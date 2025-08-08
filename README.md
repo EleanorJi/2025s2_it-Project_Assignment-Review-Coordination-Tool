@@ -3,6 +3,10 @@ Repository for IT Project - Group 80
 
 Project: Assignment Moderation Tool
 
+Scrum Master：Hanyu Ji
+
+Product Owner：Ruonan Xiong
+
 Group Member:
 
 Hanyu Ji, 1400387, hanyuj2@student.unimelb.edu.au
