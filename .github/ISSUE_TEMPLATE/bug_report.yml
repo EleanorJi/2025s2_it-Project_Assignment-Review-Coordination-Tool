@@ -1,0 +1,49 @@
+cat > .github/ISSUE_TEMPLATE/bug_report.yml << 'EOF'
+name: Bug Report
+description: Report a discovered issue
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical (System crash/Security issue)
+        - High (Major functionality unavailable)
+        - Medium (Functionality limited)
+        - Low (UI issue/Minor anomaly)
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Bug Description
+      description: Clear description of the discovered issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Reproduction Steps
+      description: Steps to reproduce the issue
+      placeholder: |
+        1. Go to login page
+        2. Enter correct email and password
+        3. Click "Login" button
+        4. Observe error message displayed
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment_info
+    attributes:
+      label: Environment Information
+      description: System and environment details
+      placeholder: |
+        - OS: Windows 10 / macOS 12 / Ubuntu 20.04
+        - Browser: Chrome 108 / Firefox 107 / Safari 16
+        - Node.js Version: 18.12.0
+EOF
