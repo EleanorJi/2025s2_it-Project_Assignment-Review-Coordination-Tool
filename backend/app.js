@@ -7,6 +7,8 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ==================== helper function ====================
 // 从邮箱提取用户名（@前面的部分）
@@ -296,7 +298,7 @@ app.post('/api/login', async (req, res) => {
     const user = userResult.rows[0];
 
     // 检查用户状态
-    if (!user.status) { // 现在status是boolean
+    if (!user.status) {
       return res.status(401).json({
         success: false,
         message: 'Account is not active. Please complete your registration.'
@@ -311,9 +313,9 @@ app.post('/api/login', async (req, res) => {
       });
     }
 
-    // 更新最后登录时间
-    await db.query(
-      'UPDATE app_user SET last_login = NOW() WHERE user_id = $1',
+    // 更新并返回最新的 last_login
+    const updateResult = await db.query(
+      'UPDATE app_user SET last_login = NOW() WHERE user_id = $1 RETURNING last_login',
       [user.id]
     );
 
@@ -323,7 +325,7 @@ app.post('/api/login', async (req, res) => {
       email: user.email,
       name: user.name,
       role: user.role,
-      last_login: user.last_login
+      last_login: updateResult.rows[0].last_login
     };
 
     res.json({
