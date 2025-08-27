@@ -29,9 +29,11 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // 查询用户信息
-    const userResult = await db.query('SELECT * FROM users WHERE id = $1 AND status = $2',
-      [userId, 'active']);
+    // 查询用户信息 - 修改表名和字段名
+    const userResult = await db.query(
+      'SELECT user_id as id, name, email, password_hash, role, is_active as status FROM app_user WHERE user_id = $1 AND is_active = true',
+      [userId]
+    );
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({
@@ -55,7 +57,7 @@ const authenticate = async (req, res, next) => {
 
 // 检查用户角色是否为coordinator的中间件
 const requireCoordinator = (req, res, next) => {
-  if (req.user.role !== 'coordinator') {
+  if (req.user.role !== 'COORDINATOR') { // 改为大写
     return res.status(403).json({
       success: false,
       message: 'Access denied. Coordinator role required.'
@@ -80,7 +82,7 @@ app.post('/api/invitations', authenticate, requireCoordinator, async (req, res) 
 
   try {
     // 检查邮箱是否已被邀请或已注册
-    const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const existingUser = await db.query('SELECT * FROM app_user WHERE email = $1', [email]);
     const existingInvite = await db.query(
       'SELECT * FROM invitations WHERE email = $1 AND used_at IS NULL',
       [email]
@@ -184,11 +186,10 @@ app.post('/api/complete-signup', async (req, res) => {
   }
 
   try {
-    // 验证令牌
     const inviteResult = await db.query(
       `SELECT i.*, u.name as coordinator_name
        FROM invitations i
-       JOIN users u ON i.created_by = u.id
+       JOIN app_user u ON i.created_by = u.user_id
        WHERE i.token = $1 AND i.used_at IS NULL AND i.expires_at > NOW()`,
       [token]
     );
@@ -204,10 +205,10 @@ app.post('/api/complete-signup', async (req, res) => {
 
     // 创建用户（角色固定为'marker'）
     const userResult = await db.query(
-      `INSERT INTO users (email, name, password_hash, role, status)
+      `INSERT INTO app_user (email, name, password_hash, role, is_active)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, name, role, created_at`,
-      [invitation.email, name, password, 'marker', 'active'] // ⚠️ 密码应该加密
+       RETURNING user_id as id, email, name, role, created_at`,
+      [invitation.email, name, password, 'MARKER', true] // ⚠️ 密码应该加密
     );
 
     // 标记邀请为已使用
@@ -253,7 +254,6 @@ app.post('/api/complete-signup', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { email, name, password } = req.body;
 
-  // 检查是否提供了登录标识和密码
   if ((!email && !name) || !password) {
     return res.status(400).json({
       success: false,
@@ -261,7 +261,6 @@ app.post('/api/login', async (req, res) => {
     });
   }
 
-  // 检查是否同时提供了email和name（二选一）
   if (email && name) {
     return res.status(400).json({
       success: false,
@@ -274,13 +273,17 @@ app.post('/api/login', async (req, res) => {
     let loginIdentifier;
 
     if (email) {
-      // 按邮箱查询
       loginIdentifier = email;
-      userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+      userResult = await db.query(
+        'SELECT user_id as id, email, name, password_hash, role, is_active as status FROM app_user WHERE email = $1',
+        [email]
+      );
     } else {
-      // 按用户名查询
       loginIdentifier = name;
-      userResult = await db.query('SELECT * FROM users WHERE name = $1', [name]);
+      userResult = await db.query(
+        'SELECT user_id as id, email, name, password_hash, role, is_active as status FROM app_user WHERE name = $1',
+        [name]
+      );
     }
 
     if (userResult.rows.length === 0) {
@@ -293,7 +296,7 @@ app.post('/api/login', async (req, res) => {
     const user = userResult.rows[0];
 
     // 检查用户状态
-    if (user.status !== 'active') {
+    if (!user.status) { // 现在status是boolean
       return res.status(401).json({
         success: false,
         message: 'Account is not active. Please complete your registration.'
@@ -310,7 +313,7 @@ app.post('/api/login', async (req, res) => {
 
     // 更新最后登录时间
     await db.query(
-      'UPDATE users SET last_login = NOW() WHERE id = $1',
+      'UPDATE app_user SET last_login = NOW() WHERE user_id = $1',
       [user.id]
     );
 
@@ -371,7 +374,4 @@ app.listen(port, () => {
   console.log('   GET  /api/me             - Get current user info (需要登录)');
   console.log('   GET  /api/health         - Health check');
   console.log('\n🔒 认证方式: 在请求头中添加 x-user-id: <用户ID>');
-  console.log('\n📝 登录请求示例:');
-  console.log('   { "email": "user@example.com", "password": "secret" }');
-  console.log('   { "name": "username", "password": "secret" }');
 });
