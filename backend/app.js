@@ -31,7 +31,7 @@ const authenticate = async (req, res, next) => {
 
     // 查询用户信息 - 修改表名和字段名
     const userResult = await db.query(
-      'SELECT user_id as id, name, email, password_hash, role, is_active as status FROM app_user WHERE user_id = $1 AND is_active = true',
+      'SELECT user_id as id, name, email, password_hash, role, is_active as status, last_login FROM app_user WHERE user_id = $1 AND is_active = true',
       [userId]
     );
 
@@ -275,13 +275,13 @@ app.post('/api/login', async (req, res) => {
     if (email) {
       loginIdentifier = email;
       userResult = await db.query(
-        'SELECT user_id as id, email, name, password_hash, role, is_active as status FROM app_user WHERE email = $1',
+        'SELECT user_id as id, email, name, password_hash, role, is_active as status, last_login FROM app_user WHERE email = $1',
         [email]
       );
     } else {
       loginIdentifier = name;
       userResult = await db.query(
-        'SELECT user_id as id, email, name, password_hash, role, is_active as status FROM app_user WHERE name = $1',
+        'SELECT user_id as id, email, name, password_hash, role, is_active as status, last_login FROM app_user WHERE name = $1',
         [name]
       );
     }
