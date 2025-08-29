@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { ROLES } = require('../config/constants');
+const { STATUS } = require('../config/constants');
 
 exports.login = async (req, res) => {
   const { email, name, password } = req.body;
@@ -24,16 +24,10 @@ exports.login = async (req, res) => {
 
     if (email) {
       loginIdentifier = email;
-      userResult = await db.query(
-        'SELECT user_id as id, email, name, password_hash, role, is_active as status, last_login FROM app_user WHERE email = $1',
-        [email]
-      );
+      userResult = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     } else {
       loginIdentifier = name;
-      userResult = await db.query(
-        'SELECT user_id as id, email, name, password_hash, role, is_active as status, last_login FROM app_user WHERE name = $1',
-        [name]
-      );
+      userResult = await db.query('SELECT * FROM users WHERE name = ?', [name]);
     }
 
     if (userResult.rows.length === 0) {
@@ -45,7 +39,7 @@ exports.login = async (req, res) => {
 
     const user = userResult.rows[0];
 
-    if (!user.status) {
+    if (user.status !== STATUS.ACTIVE) {
       return res.status(401).json({
         success: false,
         message: 'Account is not active. Please complete your registration.'
@@ -59,8 +53,8 @@ exports.login = async (req, res) => {
       });
     }
 
-    const updateResult = await db.query(
-      'UPDATE app_user SET last_login = NOW() WHERE user_id = $1 RETURNING last_login',
+    await db.query(
+      'UPDATE users SET last_login = datetime(\'now\') WHERE id = ?',
       [user.id]
     );
 
@@ -69,7 +63,7 @@ exports.login = async (req, res) => {
       email: user.email,
       name: user.name,
       role: user.role,
-      last_login: updateResult.rows[0].last_login
+      last_login: user.last_login
     };
 
     res.json({

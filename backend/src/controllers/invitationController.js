@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const db = require('../config/database');
-const { INVITATION_EXPIRY_HOURS } = require('../config/constants');
+const { ROLES, STATUS, INVITATION_EXPIRY_HOURS } = require('../config/constants');
 
 exports.inviteMarker = async (req, res) => {
   const { email } = req.body;
@@ -14,9 +14,9 @@ exports.inviteMarker = async (req, res) => {
   }
 
   try {
-    const existingUser = await db.query('SELECT * FROM app_user WHERE email = $1', [email]);
+    const existingUser = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     const existingInvite = await db.query(
-      'SELECT * FROM invitations WHERE email = $1 AND used_at IS NULL',
+      'SELECT * FROM invitations WHERE email = ? AND used_at IS NULL',
       [email]
     );
 
@@ -34,11 +34,12 @@ exports.inviteMarker = async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
     await db.query(
-      'INSERT INTO invitations (email, token, created_by, expires_at) VALUES ($1, $2, $3, $4)',
-      [email, token, createdBy, expiresAt]
+      'INSERT INTO invitations (email, token, created_by, expires_at) VALUES (?, ?, ?, ?)',
+      [email, token, createdBy, expiresAt.toISOString()]
     );
 
     console.log(`Coordinator ${req.user.name} invited ${email}. Token: ${token}`);
@@ -69,7 +70,7 @@ exports.verifyInvite = async (req, res) => {
 
   try {
     const result = await db.query(
-      'SELECT * FROM invitations WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()',
+      'SELECT * FROM invitations WHERE token = ? AND used_at IS NULL AND expires_at > datetime(\'now\')',
       [token]
     );
 
@@ -116,8 +117,8 @@ exports.completeSignup = async (req, res) => {
     const inviteResult = await db.query(
       `SELECT i.*, u.name as coordinator_name
        FROM invitations i
-       JOIN app_user u ON i.created_by = u.user_id
-       WHERE i.token = $1 AND i.used_at IS NULL AND i.expires_at > NOW()`,
+       JOIN users u ON i.created_by = u.id
+       WHERE i.token = ? AND i.used_at IS NULL AND i.expires_at > datetime('now')`,
       [token]
     );
 
@@ -130,16 +131,20 @@ exports.completeSignup = async (req, res) => {
 
     const invitation = inviteResult.rows[0];
 
-    const userResult = await db.query(
-      `INSERT INTO app_user (email, name, password_hash, role, is_active)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING user_id as id, email, name, role, created_at`,
-      [invitation.email, name, password, 'MARKER', true]
+    await db.query(
+      `INSERT INTO users (email, name, password_hash, role, status)
+       VALUES (?, ?, ?, ?, ?)`,
+      [invitation.email, name, password, ROLES.MARKER, STATUS.ACTIVE]
     );
 
     await db.query(
-      'UPDATE invitations SET used_at = NOW() WHERE id = $1',
+      'UPDATE invitations SET used_at = datetime(\'now\') WHERE id = ?',
       [invitation.id]
+    );
+
+    const newUser = await db.query(
+      'SELECT id, email, name, role, created_at FROM users WHERE email = ?',
+      [invitation.email]
     );
 
     console.log(`New marker registered: ${name} (${invitation.email}) by coordinator: ${invitation.coordinator_name}`);
@@ -147,7 +152,7 @@ exports.completeSignup = async (req, res) => {
     res.json({
       success: true,
       message: 'Registration completed successfully',
-      user: userResult.rows[0]
+      user: newUser.rows[0]
     });
 
   } catch (error) {

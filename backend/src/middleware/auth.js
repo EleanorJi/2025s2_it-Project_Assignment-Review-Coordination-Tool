@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { STATUS } = require('../config/constants');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -11,10 +12,8 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const userResult = await db.query(
-      'SELECT user_id as id, name, email, password_hash, role, is_active as status, last_login FROM app_user WHERE user_id = $1 AND is_active = true',
-      [userId]
-    );
+    const userResult = await db.query('SELECT * FROM users WHERE id = ? AND status = ?',
+      [userId, STATUS.ACTIVE]);
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({

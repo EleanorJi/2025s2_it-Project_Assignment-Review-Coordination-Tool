@@ -34,6 +34,10 @@ app.listen(port, () => {
   console.log('   POST /api/invitations/complete-signup - Complete registration');
   console.log('   GET  /api/health              - Health check');
   console.log('\n🔒 认证方式: 在请求头中添加 x-user-id: <用户ID>');
+  console.log('\n📝 登录请求示例:');
+  console.log('   { "email": "admin@grading.com", "password": "admin123" }');
+  console.log('   { "name": "admin", "password": "admin123" }');
+  console.log('📁 静态文件目录:', path.join(__dirname, '../../frontend'));
 });
 
 module.exports = app;
