@@ -1,32 +1,17 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Backend API for Grading System - Group 80",
-  "main": "src/app.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/EleanorJi/IT-Project-80.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/EleanorJi/IT-Project-80/issues"
-  },
-  "homepage": "https://github.com/EleanorJi/IT-Project-80#readme",
   "dependencies": {
-    "@supabase/supabase-js": "^2.56.0",
     "express": "^5.1.0",
     "pg": "^8.16.3",
-    "pg-pool": "^3.10.1",
-    "sqlite3": "^5.1.7"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
+    "pg-hstore": "^2.3.4"
   }
 }

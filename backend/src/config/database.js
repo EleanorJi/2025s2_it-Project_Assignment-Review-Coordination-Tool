@@ -3,8 +3,8 @@ const { Pool } = require('pg');
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'grading_system',
-  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'assignment_mod',
+  password: process.env.DB_PASSWORD || '040104',
   port: process.env.DB_PORT || 5432,
 });
 

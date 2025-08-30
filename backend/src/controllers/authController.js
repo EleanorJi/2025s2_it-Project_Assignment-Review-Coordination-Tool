@@ -60,7 +60,7 @@ exports.login = async (req, res) => {
     }
 
     const updateResult = await db.query(
-      'UPDATE app_user SET last_login = NOW() WHERE user_id = $1 RETURNING last_login',
+      'UPDATE app_user SET last_login = NOW() WHERE user_id = $1',
       [user.id]
     );
 
@@ -69,7 +69,7 @@ exports.login = async (req, res) => {
       email: user.email,
       name: user.name,
       role: user.role,
-      last_login: updateResult.rows[0].last_login
+      last_login: user.last_login
     };
 
     res.json({
