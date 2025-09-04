@@ -154,20 +154,24 @@ assignment-moderation-tool/
       ![img_1.png](test_image_readme/img_1.png)
 
 4. Test invitation:
-   1. Open Postman and enter "POST" http://localhost:3000/api/invitations
-   2. add headers
+
+   Postman Usage Declaration: We use Postman because we haven't completed the transition of the login-dashboard-invitation interface yet. Once it's completed later, we won't need Postman.
+   
+   1. Download Postman from [the Postman website](https://www.postman.com/downloads/) and install it.
+   2. Open Postman and enter "POST" http://localhost:3000/api/invitations
+   3. add headers
         ```
         Content-Type: application/json
         x-user-id: 1
         ```
         ![img_2.png](test_image_readme/img_2.png)
-   3. add body -> raw -> JSON
+   4. add body -> raw -> JSON
       ```json
       {
        "email": "marker1@example.com"
       }
        ```
-   4. Click "Send"
+   5. Click "Send"
    
       You should see the response like this:
       ```json
@@ -175,17 +179,17 @@ assignment-moderation-tool/
        "success": true,
        "message": "Invitation sent successfully"
        }
-   5. In the terminal, copy the token: XXX
-   6. Open the browser and visit http://localhost:3000/signup.html?token=XXX
+   6. In the terminal, copy the token: XXX
+   7. Open the browser and visit http://localhost:3000/signup.html?token=XXX
       
       will see the signup page:
       ![img_3.png](test_image_readme/img_3.png)
       Enter your username and password, check the terms of agreement, and click "Sign Up".
-   7. After successful registration, you will see:
+   8. After successful registration, you will see:
       ![img_4.png](test_image_readme/img_4.png)
       Click "Sign in" to navigate to the login page.
-   8. It will return to the previous login interface.
+   9. It will return to the previous login interface.
       ![img_5.png](test_image_readme/img_5.png)
-   9. Input the email/username and password to log in.
-   10. Clicking on "Sign In" will result in "Login successful!":
+   10. Input the email/username and password to log in.
+   11. Clicking on "Sign In" will result in "Login successful!":
       ![img_6.png](test_image_readme/img_6.png)
