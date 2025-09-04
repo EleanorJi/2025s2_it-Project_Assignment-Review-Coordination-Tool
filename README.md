@@ -112,3 +112,80 @@ assignment-moderation-tool/
     ├── build.sh
     └── deploy.sh
 ```
+
+## Login and invitation test steps:
+
+1. Create a database locally.
+   - Make sure you have installed the PostgreSQL database. If not, you can download and install it from [the PostgreSQL website](https://www.postgresql.org/download/).
+   - Open the database pgAdmin4 (if it cannot be found, you can search for pgAdmin4 on the start interface)
+   - Log in to your PostgreSQL server (usually localhost, port 5432, username postgres, and password is the one you set during installation).
+   - Create a new database named `assignment_mod`:
+     - Right-click on "Databases" in the left sidebar and select "Create" > "Database...".
+     - Enter `assignment_mod` as the database name and click "Save".
+   - Set up an initial user (for example, username `admin`, password `password`), and ensure that this user has all permissions for the `assignment_mod` database.
+   - To insert an initial "admin" database table, you can use the following SQL command:
+     ```sql
+     INSERT INTO app_user (name, email, password_hash, role, is_active)
+     VALUES (
+      'admin',
+      'admin@grading.com',
+      'admin123',
+      'COORDINATOR',
+      true
+     );
+     ```
+   - Make sure that the database connection configuration in backend/src/config/database.js matches your database settings (such as the username, password - it should be the password you set during installation, the host and the port).
+2. Start the backend server:
+   - Make sure that you have installed all the dependencies (`npm install`, `node.js`, `express`, etc.).
+   - Open the terminal at the current project location
+   - Run `node backend/src/app.js` to start the backend server.
+3. Test login:
+   1. Open the browser and visit `http://localhost:3000/login.html`
+      
+      You should see the login page:
+      ![img.png](img.png)
+   2. Input the email/username and password to log in.
+
+      If you are using the above SQL, then enter:
+         - Email/Username: admin@grading.com/admin
+         - Password: admin123
+      
+      Then can see "Login successful!"：
+      ![img_1.png](img_1.png)
+
+4. Test invitation:
+   1. Open Postman and enter "POST" http://localhost:3000/api/invitations
+   2. add headers
+        ```
+        Content-Type: application/json
+        x-user-id: 1
+        ```
+        ![img_2.png](img_2.png)
+   3. add body -> raw -> JSON
+      ```json
+      {
+       "email": "marker1@example.com"
+      }
+       ```
+   4. Click "Send"
+   
+      You should see the response like this:
+      ```json
+      {
+       "success": true,
+       "message": "Invitation sent successfully"
+       }
+   5. In the terminal, copy the token: XXX
+   6. Open the browser and visit http://localhost:3000/signup.html?token=XXX
+      
+      will see the signup page:
+      ![img_3.png](img_3.png)
+      Enter your username and password, check the terms of agreement, and click "Sign Up".
+   7. After successful registration, you will see:
+      ![img_4.png](img_4.png)
+      Click "Sign in" to navigate to the login page.
+   8. It will return to the previous login interface.
+      ![img_5.png](img_5.png)
+   9. Input the email/username and password to log in.
+   10. Clicking on "Sign In" will result in "Login successful!":
+      ![img_6.png](img_6.png)
