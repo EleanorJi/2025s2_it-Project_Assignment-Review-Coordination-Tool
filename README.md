@@ -143,7 +143,7 @@ assignment-moderation-tool/
    1. Open the browser and visit `http://localhost:3000/login.html`
       
       You should see the login page:
-      ![img.png](img.png)
+      ![img.png](test_image_readme/img.png)
    2. Input the email/username and password to log in.
 
       If you are using the above SQL, then enter:
@@ -151,7 +151,7 @@ assignment-moderation-tool/
          - Password: admin123
       
       Then can see "Login successful!"：
-      ![img_1.png](img_1.png)
+      ![img_1.png](test_image_readme/img_1.png)
 
 4. Test invitation:
    1. Open Postman and enter "POST" http://localhost:3000/api/invitations
@@ -160,7 +160,7 @@ assignment-moderation-tool/
         Content-Type: application/json
         x-user-id: 1
         ```
-        ![img_2.png](img_2.png)
+        ![img_2.png](test_image_readme/img_2.png)
    3. add body -> raw -> JSON
       ```json
       {
@@ -179,13 +179,13 @@ assignment-moderation-tool/
    6. Open the browser and visit http://localhost:3000/signup.html?token=XXX
       
       will see the signup page:
-      ![img_3.png](img_3.png)
+      ![img_3.png](test_image_readme/img_3.png)
       Enter your username and password, check the terms of agreement, and click "Sign Up".
    7. After successful registration, you will see:
-      ![img_4.png](img_4.png)
+      ![img_4.png](test_image_readme/img_4.png)
       Click "Sign in" to navigate to the login page.
    8. It will return to the previous login interface.
-      ![img_5.png](img_5.png)
+      ![img_5.png](test_image_readme/img_5.png)
    9. Input the email/username and password to log in.
    10. Clicking on "Sign In" will result in "Login successful!":
-      ![img_6.png](img_6.png)
+      ![img_6.png](test_image_readme/img_6.png)
