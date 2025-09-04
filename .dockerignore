@@ -1,0 +1,42 @@
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+DOCKER_README.md
+docs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env*
+docker.env
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Node modules (handled in service-specific dockerignores)
+node_modules/
+
+# Docker files
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile*
+
+# Scripts (if any)
+scripts/
