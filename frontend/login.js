@@ -23,23 +23,47 @@
     const loginJSON = { username: identifier, password };
     console.log('Login JSON:', JSON.stringify(loginJSON));
 
-    // 兼容：也附带 email/name 字段
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
     const payload = { ...loginJSON };
     if (isEmail) payload.email = identifier; else payload.name = identifier;
 
     try {
       btn.disabled = true; status.textContent = 'Signing in…';
-      const res = await fetch('/api/auth/login', {
+
+      // 兼容 /api/auth/login 和 /api/login
+      let res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (res.status === 404) {
+        res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || 'Login failed');
-      if (data.user?.id) localStorage.setItem('userId', data.user.id);
+
+      // 持久化
+      if (data.user?.id)  localStorage.setItem('userId', data.user.id);
+      if (data.user)      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // 计算跳转地址：?next > returnTo > 后端 redirectTo > 角色默认页
+      const qs = new URLSearchParams(location.search);
+      const fromNext  = qs.get('next');
+      const fromGuard = sessionStorage.getItem('returnTo');
+      const byServer  = data.redirectTo;
+      const byRole    = (data.user?.role === 'coordinator')
+        ? '/coordinator-dashboard.html'
+        : '/marker-dashboard.html';
+
+      const target = fromNext || fromGuard || byServer || byRole;
+
+      sessionStorage.removeItem('returnTo');
       status.classList.add('ok'); status.textContent = 'Login successful!';
-      // window.location.href = '/dashboard.html';
+      window.location.replace(target);
     } catch (err) {
       status.classList.add('err'); status.textContent = err.message;
     } finally { btn.disabled = false; }

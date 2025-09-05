@@ -1,5 +1,24 @@
 <!doctype html>
 <html lang="en">
+  <script>
+(function guard(){
+  const u = localStorage.getItem('user');
+  if (!u) {
+    sessionStorage.setItem('returnTo', location.pathname + location.search);
+    location.replace('/login.html'); 
+    return;
+  }
+  try {
+    const user = JSON.parse(u);
+    if (location.pathname.includes('coordinator') && user.role !== 'coordinator') {
+      return location.replace('/marker.html');
+    }
+    if (location.pathname.includes('marker') && user.role !== 'marker') {
+      return location.replace('/coordinator-dashboard.html');
+    }
+  } catch {}
+})();
+</script>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -24,13 +43,13 @@
   <div class="app">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <nav class="nav">
-        <button class="nav-item active" data-view="overview">Overview</button>
-        <button class="nav-item" data-view="invite">Invite Markers</button>
-        <button class="nav-item" data-view="upload">Upload Assignment / Rubric</button>
-        <button class="nav-item" data-view="mark">Mark Assignment</button>
-        <button class="nav-item" data-view="report">Feedback / Report</button>
-        <button class="nav-item" data-view="past">Past Assignment</button>
+       <nav class="nav">
+        <a class="nav-item active" href="coordinator-dashboard.html">Overview</a>
+        <a class="nav-item" aria-current="page" href="invite.html">Invite Markers</a>
+        <a class="nav-item" href="upload-assignment.html">Upload Assignment / Rubric</a>
+        <a class="nav-item" href="mark.html">Mark Assignment</a>
+        <a class="nav-item" href="feedback.html">Feedback / Report</a>
+        <a class="nav-item" href="past.html">Past Assignment</a>
       </nav>
     </aside>
 
