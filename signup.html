@@ -7,6 +7,21 @@
   <link rel="stylesheet" href="./styles copy.css" />
 </head>
 <body>
+  <!-- In-page notification toast -->
+  <div class="toast-wrap">
+    <div id="toast" class="toast info hidden" role="status" aria-live="polite">
+      <div class="brand"><img src="./deakin-logo.png" alt="Deakin logo"/></div>
+      <div class="content">
+        <div class="title" id="toast-title">You’re invited to join moderation</div>
+        <div class="desc" id="toast-desc">Carrie (Coordinator) invited you to mark Assignment 1 · Round 1.</div>
+        <div class="actions">
+          <button class="btn-small" id="toast-ok">Got it</button>
+          <button class="btn-ghost" id="toast-dismiss">Dismiss</button>
+        </div>
+      </div>
+      <button class="close" id="toast-close" aria-label="Close">×</button>
+    </div>
+    </div>
   <div class="container">
     <section class="panel">
       <div class="header">
@@ -52,7 +67,6 @@
 
         <button class="btn" id="btn">Sign up</button>
         <div class="msg" id="status"></div>
-        <div class="small"><a class="link" href="/">Back to sign in</a></div>
       </form>
 
       <div class="footer-left">© 2025 Deakin University</div>
