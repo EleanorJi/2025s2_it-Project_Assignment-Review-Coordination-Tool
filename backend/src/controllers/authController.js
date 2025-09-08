@@ -1,6 +1,5 @@
 const db = require('../config/database');
 const { ROLES } = require('../config/constants');
-const redirectConfig = require('../config/redirect');
 
 exports.login = async (req, res) => {
   const { email, name, password } = req.body;
@@ -73,14 +72,10 @@ exports.login = async (req, res) => {
       last_login: user.last_login
     };
 
-    // 根据角色确定重定向路径
-    const redirectTo = redirectConfig[user.role] || redirectConfig.default;
-
     res.json({
       success: true,
       message: 'Login successful!',
-      user: userResponse,
-      redirectTo: redirectTo  // 添加重定向路径
+      user: userResponse
     });
 
   } catch (error) {

@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const { INVITATION_EXPIRY_HOURS } = require('../config/constants');
+const EmailService = require('../services/emailService');
 
 exports.inviteMarker = async (req, res) => {
   const { email } = req.body;
@@ -43,6 +44,19 @@ exports.inviteMarker = async (req, res) => {
 
     console.log(`Coordinator ${req.user.name} invited ${email}. Token: ${token}`);
 
+    // 发送邀请邮件
+    try {
+      await EmailService.sendInvitationEmail(email, token, req.user.name);
+      console.log(`邀请邮件已成功发送至: ${email}`);
+    } catch (emailError) {
+      console.error('发送邮件失败，但邀请已创建:', emailError);
+      // 即使邮件发送失败，也返回成功，但提示用户可能需要手动发送链接
+      return res.json({
+        success: true,
+        message: 'Invitation created but email sending failed. Please manually send the registration link.',
+        token: token // 返回token以便手动发送
+      });
+    }
     res.json({
       success: true,
       message: 'Invitation sent successfully'
