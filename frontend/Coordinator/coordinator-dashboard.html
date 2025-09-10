@@ -1,23 +1,35 @@
 <!doctype html>
 <html lang="en">
   <script>
-(function guard(){
-  const u = localStorage.getItem('user');
-  if (!u) {
-    sessionStorage.setItem('returnTo', location.pathname + location.search);
-    location.replace('/login.html'); 
-    return;
-  }
-  try {
-    const user = JSON.parse(u);
-    if (location.pathname.includes('coordinator') && user.role !== 'coordinator') {
-      return location.replace('/marker.html');
-    }
-    if (location.pathname.includes('marker') && user.role !== 'marker') {
-      return location.replace('/coordinator-dashboard.html');
-    }
-  } catch {}
-})();
+    (function guard(){
+      const userId = localStorage.getItem('userId');
+      const userRole = localStorage.getItem('userRole'); // 如果你有存 role
+
+      if (!userId || userRole !== 'COORDINATOR') {
+        window.location.href = '/login.html';
+      }
+      })();
+
+      const u = localStorage.getItem('user');
+
+      try {
+        const user = JSON.parse(u);
+
+        // 访问 coordinator 页
+        if (location.pathname.includes('coordinator') && user.role !== 'COORDINATOR') {
+          return location.replace('/Marker/marker-dashboard.html');
+        }
+
+        // 访问 marker 页
+        if (location.pathname.includes('marker') && user.role !== 'MARKER') {
+          return location.replace('/login.html');
+        }
+
+      } catch (err) {
+        console.error('Guard error:', err);
+        location.replace('/login.html'); // 出错时兜底
+      }
+    })();
 </script>
 <head>
   <meta charset="utf-8" />
@@ -29,7 +41,7 @@
   <header class="topbar">
     <div class="brand">
       <img alt="Deakin University logo"
-        <img src="./deakin-logo.png" alt="Deakin University logo" />
+        <img src="../deakin-logo.png" alt="Deakin University logo" />
         <div class="brand-title">Deakin Moderation</div>
         <div class="brand-sub">Psychology · Calibration Portal</div>
       </div>

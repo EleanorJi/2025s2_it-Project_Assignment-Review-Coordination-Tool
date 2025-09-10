@@ -10,7 +10,8 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    status.className = 'msg'; status.textContent = '';
+    status.className = 'msg';
+    status.textContent = '';
 
     const identifier = document.getElementById('identifier').value.trim();
     const password   = document.getElementById('password').value;
@@ -48,21 +49,21 @@
 
       // 持久化
       if (data.user?.id)  localStorage.setItem('userId', data.user.id);
+      if (data.user?.role)  localStorage.setItem('userRole', data.user.role);
       if (data.user)      localStorage.setItem('user', JSON.stringify(data.user));
 
-      // 计算跳转地址：?next > returnTo > 后端 redirectTo > 角色默认页
-      const qs = new URLSearchParams(location.search);
-      const fromNext  = qs.get('next');
-      const fromGuard = sessionStorage.getItem('returnTo');
-      const byServer  = data.redirectTo;
-      const byRole    = (data.user?.role === 'coordinator')
-        ? '/coordinator-dashboard.html'
-        : '/marker-dashboard.html';
+      // 根据用户角色选择跳转
+      let target;
+      if (data.user?.role === 'COORDINATOR') {
+        target = '/Coordinator/coordinator-dashboard.html';
+      } else if (data.user?.role === 'MARKER') {
+        target = '/Marker/marker-dashboard.html';
+      } else {
+        target = '/login.html'; // fallback
+      }
 
-      const target = fromNext || fromGuard || byServer || byRole;
-
-      sessionStorage.removeItem('returnTo');
-      status.classList.add('ok'); status.textContent = 'Login successful!';
+      status.classList.add('ok');
+      status.textContent = 'Login successful!';
       window.location.replace(target);
     } catch (err) {
       status.classList.add('err'); status.textContent = err.message;
