@@ -7,8 +7,8 @@
 
       if (!userId || userRole !== 'COORDINATOR') {
         window.location.href = '/login.html';
+        return;
       }
-      })();
 
       const u = localStorage.getItem('user');
 
@@ -17,12 +17,12 @@
 
         // 访问 coordinator 页
         if (location.pathname.includes('coordinator') && user.role !== 'COORDINATOR') {
-          return location.replace('/Marker/marker-dashboard.html');
+          location.replace('/Marker/marker-dashboard.html');
         }
 
         // 访问 marker 页
         if (location.pathname.includes('marker') && user.role !== 'MARKER') {
-          return location.replace('/login.html');
+          location.replace('/login.html');
         }
 
       } catch (err) {
