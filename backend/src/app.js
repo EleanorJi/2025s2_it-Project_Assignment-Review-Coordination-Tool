@@ -1,9 +1,10 @@
+require('dotenv').config({ path: 'backend/.env' });
+
 const express = require('express');
 const path = require('path');
 const routes = require('./routes');
 //const uploadRoutes = require('./routes/uploads'); // 新增上传路由
 const errorHandler = require('./middleware/errorHandler');
-require('dotenv').config({ path: 'backend/.env' });
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -47,69 +48,70 @@ app.listen(port, () => {
   console.log('   GET  /api/uploads/active-submission/:offering_id - Get active submission');
   console.log('   GET  /api/uploads/debug/temp-files - Debug temp files');
   console.log('\n🔒 认证方式: 在请求头中添加 x-user-id: <用户ID>');
-  // 验证环境变量内容和类型
-  console.log('=== 环境变量验证 ===');
-
-  // 验证DB_USER
-  console.log('DB_USER:');
-  console.log('  值:', process.env.DB_USER);
-  console.log('  类型:', typeof process.env.DB_USER);
-  console.log('  长度:', process.env.DB_USER ? process.env.DB_USER.length : 0);
-  console.log('  是否包含非法字符:', process.env.DB_USER && /[^a-zA-Z0-9\-_]/.test(process.env.DB_USER) ? '是' : '否');
-  console.log('');
-
-  // 验证DB_HOST
-  console.log('DB_HOST:');
-  console.log('  值:', process.env.DB_HOST);
-  console.log('  类型:', typeof process.env.DB_HOST);
-  console.log('  是否本地主机:', process.env.DB_HOST === 'localhost' ? '是' : '否');
-  console.log('');
-
-  // 验证DB_NAME
-  console.log('DB_NAME:');
-  console.log('  值:', process.env.DB_NAME);
-  console.log('  类型:', typeof process.env.DB_NAME);
-  console.log('  长度:', process.env.DB_NAME ? process.env.DB_NAME.length : 0);
-  console.log('');
-
-  // 验证DB_PASSWORD
-  console.log('DB_PASSWORD:');
-  console.log('  值:', process.env.DB_PASSWORD);
-  console.log('  类型:', typeof process.env.DB_PASSWORD);
-  console.log('  长度:', process.env.DB_PASSWORD ? process.env.DB_PASSWORD.length : 0);
-  console.log('');
-
-  // 验证DB_PORT
-  console.log('DB_PORT:');
-  console.log('  值:', process.env.DB_PORT);
-  console.log('  类型:', typeof process.env.DB_PORT);
-  console.log('  转换为数字:', Number(process.env.DB_PORT));
-  console.log('  是否为有效端口:', Number(process.env.DB_PORT) > 0 && Number(process.env.DB_PORT) < 65536 ? '是' : '否');
-  console.log('');
-
-  // 验证PORT
-  console.log('PORT:');
-  console.log('  值:', process.env.PORT);
-  console.log('  类型:', typeof process.env.PORT);
-  console.log('  转换为数字:', Number(process.env.PORT));
-  console.log('  是否为有效端口:', Number(process.env.PORT) > 0 && Number(process.env.PORT) < 65536 ? '是' : '否');
-  console.log('');
-
-  // 验证SENDGRID_API_KEY
-  console.log('SENDGRID_API_KEY:');
-  console.log('  值:', process.env.SENDGRID_API_KEY);
-  console.log('  类型:', typeof process.env.SENDGRID_API_KEY);
-  console.log('  长度:', process.env.SENDGRID_API_KEY ? process.env.SENDGRID_API_KEY.length : 0);
-  console.log('  是否以SG.开头:', process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.startsWith('SG.') ? '是' : '否');
-  console.log('');
-
-  // 验证EMAIL_USER
-  console.log('EMAIL_USER:');
-  console.log('  值:', process.env.EMAIL_USER);
-  console.log('  类型:', typeof process.env.EMAIL_USER);
-  console.log('  长度:', process.env.EMAIL_USER ? process.env.EMAIL_USER.length : 0);
-  console.log('  是否为有效邮箱:', process.env.EMAIL_USER && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.EMAIL_USER) ? '是' : '否');
-  console.log('');
+//
+//  // 验证环境变量内容和类型
+//  console.log('=== 环境变量验证 ===');
+//
+//  // 验证DB_USER
+//  console.log('DB_USER:');
+//  console.log('  值:', process.env.DB_USER);
+//  console.log('  类型:', typeof process.env.DB_USER);
+//  console.log('  长度:', process.env.DB_USER ? process.env.DB_USER.length : 0);
+//  console.log('  是否包含非法字符:', process.env.DB_USER && /[^a-zA-Z0-9\-_]/.test(process.env.DB_USER) ? '是' : '否');
+//  console.log('');
+//
+//  // 验证DB_HOST
+//  console.log('DB_HOST:');
+//  console.log('  值:', process.env.DB_HOST);
+//  console.log('  类型:', typeof process.env.DB_HOST);
+//  console.log('  是否本地主机:', process.env.DB_HOST === 'localhost' ? '是' : '否');
+//  console.log('');
+//
+//  // 验证DB_NAME
+//  console.log('DB_NAME:');
+//  console.log('  值:', process.env.DB_NAME);
+//  console.log('  类型:', typeof process.env.DB_NAME);
+//  console.log('  长度:', process.env.DB_NAME ? process.env.DB_NAME.length : 0);
+//  console.log('');
+//
+//  // 验证DB_PASSWORD
+//  console.log('DB_PASSWORD:');
+//  console.log('  值:', process.env.DB_PASSWORD);
+//  console.log('  类型:', typeof process.env.DB_PASSWORD);
+//  console.log('  长度:', process.env.DB_PASSWORD ? process.env.DB_PASSWORD.length : 0);
+//  console.log('');
+//
+//  // 验证DB_PORT
+//  console.log('DB_PORT:');
+//  console.log('  值:', process.env.DB_PORT);
+//  console.log('  类型:', typeof process.env.DB_PORT);
+//  console.log('  转换为数字:', Number(process.env.DB_PORT));
+//  console.log('  是否为有效端口:', Number(process.env.DB_PORT) > 0 && Number(process.env.DB_PORT) < 65536 ? '是' : '否');
+//  console.log('');
+//
+//  // 验证PORT
+//  console.log('PORT:');
+//  console.log('  值:', process.env.PORT);
+//  console.log('  类型:', typeof process.env.PORT);
+//  console.log('  转换为数字:', Number(process.env.PORT));
+//  console.log('  是否为有效端口:', Number(process.env.PORT) > 0 && Number(process.env.PORT) < 65536 ? '是' : '否');
+//  console.log('');
+//
+//  // 验证SENDGRID_API_KEY
+//  console.log('SENDGRID_API_KEY:');
+//  console.log('  值:', process.env.SENDGRID_API_KEY);
+//  console.log('  类型:', typeof process.env.SENDGRID_API_KEY);
+//  console.log('  长度:', process.env.SENDGRID_API_KEY ? process.env.SENDGRID_API_KEY.length : 0);
+//  console.log('  是否以SG.开头:', process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.startsWith('SG.') ? '是' : '否');
+//  console.log('');
+//
+//  // 验证EMAIL_USER
+//  console.log('EMAIL_USER:');
+//  console.log('  值:', process.env.EMAIL_USER);
+//  console.log('  类型:', typeof process.env.EMAIL_USER);
+//  console.log('  长度:', process.env.EMAIL_USER ? process.env.EMAIL_USER.length : 0);
+//  console.log('  是否为有效邮箱:', process.env.EMAIL_USER && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.EMAIL_USER) ? '是' : '否');
+//  console.log('');
 });
 
 module.exports = app;
