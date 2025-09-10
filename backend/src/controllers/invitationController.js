@@ -3,6 +3,7 @@ const db = require('../config/database');
 const { INVITATION_EXPIRY_HOURS } = require('../config/constants');
 const EmailService = require('../services/emailService');
 
+// 邀请一位评分员
 exports.inviteMarker = async (req, res) => {
   const { email } = req.body;
   const createdBy = req.user.id;
@@ -71,6 +72,7 @@ exports.inviteMarker = async (req, res) => {
   }
 };
 
+// 验证 token
 exports.verifyInvite = async (req, res) => {
   const { token } = req.query;
 
@@ -184,31 +186,85 @@ exports.inviteMarkersBatch = async (req, res) => {
 
     for (const email of emails) {
       // 跳过空值
-      if (!email) continue;
-
-      // 检查是否已有用户或未过期邀请
-      const existingUser = await db.query('SELECT 1 FROM app_user WHERE email = $1', [email]);
-      const existingInvite = await db.query(
-        'SELECT 1 FROM invitations WHERE email = $1 AND used_at IS NULL AND expires_at > NOW()',
-        [email]
-      );
-
-      if (existingUser.rows.length > 0 || existingInvite.rows.length > 0) {
-        results.push({ email, status: 'skipped' });
+      if (!email) {
+        results.push({ email, status: 'skipped', reason: 'Empty email' });
         continue;
       }
 
-      // 生成 token
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
+      // 检查是否已有用户
+      const existingUser = await db.query('SELECT 1 FROM app_user WHERE email = $1', [email]);
+      if (existingUser.rows.length > 0) {
+        results.push({ email, status: 'skipped', reason: 'User already exists' });
+        continue;
+      }
 
-      await db.query(
-        'INSERT INTO invitations (email, token, created_by, expires_at) VALUES ($1, $2, $3, $4)',
-        [email, token, createdBy, expiresAt]
+      // 检查是否存在未过期的邀请
+      const existingInvite = await db.query(
+        'SELECT token, expires_at FROM invitations WHERE email = $1 AND used_at IS NULL AND expires_at > NOW()',
+        [email]
       );
 
-      console.log(`Coordinator ${req.user.name} invited ${email}. Token: ${token}`);
-      results.push({ email, status: 'invited' });
+      if (existingInvite.rows.length > 0) {
+        // 存在未过期的邀请，不需要重新生成token或发送邮件
+        results.push({
+          email,
+          status: 'skipped',
+          reason: 'Active invitation already exists',
+          existingToken: existingInvite.rows[0].token,
+          expiresAt: existingInvite.rows[0].expires_at
+        });
+        continue;
+      }
+
+      // 检查是否存在已过期的邀请
+      const expiredInvite = await db.query(
+        'SELECT id FROM invitations WHERE email = $1 AND used_at IS NULL AND expires_at <= NOW()',
+        [email]
+      );
+
+      let token;
+      if (expiredInvite.rows.length > 0) {
+        // 更新已过期的邀请：生成新token和过期时间
+        token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
+
+        await db.query(
+          'UPDATE invitations SET token = $1, expires_at = $2, created_by = $3, created_at = NOW() WHERE id = $4',
+          [token, expiresAt, createdBy, expiredInvite.rows[0].id]
+        );
+
+        console.log(`Updated expired invitation for ${email}. New token: ${token}`);
+      } else {
+        // 创建全新的邀请
+        token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
+
+        await db.query(
+          'INSERT INTO invitations (email, token, created_by, expires_at) VALUES ($1, $2, $3, $4)',
+          [email, token, createdBy, expiresAt]
+        );
+
+        console.log(`Created new invitation for ${email}. Token: ${token}`);
+      }
+
+      // 发送邀请邮件
+      try {
+        await EmailService.sendInvitationEmail(email, token, req.user.name);
+        console.log(`邀请邮件已成功发送至: ${email}`);
+        results.push({
+          email,
+          status: expiredInvite.rows.length > 0 ? 'renewed' : 'invited',
+          emailSent: true
+        });
+      } catch (emailError) {
+        console.error(`发送邮件至 ${email} 失败:`, emailError);
+        results.push({
+          email,
+          status: expiredInvite.rows.length > 0 ? 'renewed' : 'invited',
+          emailSent: false,
+          token: token // 返回token以便手动发送
+        });
+      }
     }
 
     res.json({ success: true, results });
@@ -271,7 +327,20 @@ exports.resendInvite = async (req, res) => {
     }
 
     console.log(`Coordinator ${req.user.name} resent invite to ${email}. Token: ${token}`);
-    res.json({ success: true, message: 'Resent successfully' });
+
+    // 发送新的邀请邮件
+    try {
+      await EmailService.sendInvitationEmail(email, token, req.user.name);
+      console.log(`重新发送的邀请邮件已成功发送至: ${email}`);
+      res.json({ success: true, message: 'Resent successfully' });
+    } catch (emailError) {
+      console.error('发送重新邀请邮件失败:', emailError);
+      res.json({
+        success: true,
+        message: 'Invitation updated but email sending failed. Please manually send the registration link.',
+        token: token
+      });
+    }
   } catch (error) {
     console.error('Resend error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -300,6 +369,16 @@ exports.revokeInvite = async (req, res) => {
     }
 
     console.log(`Revoked invitation for ${email}`);
+
+    // 发送撤销通知邮件
+    try {
+      await EmailService.sendRevocationEmail(email);
+      console.log(`撤销通知邮件已成功发送至: ${email}`);
+    } catch (emailError) {
+      console.error('发送撤销通知邮件失败:', emailError);
+      // 即使邮件发送失败，也返回成功，因为邀请已被撤销
+    }
+
     res.json({ success: true, message: 'Revoked successfully' });
   } catch (error) {
     console.error('Revoke error:', error);
