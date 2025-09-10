@@ -13,7 +13,7 @@ class EmailService {
       const signupUrl = `${websiteUrl}/signup.html?token=${token}`;
 
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'hanyuj2@student.unimelb.edu.au',
+        from: process.env.EMAIL_USER,
         to: to,
         subject: '邀请您加入评分系统作为评分员',
         html: `
