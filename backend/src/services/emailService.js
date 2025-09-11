@@ -23,7 +23,7 @@ class EmailService {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: to,
-        subject: '邀请您加入评分系统作为评分员',
+        subject: 'Invitation to Join Assignment Moderation Tool as a Marker',
         html: html
       };
 
@@ -50,7 +50,7 @@ class EmailService {
         const mailOptions = {
           from: process.env.EMAIL_USER,
           to: to,
-          subject: '关于评分系统邀请的更正说明',
+          subject: 'Correction Regarding Assignment Moderation Tool Invitation',
           html: html
         };
 
