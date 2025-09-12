@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Past Assignment — Deakin Moderation</title>
+<style>
+  :root{
+    --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
+    --primary:#0F172A; --warn:#F59E0B; --bad:#DC2626;
+    --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+
+  /* Top bar */
+  .topbar{
+    height:64px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 18px; background:#fff; border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex; align-items:center; gap:12px}
+  .brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
+  .brand-title{font-weight:800}
+  .brand-sub{font-size:12px;color:var(--muted)}
+  .account{color:var(--text);font-weight:600}
+  .caret{margin-left:4px;color:var(--muted)}
+
+  /* Layout */
+  .app{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
+  .sidebar{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;
+    height:calc(100vh - 96px);
+  }
+  .nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .nav-item{
+    width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
+    background:#fff;color:var(--text);font-weight:600;cursor:pointer;text-decoration:none;
+  }
+  .nav-item.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+  .main{padding-right:16px}
+  .panel{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:18px 18px 22px;
+  }
+
+  /* Typography & cards */
+  h1{font-size:28px;margin:0 0 14px 0}
+  .group{margin-top:16px}
+  .group-title{font-weight:800;margin:4px 0 10px 6px}
+  .card{
+    background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;
+  }
+
+  /* Buttons & misc */
+  .btn{
+    height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--border);
+    background:#fff;color:var(--text);font-weight:600;cursor:pointer
+  }
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .muted{color:var(--muted)}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid #F1F5F9}
+  .row:first-of-type{border-top:none;padding-top:6px}
+  .name{color:var(--text)}
+  .actions{display:flex;gap:8px}
+
+  /* Responsive */
+  @media (max-width: 1100px){
+    .app{grid-template-columns:1fr}
+    .sidebar{height:auto}
+  }
+</style>
+</head>
+<body>
+  <!-- top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img alt="Deakin mark" src="deakin-logo.png"/>
+      <div>
+        <div class="brand-title">Deakin Moderation</div>
+        <div class="brand-sub">Psychology · Calibration Portal</div>
+      </div>
+    </div>
+    <div class="account">Carrie <span class="caret">▾</span></div>
+  </header>
+
+  <div class="app">
+    <!-- sidebar -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <a class="nav-item" href="#">Overview</a>
+        <a class="nav-item" href="#">Invite Markers</a>
+        <a class="nav-item" href="#">Upload Assignment / Rubric</a>
+        <a class="nav-item" href="#">Mark Assignment</a>
+        <a class="nav-item" href="#">Feedback / Report</a>
+        <a class="nav-item active" href="#">Past Assignment</a>
+      </nav>
+    </aside>
+
+    <!-- main -->
+    <main class="main">
+      <section class="panel">
+        <h1>Past Assignment</h1>
+        <div class="muted" style="margin-bottom:10px;">Browse by semester</div>
+
+        <!-- 2024 · Semester 2 -->
+        <div class="group">
+          <div class="group-title">2024 · Semester 2</div>
+          <div class="card">
+            <div class="row">
+              <div class="name">Assignment 1 (Round 1)</div>
+              <div class="actions">
+                <button class="btn">View report</button>
+                <button class="btn">Open rubric</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="name">Assignment 1 (Round 2)</div>
+              <div class="actions">
+                <button class="btn">View report</button>
+                <button class="btn">Open rubric</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="name">Assignment 2 (Round 1)</div>
+              <div class="actions">
+                <button class="btn">View report</button>
+                <button class="btn">Open rubric</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2024 · Semester 1 -->
+        <div class="group">
+          <div class="group-title">2024 · Semester 1</div>
+          <div class="card">
+            <div class="row">
+              <div class="name">Assignment 1 (Round 1)</div>
+              <div class="actions">
+                <button class="btn">View report</button>
+                <button class="btn">Open rubric</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="name">Assignment 2 (Round 1)</div>
+              <div class="actions">
+                <button class="btn">View report</button>
+                <button class="btn">Open rubric</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2023 · Semester 2 -->
+        <div class="group">
+          <div class="group-title">2023 · Semester 2</div>
+          <div class="card">
+            <div class="row">
+              <div class="name">Assignment 1 (Round 2)</div>
+              <div class="actions">
+                <button class="btn">View report</button>
+                <button class="btn">Open rubric</button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="name">Assignment 2 (Round 1)</div>
+              <div class="actions">
+                <button class="btn">View report</button>
+                <button class="btn">Open rubric</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+</body>
+</html>

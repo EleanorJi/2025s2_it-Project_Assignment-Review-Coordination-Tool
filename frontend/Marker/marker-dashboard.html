@@ -1,5 +1,25 @@
 <!doctype html>
 <html lang="en">
+  <script>
+(function guard(){
+  const u = localStorage.getItem('user');
+  if (!u) {
+    sessionStorage.setItem('returnTo', location.pathname + location.search);
+    location.replace('/login.html');
+    return;
+  }
+
+  try {
+    const user = JSON.parse(u);
+    if (location.pathname.includes('coordinator') && user.role !== 'coordinator') {
+      return location.replace('/marker.html');
+    }
+    if (location.pathname.includes('marker') && user.role !== 'marker') {
+      return location.replace('/coordinator-dashboard.html');
+    }
+  } catch {}
+})();
+</script>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
