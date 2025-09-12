@@ -7,5 +7,9 @@ const { requireCoordinator } = require('../middleware/roleAuth');
 router.post('/', authenticate, requireCoordinator, invitationController.inviteMarker);
 router.get('/verify', invitationController.verifyInvite);
 router.post('/complete-signup', invitationController.completeSignup);
+router.post('/batch', authenticate, requireCoordinator, invitationController.inviteMarkersBatch);
+router.get('/', authenticate, requireCoordinator, invitationController.listInvitations);
+router.post('/resend', authenticate, requireCoordinator, invitationController.resendInvite);
+router.post('/revoke', authenticate, requireCoordinator, invitationController.revokeInvite);
 
 module.exports = router;
