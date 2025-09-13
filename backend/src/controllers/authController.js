@@ -72,6 +72,14 @@ exports.login = async (req, res) => {
       last_login: user.last_login
     };
 
+    // 登录成功后设置 Cookie
+    res.cookie('userId', user.id, {
+    httpOnly: true,    // 防止 XSS
+    secure: process.env.NODE_ENV === 'production', // TODO：后期要把NODE_ENV改成 'production' 变成HTTPS
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7天
+    sameSite: 'strict'
+    });
+
     res.json({
       success: true,
       message: 'Login successful!',
@@ -85,6 +93,11 @@ exports.login = async (req, res) => {
       message: 'Internal server error.'
     });
   }
+};
+
+exports.logout = (req, res) => {
+  res.clearCookie('userId');
+  res.json({ success: true, message: 'Logged out successfully' });
 };
 
 exports.getCurrentUser = async (req, res) => {

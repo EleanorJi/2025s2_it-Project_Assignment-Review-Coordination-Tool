@@ -180,7 +180,7 @@ exports.completeSignup = async (req, res) => {
       `INSERT INTO app_user (email, name, password_hash, role, is_active)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING user_id as id, email, name, role`,
-      [invitation.email, name, password, 'MARKER', true] // ⚠️ 密码应该加密
+      [invitation.email, name, password, 'MARKER', true] // TODO: 密码应该加密
     );
 
     await db.query(
