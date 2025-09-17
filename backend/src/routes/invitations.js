@@ -11,5 +11,6 @@ router.post('/batch', authenticate, requireCoordinator, invitationController.inv
 router.get('/', authenticate, requireCoordinator, invitationController.listInvitations);
 router.post('/resend', authenticate, requireCoordinator, invitationController.resendInvite);
 router.post('/revoke', authenticate, requireCoordinator, invitationController.revokeInvite);
+router.post('/close', authenticate, requireCoordinator, invitationController.closeUser);
 
 module.exports = router;

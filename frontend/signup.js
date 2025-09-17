@@ -109,7 +109,7 @@
       statusEl.textContent = 'Account created. Redirecting…';
 
       // 登录页地址 & 自动跳秒数：可按需调整
-      const next = '/login.html';                       // 登录页（如果不是根路径改成 '/index.html'）
+      const next = '/login';                       // 登录页（如果不是根路径改成 '/index.html'）
       const s = 0;                            // 0=不自动跳；3=3秒后自动跳
 
       const emailParam = encodeURIComponent(emailEl?.value || '');

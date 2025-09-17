@@ -123,7 +123,9 @@
       // 后端联想
       let remote = [];
       try{
-        const res = await fetch(`/api/markers/suggest?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/markers/suggest?q=${encodeURIComponent(q)}`, {
+          credentials: 'include' // 允许携带 Cookie
+        });
         if (res.ok){
           const data = await res.json();  // 期望 {emails: ["a@...","b@..."]}
           remote = (data.emails || []).map(String);
@@ -161,6 +163,7 @@
     });
   
     btnSend.addEventListener('click', async ()=>{
+      console.log('🎯 Send按钮被点击了！');
       if (emails.length===0){ status('Please add at least one email.', 'err'); return; }
       // 记录历史
       saveHistory();
@@ -171,7 +174,8 @@
         let res = await fetch('/api/invitations/batch', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ emails })
+          body: JSON.stringify({ emails }),
+          credentials: 'include'
         });
   
         // 如果没有批量接口，则逐个发送
@@ -180,7 +184,8 @@
             const r = await fetch('/api/invitations', {
               method:'POST',
               headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ email })
+              body: JSON.stringify({ email }),
+              credentials: 'include'
             });
             if (!r.ok) throw new Error('Invite failed for ' + email);
           }
@@ -202,7 +207,9 @@
     async function refreshTable(){
       try{
         // 期望返回：[{email,status,sent_at},{...}]
-        const res = await fetch('/api/invitations');
+        const res = await fetch('/api/invitations', {
+          credentials: 'include'
+        });
         let data;
         if (res.ok){ data = await res.json(); }
         else{
@@ -263,7 +270,8 @@
       try{
         const r = await fetch('/api/invitations/resend', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email }),
+          credentials: 'include'
         });
         if (!r.ok) throw new Error('Failed');
         status('Resent to ' + email, 'ok');
@@ -275,7 +283,8 @@
       try{
         const r = await fetch('/api/invitations/revoke', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email }),
+          credentials: 'include'
         });
         if (!r.ok) throw new Error('Failed');
         status('Revoked ' + email, 'ok');

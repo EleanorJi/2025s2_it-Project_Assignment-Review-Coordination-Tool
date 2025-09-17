@@ -1,11 +1,17 @@
 const { Pool } = require('pg');
 
+//console.log('database.js 加载时 DB_USER:', process.env.DB_USER ? '存在' : '不存在');
+//console.log('database.js 加载时 DB_HOST:', process.env.DB_HOST ? '存在' : '不存在');
+//console.log('database.js 加载时 DB_NAME:', process.env.DB_NAME ? '存在' : '不存在');
+//console.log('database.js 加载时 DB_PASSWORD:', process.env.DB_PASSWORD ? '存在' : '不存在');
+//console.log('database.js 加载时 DB_PORT:', process.env.DB_PORT ? '存在' : '不存在');
+
 const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'assignment_mod',
-  password: process.env.DB_PASSWORD || 'assignment_db_2024',
-  port: process.env.DB_PORT || 5432,
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
 });
 
 pool.on('connect', () => {
