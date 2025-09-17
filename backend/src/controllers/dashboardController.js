@@ -55,8 +55,18 @@ exports.getCoordinatorMarkPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/mark.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/mark-assignment.html'));
 }
+
+exports.getCoordinatorAnalysisPage = (req, res) => {
+    // 检查角色权限
+    if (req.user.role !== 'COORDINATOR') {
+        return res.redirect('/login?error=access_denied');
+    }
+    // 发送对应的HTML文件
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/analysis.html'));
+}
+
 exports.getCoordinatorPastPage = (req, res) => {
     // 检查角色权限
     if (req.user.role !== 'COORDINATOR') {

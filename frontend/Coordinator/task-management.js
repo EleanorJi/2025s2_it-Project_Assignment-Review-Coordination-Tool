@@ -32,8 +32,8 @@
         act.className = 'tm-actions';
   
         const btnRubric = btn('View Rubric', () => previewFile(item.rubricUrl, item.rubricName));
-        const btnMark   = btn('Mark Assignment', () => (location.href = 'mark.html'));
-        const btnAna    = btn('View Analysis', () => (location.href = 'analysis.html'));
+        const btnMark   = btn('Mark Assignment', () => (location.href = '/dashboard/coordinator/mark'));
+        const btnAna    = btn('View Analysis', () => (location.href = '/dashboard/coordinator/analysis'));
   
         act.append(btnRubric, btnMark, btnAna);
         row.append(left, act);
