@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deakin Moderation – Mark Assignment</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/Coordinator/mark-assignment.css">
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="/deakin-logo.png" alt="Deakin University logo" />
+      <div>
+        <div class="brand-title">Deakin Moderation</div>
+        <div class="brand-sub">Coordinator Portal</div>
+      </div>
+    </div>
+    <div class="account">Carrie <span class="caret">▾</span></div>
+  </header>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <a class="nav-item" href="/dashboard/coordinator">Overview</a>
+        <a class="nav-item" href="/dashboard/coordinator/invite">Invite Markers</a>
+        <a class="nav-item" href="/dashboard/coordinator/upload">Upload Assignment / Rubric</a>
+        <a class="nav-item active" href="/dashboard/coordinator/mark" aria-current="page">Mark Assignment</a>
+        <a class="nav-item" href="/dashboard/coordinator/feedback">Feedback / Report</a>
+        <a class="nav-item" href="/dashboard/coordinator/past">Past Assignment</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <section class="panel">
+        <h1>Mark Assignment</h1>
+
+        <div class="head">
+          <div>
+            <div class="label">Assignment</div>
+            <input id="assignmentName" class="input wide" placeholder="e.g. Assignment 1" />
+          </div>
+          <div>
+            <div class="label">Student sample</div>
+            <input id="studentSample" class="input wide" placeholder="Optional" />
+          </div>
+
+          <div class="right">
+            <input id="rubricFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+            <button id="btnImport" class="btn">Import from rubric</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="rubricTable" class="rubric">
+            <thead>
+              <tr>
+                <th style="width:56px">#</th>
+                <th>Criterion</th>
+                <th style="width:100px">Max</th>
+                <th style="width:50px">Weight (%)</th>
+                <th style="width:100px">Score (Carrie)</th>
+                <th>Commentary</th>
+              </tr>
+            </thead>
+            <tbody id="rubricBody">
+              <!-- 动态生成 -->
+            </tbody>
+            <tfoot>
+              <tr>
+                <td></td>
+                <td class="muted">Total</td>
+                <td id="totalMax">0</td>
+                <td id="totalWeight">0%</td>
+                <td id="totalScore">0</td>
+                <td id="totalPct" class="muted">0%</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="actions">
+          <div class="msg" id="msg"></div>
+          <div class="btns">
+            <button id="btnSave" class="btn">Save</button>
+            <button id="btnPublish" class="btn primary">Publish to markers</button>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- 前端解析 Excel/CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+  <script src="/Coordinator/mark-assignment.js" defer></script>
+</body>
+</html>

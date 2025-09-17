@@ -9,28 +9,25 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <img alt="Deakin University logo"
-        <img src="/deakin-logo.png" alt="Deakin University logo" />
-        <div class="brand-title">Deakin Moderation</div>
-        <div class="brand-sub">Psychology · Calibration Portal</div>
-      </div>
+      <!-- 如果 logo 和本页同目录，改成 ./deakin-logo.png -->
+      <img src="/deakin-logo.png" alt="Deakin University logo" />
+      <div class="brand-title">Deakin Moderation</div>
+      <div class="brand-sub">Psychology · Calibration Portal</div>
     </div>
     <div class="account">
-      <span>Carrie</span>
-      <span class="caret">▾</span>
+      <span>Carrie</span><span class="caret">▾</span>
     </div>
   </header>
 
   <div class="app">
     <!-- Sidebar -->
     <aside class="sidebar">
-       <nav class="nav">
+      <nav class="nav">
         <a class="nav-item active" href="/dashboard/coordinator">Overview</a>
-        <a class="nav-item" aria-current="page" href="/dashboard/coordinator/invite">Invite Markers</a>
-        <a class="nav-item" href="/dashboard/coordinator/upload">Upload Assignment / Rubric</a>
-        <a class="nav-item" href="mark.html">Mark Assignment</a>
-        <a class="nav-item" href="feedback.html">Feedback / Report</a>
-        <a class="nav-item" href="past.html">Past Assignment</a>
+        <a class="nav-item" href="/dashboard/coordinator/invite">Markers Management</a>
+        <a class="nav-item" href="/dashboard/coordinator/upload">Upload Rubric/Assignment</a>
+        <a class="nav-item" href="/dashboard/coordinator/taskManagement">Task Management</a>
+        <a class="nav-item" href="/dashboard/coordinator/past">Past Assignment</a>
       </nav>
     </aside>
 
@@ -112,7 +109,7 @@
   </div>
 
   <script src="/Coordinator/coordinator.js"></script>
-  <!-- 在 body 的最后临时添加 -->
+  <!-- 在 body 的最后临时添加 TODO: 要删logout按钮-->
   <div style="position: fixed; bottom: 10px; right: 10px; z-index: 1000;">
     <button onclick="logout()" style="background: red; color: white; padding: 5px 10px; border: none; border-radius: 3px;">
       Logout (Test)

@@ -8,7 +8,10 @@ const dashboardController = require('../controllers/dashboardController');
 router.get('/coordinator', authenticate, dashboardController.getCoordinatorDashboard);
 router.get('/coordinator/invite', authenticate, dashboardController.getCoordinatorInvitePage);
 router.get('/coordinator/upload', authenticate, dashboardController.getCoordinatorUploadPage);
-
+router.get('/coordinator/feedback', authenticate, dashboardController.getCoordinatorFeedbackPage);
+router.get('/coordinator/mark', authenticate, dashboardController.getCoordinatorMarkPage);
+router.get('/coordinator/taskManagement', authenticate, dashboardController.getCoordinatorTaskManagementPage);
+router.get('/coordinator/past', authenticate, dashboardController.getCoordinatorPastPage);
 // 保护 Marker Dashboard
 router.get('/marker', authenticate, dashboardController.getMarkerDashboard);
 
