@@ -309,22 +309,28 @@ exports.listInvitations = async (req, res) => {
   const createdBy = req.user.id;
   try {
     const result = await db.query(
-      `SELECT
-         COALESCE('user_' || u.user_id, 'invitation_' || i.id) as id,
-         COALESCE(u.email, i.email) as email,
+      `WITH latest_invitations AS (
+         SELECT DISTINCT ON (email) 
+           id, email, expires_at, created_at,
+           ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at DESC) as rn
+         FROM invitations 
+         WHERE created_by = $1
+       )
+       SELECT
+         COALESCE('user_' || u.user_id, 'invitation_' || li.id) as id,
+         COALESCE(u.email, li.email) as email,
          CASE
            WHEN u.user_id IS NOT NULL THEN
              CASE WHEN u.is_active = true THEN 'active' ELSE 'closed' END
-           WHEN i.expires_at < NOW() AND NOT EXISTS (
-             SELECT 1 FROM app_user u2 WHERE u2.email = i.email AND u2.role = 'MARKER'
+           WHEN li.expires_at < NOW() AND NOT EXISTS (
+             SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
            ) THEN 'expired'
            ELSE 'pending'
          END as status,
-         to_char(COALESCE(u.last_login, i.created_at), 'Mon DD, YYYY') as sent_at
-       FROM invitations i
-       FULL OUTER JOIN app_user u ON i.email = u.email AND u.role = 'MARKER' AND i.created_by = $1
-       WHERE (i.created_by = $1 OR u.user_id IS NOT NULL)
-         AND (u.role = 'MARKER' OR u.role IS NULL)
+         to_char(COALESCE(u.last_login, li.created_at), 'Mon DD, YYYY') as sent_at
+       FROM latest_invitations li
+       FULL OUTER JOIN app_user u ON li.email = u.email AND u.role = 'MARKER'
+       WHERE li.rn = 1 OR u.user_id IS NOT NULL
        ORDER BY sent_at DESC`,
       [createdBy]
     );
