@@ -7,8 +7,8 @@ const dashboardRoutes = require('./dashboard');
 router.use('/dashboard', dashboardRoutes);
 
 router.get('/login', (req, res) => {
-  // 返回 HTML 页面给浏览器渲染
-  res.sendFile(path.join(__dirname, '../../../frontend/login.html'));
+  // 返回HTML页面给浏览器渲染（保持路由隐藏）
+  res.sendFile(path.join(__dirname, '../../frontend/login.html'));
 });
 
 module.exports = router;

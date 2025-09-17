@@ -30,8 +30,8 @@ services:
   # Backend Service
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: assignment_backend
     env_file:
       - docker.env

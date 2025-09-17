@@ -82,13 +82,13 @@
         setTimeout(() => {
           let target;
           if (data.user?.role === 'COORDINATOR') {
-            // 跳转到后端保护的路由，不是直接跳转到静态文件！
             target = '/dashboard/coordinator';
           } else if (data.user?.role === 'MARKER') {
             target = '/dashboard/marker';
           } else {
             target = '/login';
           }
+          console.log('Ready to redirect to:', target);
           window.location.href = target;
         }, 1000);
 
@@ -118,10 +118,10 @@
       try {
         const userData = JSON.parse(user);
         let target;
-        if (data.user?.role === 'COORDINATOR') {
+        if (userData.role === 'COORDINATOR') {
         // 跳转到后端保护的路由，不是直接跳转到静态文件！
         target = '/dashboard/coordinator';
-        } else if (data.user?.role === 'MARKER') {
+        } else if (userData.role === 'MARKER') {
         target = '/dashboard/marker';
         }
 
