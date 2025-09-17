@@ -15,6 +15,7 @@ app.use(cookieParser());
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, '../../frontend'))); // 前端静态文件
+app.use('/static', express.static(path.join(__dirname, '../../uploads')));
 
 // 路由
 app.use('/api', apiRoutes);
