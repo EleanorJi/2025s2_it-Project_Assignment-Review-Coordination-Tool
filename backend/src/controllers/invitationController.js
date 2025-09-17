@@ -306,21 +306,32 @@ exports.inviteMarkersBatch = async (req, res) => {
 
 // 列表
 exports.listInvitations = async (req, res) => {
-  const createdBy = req.user.id; // 从 authenticate 拿到的 user.id
+  const createdBy = req.user.id;
   try {
     const result = await db.query(
-      `SELECT id, email,
-              CASE
-                WHEN used_at IS NOT NULL THEN 'accepted'
-                WHEN expires_at < NOW() THEN 'expired'
-                ELSE 'pending'
-              END as status,
-              to_char(created_at, 'Mon DD, YYYY') as sent_at
-       FROM invitations
-       WHERE created_by = $1
-       ORDER BY created_at DESC`,
+      `SELECT
+         COALESCE('user_' || u.user_id, 'invitation_' || i.id) as id,
+         COALESCE(u.email, i.email) as email,
+         CASE
+           WHEN u.user_id IS NOT NULL THEN
+             CASE WHEN u.is_active = true THEN 'active' ELSE 'closed' END
+           WHEN i.expires_at < NOW() AND NOT EXISTS (
+             SELECT 1 FROM app_user u2 WHERE u2.email = i.email AND u2.role = 'MARKER'
+           ) THEN 'expired'
+           ELSE 'pending'
+         END as status,
+         to_char(COALESCE(u.last_login, i.created_at), 'Mon DD, YYYY') as sent_at
+       FROM invitations i
+       FULL OUTER JOIN app_user u ON i.email = u.email AND u.role = 'MARKER' AND i.created_by = $1
+       WHERE (i.created_by = $1 OR u.user_id IS NOT NULL)
+         AND (u.role = 'MARKER' OR u.role IS NULL)
+       ORDER BY sent_at DESC`,
       [createdBy]
     );
+    console.log('返回给前端的数据：');
+    result.rows.forEach((row, index) => {
+      console.log(`记录 ${index + 1}: email=${row.email}, status=${row.status}, sent_at=${row.sent_at}`);
+    });
 
     res.json({ items: result.rows });
   } catch (error) {
@@ -412,6 +423,47 @@ exports.revokeInvite = async (req, res) => {
     res.json({ success: true, message: 'Revoked successfully' });
   } catch (error) {
     console.error('Revoke error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// 关闭用户
+// 关闭用户权限
+exports.closeUser = async (req, res) => {
+  const { userId } = req.params;
+  const currentUserId = req.user.id; // 从 authenticate 拿到的 user.id
+
+  try {
+    // 检查要操作的用户是否存在且是由当前用户邀请的
+    const userCheck = await db.query(
+      `SELECT id FROM app_user
+       WHERE id = $1 AND invited_by = $2 AND role = 'MARKER'`,
+      [userId, currentUserId]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在或没有操作权限'
+      });
+    }
+
+    // 更新用户状态为关闭
+    const result = await db.query(
+      `UPDATE app_user
+       SET is_active = false, updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, email, is_active as status`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      message: '用户权限已关闭',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Close user error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
