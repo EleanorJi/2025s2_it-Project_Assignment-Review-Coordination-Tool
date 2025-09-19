@@ -79,7 +79,7 @@ exports.getCoordinatorAnalysisPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/analysis.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/feedback.html'));
 }
 
 exports.getCoordinatorPastPage = (req, res) => {

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Feedback — Deakin Moderation</title>
+
+  <!-- 字体（沿用你原文件里的 Inter；如果想换 Lato，把链接改成 Lato 即可） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/Coordinator/feedback.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+          <img src="/deakin-logo.png" alt="Deakin University logo" />
+          <div>
+            <div class="brand-title">Deakin Moderation</div>
+            <div class="brand-sub">Coordinator Portal</div>
+          </div>
+        </div>
+      <div class="account">
+        <span id="username"></span><span class="caret">▾</span>
+      </div>
+      </header>
+  <div class="container">
+    <section class="panel">
+      <h1>Analysis & Give Feedback</h1>
+
+      <!-- Marker selector -->
+      <div class="controls">
+        <label for="markerSelect" class="label-strong">Select Marker:</label>
+        <select id="markerSelect" class="select">
+          <option value="all">All Markers</option>
+          <option value="A">Marker A</option>
+          <option value="B">Marker B</option>
+          <option value="C">Marker C</option>
+          <option value="D">Marker D</option>
+          <option value="E">Marker E</option>
+          <option value="F">Marker F</option>
+          <option value="G">Marker G</option>
+          <option value="H">Marker H</option>
+          <option value="I">Marker I</option>
+          <option value="J">Marker J</option>
+        </select>
+
+        <button id="exportCsv" class="btn">Export CSV</button>
+        <button id="backBtn" class="btn ml-auto">Back</button>
+      </div>
+
+      <!-- Alignment table -->
+      <div class="table-wrap mb-12">
+        <table id="alignmentTable">
+          <thead><tr id="alignHeader"></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- All markers: Differences + Send feedback -->
+      <div id="allDiffSection">
+        <h2 class="subhead">Differences (All Markers)</h2>
+        <div class="table-wrap mb-12">
+          <table id="allDifferenceTable">
+            <thead><tr id="allDiffHeader"></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="allFeedback" class="feedback">
+          <h2>Send Feedback</h2>
+          
+          <!-- All Markers Summary -->
+          <div id="allMarkersSummary" class="marker-summary">
+            <div class="summary-card">
+              <h3>All Markers Performance Overview</h3>
+              <p id="allMarkersSummaryText" class="summary-text"></p>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="actions justify-start gap-8">
+              <label for="allFbSelect" class="label-strong muted">Select Marker:</label>
+              <select id="allFbSelect" class="select">
+                <option value="A">Marker A</option>
+                <option value="B">Marker B</option>
+                <option value="C">Marker C</option>
+                <option value="D">Marker D</option>
+                <option value="E">Marker E</option>
+                <option value="F">Marker F</option>
+                <option value="G">Marker G</option>
+                <option value="H">Marker H</option>
+                <option value="I">Marker I</option>
+                <option value="J">Marker J</option>
+              </select>
+            </div>
+            <textarea id="allFbTextarea" class="textarea" placeholder="Write feedback to the selected marker..."></textarea>
+            <div class="actions justify-end">
+              <button id="allFbSend" class="btn">Send Feedback</button>
+              <span id="allFbHint" class="small"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Single marker: Differences -->
+      <div id="diffSection" class="hidden">
+        <h2 class="subhead">Differences (Selected Marker)</h2>
+        <div class="table-wrap">
+          <table id="differenceTable">
+            <thead><tr id="diffHeader"></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Single marker: Feedback -->
+      <div id="feedback" class="feedback hidden">
+        <h2>Feedback</h2>
+        
+        <!-- Marker Performance Summary -->
+        <div id="markerSummary" class="marker-summary hidden">
+          <div class="summary-card">
+            <h3>Marker Performance Summary</h3>
+            <p id="summaryText" class="summary-text"></p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div id="fbTitle" class="fb-title">Marker</div>
+          <textarea id="fbTextarea" class="textarea" placeholder="Write overall feedback for this marker..."></textarea>
+          <div class="actions">
+            <button id="fbSave" class="btn">Save draft</button>
+            <button id="fbSend" class="btn primary">Send Feedback</button>
+            <button id="fbClear" class="btn">Clear</button>
+            <span id="fbHint" class="small"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/Coordinator/feedback.js" defer></script>
+</body>
+</html>
