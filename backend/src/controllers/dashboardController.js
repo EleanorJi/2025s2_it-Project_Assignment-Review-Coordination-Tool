@@ -55,6 +55,14 @@ exports.getCoordinatorTaskManagementPage = (req, res) => {
     // 发送对应的HTML文件
     res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/task-management.html'));
 }
+exports.getCoordinatorViewRubricPage = (req, res) => {
+    // 检查角色权限
+    if (req.user.role !== 'COORDINATOR') {
+        return res.redirect('/login?error=access_denied');
+    }
+    // 发送对应的HTML文件
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/rubric.html'));
+}
 
 exports.getCoordinatorMarkPage = (req, res) => {
     // 检查角色权限

@@ -13,6 +13,7 @@ router.get('/coordinator/feedback', authenticate, dashboardController.getCoordin
 router.get('/coordinator/mark', authenticate, dashboardController.getCoordinatorMarkPage);
 router.get('/coordinator/analysis', authenticate, dashboardController.getCoordinatorAnalysisPage);
 router.get('/coordinator/taskManagement', authenticate, dashboardController.getCoordinatorTaskManagementPage);
+router.get('/coordinator/rubric', authenticate, dashboardController.getCoordinatorViewRubricPage);
 router.get('/coordinator/past', authenticate, dashboardController.getCoordinatorPastPage);
 // 保护 Marker Dashboard
 router.get('/marker', authenticate, dashboardController.getMarkerDashboard);

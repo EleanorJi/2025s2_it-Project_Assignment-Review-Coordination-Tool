@@ -112,7 +112,7 @@
           let buttons = [btnUpload];
 
           if (item.status !== 'draft' && item.file_counts?.rubric > 0) {
-            const btnViewRubric = btn('View Rubric', () => viewRubricDetails(item.rubric_id));
+            const btnViewRubric = btn('View Rubric', () => (location.href = `/dashboard/coordinator/rubric?project=${item.project_id}`));
             buttons.push(btnViewRubric);
           }
 
@@ -125,7 +125,7 @@
         else {
           // 只有有 rubric 文件的项目才显示 View Rubric
           if (item.file_counts?.rubric > 0) {
-            const btnViewRubric = btn('View Rubric', () => viewRubricDetails(item.rubric_id));
+            const btnViewRubric = btn('View Rubric', () => (location.href = `/dashboard/coordinator/rubric?project=${item.project_id}`));
             act.append(btnViewRubric);
           }
 

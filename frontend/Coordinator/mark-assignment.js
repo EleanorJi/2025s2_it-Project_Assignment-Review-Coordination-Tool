@@ -24,6 +24,21 @@
 
   // Initialize the interface
   async function init() {
+    // ✅ 显示用户名
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          const usernameEl = document.getElementById("username");
+          if (usernameEl) {
+            usernameEl.textContent = user.name;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load username:", err);
+    }
     setupDocumentNavigation();
     setupGradeSelection();
     setupScoreInputs();

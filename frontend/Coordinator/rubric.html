@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Rubric</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Lato -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/Coordinator/rubric.css" />
+  <script src="/Coordinator/rubric.js" defer></script>
+</head>
+<body>
+ <!-- Top bar -->
+ <header class="topbar">
+  <div class="brand">
+    <img src="/deakin-logo.png" alt="Deakin logo">
+    <div>
+      <div class="brand-title">Deakin Moderation</div>
+      <div class="brand-sub">Coordinator Portal</div>
+    </div>
+  </div>
+   <div class="account">
+     <span id="username"></span><span class="caret">▾</span>
+   </div>
+</header>
+
+
+  <div class="app">
+    <main class="main-content">
+      <!-- Title and Back button row -->
+      <div class="title-row">
+        <h1>Rubric</h1>
+        <button class="back-btn" id="backBtn">Back</button>
+      </div>
+
+      <!-- Assignment details -->
+      <div class="assignment-details">
+        <div class="assignment-info">
+          <div id="rubric-meta" class="assignment-meta">Loading…</div>
+        </div>
+      </div>
+
+    <section class="panel" aria-labelledby="rubric-title">
+      <div class="table-scroll">
+        <table class="rubric-table" id="rubric-table" aria-describedby="rubric-meta">
+          <thead>
+            <tr>
+              <th scope="col">Criteria:</th>
+              <th scope="col">
+                <div class="grade-header">High Distinction</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Distinction</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Credit</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Pass</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Fail</div>
+              </th>
+              <th scope="col">Criteria Score</th>
+            </tr>
+          </thead>
+          <tbody id="rubric-body">
+            <!-- JS renders rows here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+    </main>
+  </div>
+</body>
+</html>
