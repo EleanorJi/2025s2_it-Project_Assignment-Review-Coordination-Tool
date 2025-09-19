@@ -26,6 +26,13 @@ exports.getCoordinatorUploadPage = (req, res) => {
     return res.redirect('/login?error=access_denied');
   }
 
+  // 检查是否有 project_id 参数
+  const projectId = req.query.project;
+  if (!projectId) {
+    // 如果没有 project_id，重定向到任务管理页面
+    return res.redirect('/dashboard/coordinator/taskManagement?error=no_project_selected');
+  }
+
   // 发送对应的HTML文件
   res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/upload-assignment.html'));
 };

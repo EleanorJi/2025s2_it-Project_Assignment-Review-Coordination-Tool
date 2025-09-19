@@ -28,7 +28,7 @@ const tempStorage = multer.diskStorage({
 
 const draftUpload = multer({
   storage: tempStorage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 200 * 1024 * 1024 },
 });
 
 // 1) 上传草稿文件：POST /api/uploads/drafts (保持与原API一致)

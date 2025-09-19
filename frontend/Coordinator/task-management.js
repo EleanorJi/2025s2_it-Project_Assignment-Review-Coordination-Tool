@@ -3,51 +3,135 @@
     const $  = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
   
-    // ---------- seed data (与截图一致) ----------
+    // ---------- 状态管理 ----------
     const state = {
-      upcoming: [
-        { title: '2025 · Semester 1 · Assignment 1' },
-        { title: '2025 · Semester 1 · Assignment 2' },
-      ],
-      completed: [
-        { title: '2024 · Semester 1 · Assignment 1' }
-      ]
+      upcoming: [],
+      completed: []
     };
-  
+
+    // API endpoints
+    const API = {
+      listProjects: '/api/uploads/projects',
+      createProject: '/api/uploads/project',
+    };
+
+    let currentProjectId = null;
+
+    // 从后端获取项目数据
+    async function fetchProjects() {
+      try {
+        const response = await fetch(API.listProjects);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // 清空当前状态
+        state.upcoming = [];
+        state.completed = [];
+
+        // 根据状态分类项目
+        data.projects.forEach(project => {
+          // 将published状态的项目归类为upcoming
+          if (project.status === 'published'|| project.status === 'draft') {
+            state.upcoming.push({
+              title: project.name,
+              description: project.description,
+              project_id: project.project_id,
+              created_at: project.created_at,
+              file_counts: project.file_counts,
+              rubric_id: project.rubric_id
+            });
+          }
+          // 将completed状态的项目归类为completed
+          else if (project.status === 'completed') {
+            state.completed.push({
+              title: project.name,
+              description: project.description,
+              project_id: project.project_id,
+              created_at: project.created_at,
+              file_counts: project.file_counts,
+              rubric_id: project.rubric_id
+            });
+          }
+        });
+
+        // 重新渲染界面
+        render();
+      } catch (error) {
+        console.error('获取项目数据失败:', error);
+        toast('Failed to load projects. Please try again later.');
+      }
+    }
+
     const upcomingList  = $('#upcomingList');
     const completedList = $('#completedList');
-  
+
     function render() {
-      const makeRow = (item) => {
+      const makeRow = (item, isUpcoming) => {
         const box = document.createElement('div');
         box.className = 'tm-box';
         const row = document.createElement('div');
         row.className = 'tm-item';
-  
+
         const left = document.createElement('div');
         left.className = 'tm-title';
         left.textContent = item.title;
-  
+
+        // 添加描述信息（如果有）
+        if (item.description) {
+          const desc = document.createElement('div');
+          desc.className = 'tm-description';
+          desc.textContent = item.description;
+          left.appendChild(desc);
+        }
+
         const act = document.createElement('div');
         act.className = 'tm-actions';
-  
-        const btnRubric = btn('View Rubric', () => previewFile(item.rubricUrl, item.rubricName));
-        const btnMark   = btn('Mark Assignment', () => (location.href = '/dashboard/coordinator/mark'));
-        const btnAna    = btn('View Analysis', () => (location.href = '/dashboard/coordinator/analysis'));
-  
-        act.append(btnRubric, btnMark, btnAna);
+
+        // Upcoming 项目：显示 Upload Rubric/Assignment + View Rubric + Mark Assignment
+        if (isUpcoming) {
+          const btnUpload = btn('Upload Rubric/Assignment', () => {
+            location.href = `/dashboard/coordinator/upload?project=${item.project_id}`;
+          });
+
+          // 只有非 draft 状态的项目才显示 View Rubric
+          let buttons = [btnUpload];
+
+          if (item.status !== 'draft' && item.file_counts?.rubric > 0) {
+            const btnViewRubric = btn('View Rubric', () => viewRubricDetails(item.rubric_id));
+            buttons.push(btnViewRubric);
+          }
+
+          const btnMark = btn('Mark Assignment', () => (location.href = `/dashboard/coordinator/mark?project=${item.project_id}`));
+          buttons.push(btnMark);
+
+          act.append(...buttons);
+        }
+        // Completed 项目：显示 View Rubric + View Analysis
+        else {
+          // 只有有 rubric 文件的项目才显示 View Rubric
+          if (item.file_counts?.rubric > 0) {
+            const btnViewRubric = btn('View Rubric', () => viewRubricDetails(item.rubric_id));
+            act.append(btnViewRubric);
+          }
+
+          const btnAna = btn('View Analysis', () => (location.href = `/dashboard/coordinator/analysis?project=${item.project_id}`));
+          act.append(btnAna);
+        }
+
         row.append(left, act);
         box.append(row);
         return box;
       };
-  
+
       upcomingList.innerHTML = '';
-      state.upcoming.forEach(it => upcomingList.append(makeRow(it)));
-  
+      state.upcoming.forEach(it => upcomingList.append(makeRow(it, true))); // true 表示 upcoming
+
       completedList.innerHTML = '';
-      state.completed.forEach(it => completedList.append(makeRow(it)));
+      state.completed.forEach(it => completedList.append(makeRow(it, false))); // false 表示 completed
     }
-  
+
     function btn(text, onClick){
       const b = document.createElement('button');
       b.className = 'btn';
@@ -55,116 +139,138 @@
       b.addEventListener('click', onClick);
       return b;
     }
-  
+
     function previewFile(url, name){
       if(!url){ alert('No rubric uploaded for this assignment.'); return; }
       const a = document.createElement('a');
       a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.download = name || '';
       a.click();
     }
-  
-    render();
-  
-    // ---------- modal ----------
-    const modal   = $('#modal');
-    const btnAdd  = $('#btnAdd');
-    const btnClose= $('#btnClose');
-    const btnSubmit = $('#btnSubmit');
-  
-    const rubricDrop = $('#rubricDrop');
-    const rubricFile = $('#rubricFile');
-    const rubricText = $('#rubricText');
-  
-    const asgnDrop   = $('#asgnDrop');
-    const asgnFile   = $('#asgnFile');
-    const asgnText   = $('#asgnText');
-  
-    const asgnName   = $('#asgnName');
-    const asgnDue    = $('#asgnDue');
-    const errLine    = $('#errLine');
-  
-    // Date input：转为 date 并限制过去
-    (function ensureDate(){
-      const todayISO = () => {
-        const d = new Date(); const off = d.getTimezoneOffset();
-        return new Date(d.getTime() - off*60*1000).toISOString().slice(0,10);
-      };
-      asgnDue.type = 'date'; asgnDue.min = todayISO();
-    })();
-  
-    function openModal(){ modal.classList.add('show'); errLine.style.display='none'; }
-    function closeModal(){ modal.classList.remove('show'); }
-  
-    btnAdd.addEventListener('click', openModal);
-    btnClose.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-  
-    // ---------- dropzones ----------
-    function wireDrop(dropEl, inputEl, labelEl){
-      dropEl.addEventListener('click', ()=> inputEl.click());
-      inputEl.addEventListener('change', ()=>{
-        const f = inputEl.files?.[0];
-        if (f){ labelEl.textContent = f.name; dropEl.classList.remove('drag'); dropEl.querySelector('.tm-help').textContent = 'Selected'; }
-        else { resetLabel(); }
-      });
-      const resetLabel = ()=>{
-        const isPdf = (inputEl.accept||'').includes('.pdf');
-        labelEl.textContent = isPdf ? 'Upload assignment...' : 'Upload rubric...';
-        dropEl.querySelector('.tm-help').textContent = isPdf ? 'PDF only' : '.docx / .csv / .xlsx';
-      };
-      ['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e=>{ e.preventDefault(); dropEl.classList.add('drag'); }));
-      ['dragleave','dragend','drop'].forEach(ev => dropEl.addEventListener(ev, e=>{ e.preventDefault(); dropEl.classList.remove('drag'); }));
-      dropEl.addEventListener('drop', (e)=>{
-        const files = e.dataTransfer.files;
-        if(!files || !files.length) return;
-        // 简单过滤：按 accept 后缀匹配
-        const accept = (dropEl.dataset.accept||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
-        const picked = Array.from(files).find(f=>{
-          if(!accept.length) return true;
-          const name = f.name.toLowerCase(); return accept.some(a=> name.endsWith(a.replace('.','')) || name.endsWith(a));
-        }) || files[0];
-        const dt = new DataTransfer(); dt.items.add(picked); inputEl.files = dt.files;
-        labelEl.textContent = picked.name; dropEl.querySelector('.tm-help').textContent = 'Selected';
-      });
+
+    // ---------- 项目创建弹窗 ----------
+    let projectModal, projectInput, descriptionInput, projectMsg, lastFocusEl;
+
+    function ensureProjectModal() {
+        if (projectModal) return;
+
+        projectModal = document.createElement('div');
+        projectModal.id = 'project-modal';
+        projectModal.style.position = 'fixed';
+        projectModal.style.inset = '0';
+        projectModal.style.display = 'none';
+        projectModal.style.placeItems = 'center';
+        projectModal.style.background = 'rgba(15,23,42,.38)';
+        projectModal.style.padding = '16px';
+        projectModal.style.zIndex = '10000';
+        projectModal.setAttribute('aria-hidden', 'true');
+
+        projectModal.innerHTML = `
+            <div role="dialog" aria-modal="true" aria-labelledby="pm-title"
+                style="width:min(520px,92vw);background:#fff;border:1px solid #E6EAF2;border-radius:16px;box-shadow:0 6px 24px rgba(2,6,23,0.06);overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E6EAF2">
+                <h3 id="pm-title" style="margin:0;font-weight:800">Create New Project</h3>
+                <button id="pm-close" class="btn" style="background:transparent;border-color:transparent;color:#6B7280">✕</button>
+            </div>
+            <form id="pm-form" style="padding:14px;display:flex;flex-direction:column;gap:12px">
+                <label class="label" for="project-name">Project name</label>
+                <input id="project-name" class="input" placeholder="e.g., 2025 · Semester 1" autocomplete="off" />
+
+                <label class="label" for="project-description">Task description</label>
+                <textarea id="project-description" class="input" placeholder="Enter task description (optional)"
+                    style="height:80px;padding:10px;resize:vertical" autocomplete="off"></textarea>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button type="button" class="btn" id="pm-cancel">Cancel</button>
+                <button type="submit" class="btn primary" id="pm-create">Create</button>
+                </div>
+                <div class="msg" id="pm-msg"></div>
+            </form>
+            </div>
+        `;
+        document.body.appendChild(projectModal);
+
+        projectInput = $('#project-name', projectModal);
+        descriptionInput = $('#project-description', projectModal);
+        projectMsg = $('#pm-msg', projectModal);
+
+        // 事件绑定
+        $('#pm-close', projectModal)?.addEventListener('click', closeProjectModal);
+        $('#pm-cancel', projectModal)?.addEventListener('click', closeProjectModal);
+        projectModal.addEventListener('click', (e) => {
+            if (e.target === projectModal) closeProjectModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (projectModal.style.display !== 'none' && e.key === 'Escape') {
+                closeProjectModal();
+            }
+        });
+
+        $('#pm-form', projectModal).addEventListener('submit', onCreateProjectSubmit);
     }
-    wireDrop(rubricDrop, rubricFile, rubricText);
-    wireDrop(asgnDrop, asgnFile, asgnText);
-  
-    // ---------- submit ----------
-    btnSubmit.addEventListener('click', ()=>{
-      const name = asgnName.value.trim();
-      const due  = asgnDue.value.trim();
-      const rf   = rubricFile.files?.[0];
-      const af   = asgnFile.files?.[0];
-  
-      if (!name || !due || !rf || !af){
-        errLine.style.display='inline-block';
-        errLine.textContent = 'Please complete: Name + Due date + Rubric + Assignment PDF.';
-        return;
-      }
-  
-      // 简单“保存”：生成 URL 供 View Rubric 下载/预览使用
-      const rubricUrl = URL.createObjectURL(rf);
-  
-      state.upcoming.unshift({
-        title: name,
-        rubricUrl,
-        rubricName: rf.name
-      });
-  
-      render();
-      closeModal();
-  
-      // 提示
-      toast('Assignment created.');
-      // 清理
-      asgnName.value=''; asgnDue.value=''; rubricFile.value=''; asgnFile.value='';
-      $('#rubricText').textContent='Upload rubric...'; $('#asgnText').textContent='Upload assignment...';
-      rubricDrop.querySelector('.tm-help').textContent='.docx / .csv / .xlsx';
-      asgnDrop.querySelector('.tm-help').textContent='PDF only';
-    });
-  
+
+    function openProjectModal() {
+        ensureProjectModal();
+        lastFocusEl = document.activeElement;
+        projectInput.value = '';
+        descriptionInput.value = '';
+        setProjectMsg('');
+        projectModal.style.display = 'grid';
+        projectModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => projectInput.focus(), 0);
+    }
+
+    function closeProjectModal() {
+        if (!projectModal) return;
+        projectModal.style.display = 'none';
+        projectModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        if (lastFocusEl && typeof lastFocusEl.focus === 'function') {
+            lastFocusEl.focus();
+        }
+    }
+
+    async function onCreateProjectSubmit(e) {
+        e.preventDefault();
+        const name = (projectInput.value || '').trim();
+        const description = (descriptionInput.value || '').trim();
+
+        if (!name) {
+            setProjectMsg('Please enter a project name');
+            projectInput.focus();
+            return;
+        }
+
+        try {
+            setProjectMsg('Creating…', true);
+            const res = await fetch(API.createProject, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    description: description
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Create failed');
+
+            setProjectMsg('Created', true);
+            toast(`Project "${data.project.name}" created`);
+            setTimeout(() => {
+                closeProjectModal();
+                fetchProjects(); // 刷新项目列表
+            }, 250);
+        } catch (err) {
+            setProjectMsg(err.message || 'Create failed');
+        }
+    }
+
+    function setProjectMsg(text, ok) {
+        if (!projectMsg) return;
+        projectMsg.textContent = text || '';
+        projectMsg.className = 'msg' + (text ? (ok ? ' ok' : ' err') : '');
+    }
+
     // ---------- toast ----------
     function toast(msg, ms=2200){
       const el = document.createElement('div');
@@ -173,5 +279,14 @@
       requestAnimationFrame(()=>{ el.style.opacity=1; el.style.transform='none'; });
       setTimeout(()=>{ el.style.opacity=0; el.style.transform='translateY(6px)'; setTimeout(()=> el.remove(), 200); }, ms);
     }
-  })();
-  
+
+    // 初始化
+    fetchProjects();
+
+    // 将 Create New Task 按钮改为打开项目创建弹窗
+    const btnAdd = $('#btnAdd');
+    if (btnAdd) {
+        btnAdd.addEventListener('click', openProjectModal);
+    }
+
+})();
