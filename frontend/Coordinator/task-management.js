@@ -294,6 +294,18 @@
     }
 
     // 初始化
+    // 显示用户名
+    try {
+    const rawUser = localStorage.getItem("user");
+    if (rawUser) {
+      const user = JSON.parse(rawUser);
+      if (user && user.name) {
+        document.getElementById("username").textContent = user.name;
+      }
+    }
+    } catch (err) {
+    console.error("Failed to load username:", err);
+    }
     fetchProjects();
 
     // 将 Create New Task 按钮改为打开项目创建弹窗

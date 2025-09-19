@@ -1,6 +1,21 @@
 // Past Assignment – grouped by semester with collapse + actions
 (function () {
     const $  = (s, r=document) => r.querySelector(s);
+    // ✅ 显示用户名
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          const usernameEl = document.getElementById("username");
+          if (usernameEl) {
+            usernameEl.textContent = user.name;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load username:", err);
+    }
   
     // ===== Demo data（可替换为后端返回）=====
     // 结构：year, semester, items[{title, reportUrl?, rubricUrl?}]

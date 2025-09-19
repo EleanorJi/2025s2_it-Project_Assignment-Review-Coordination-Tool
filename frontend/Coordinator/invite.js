@@ -225,6 +225,17 @@
   }
 
   // init
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          document.getElementById("username").textContent = user.name;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load username:", err);
+    }
   renderChips();
   refreshTable();
 })();

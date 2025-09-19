@@ -10,9 +10,21 @@
     }
   });
 
-  function initCommonNav() {
-    // 这里写侧边栏高亮、用户菜单等通用逻辑（可留空）
+function initCommonNav() {
+  // 从 localStorage 取用户信息
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      const usernameEl = document.getElementById('username');
+      if (usernameEl && user.name) {
+        usernameEl.textContent = user.name || user.email || 'User';
+      }
+    } catch (e) {
+      console.error('Error parsing user data:', e);
+    }
   }
+}
 
   // ====== 原 upload.js 合并过来的逻辑 ======
   function initUploadPage() {

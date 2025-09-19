@@ -64,6 +64,21 @@
         fetchProjectInfo(projectId);
       }
     }
+    // ✅ 显示用户名
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          const usernameEl = document.getElementById("username");
+          if (usernameEl) {
+            usernameEl.textContent = user.name;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load username:", err);
+    }
   });
 
   // ============== 三张卡片：元素与交互 ==============
