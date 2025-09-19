@@ -81,7 +81,7 @@ exports.getCoordinatorPastPage = (req, res) => {
     }
 
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/past.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/past-assignment.html'));
 }
 
 exports.getMarkerDashboard = (req, res) => {

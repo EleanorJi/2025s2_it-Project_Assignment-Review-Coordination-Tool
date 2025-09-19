@@ -30,7 +30,14 @@ body{margin:0;background:var(--bg);color:var(--text);
   padding:24px;
 }
 
-h1{font-size:22px;margin: 0 0 24px 0;font-weight:800;font-style:italic;text-align:center}
+.panel h1 {
+  font-size: 14px; /* 改成和description一样的字体大小 */
+  color: var(--muted); /* 改成Project description的颜色（灰色） */
+  margin: 0 0 8px 0; /* 调整间距 */
+  font-weight: 600; /* 保持粗体但去掉italic */
+  font-style: normal; /* 去掉斜体 */
+  text-align: center;
+}
 
 /* ===================== Buttons ===================== */
 .btn{
@@ -114,21 +121,37 @@ h1{font-size:22px;margin: 0 0 24px 0;font-weight:800;font-style:italic;text-alig
 /* ===================== Project Info ===================== */
 .project-info {
   text-align: center;
-  margin: -16px 0 24px 0;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 0 24px 0; /* 调整间距 */
+  padding: 0 20px;
 }
 
 .project-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 22px; /* 改成原来h1的字体大小 */
+  font-weight: 800; /* 改成原来h1的粗体程度 */
+  font-style: italic; /* 改成原来h1的斜体 */
+  color: var(--text); /* 改成原来h1的文本颜色 */
   margin-bottom: 6px;
 }
 
+
 .project-description {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.5;
+  font-size: 22px; /* 和Project name一样大 */
+  color: var(--muted); /* 保持灰色 */
+  line-height: 1.4;
+  font-weight: 600; /* 适当的粗体 */
+}
+
+@media (max-width: 768px) {
+  .panel h1 {
+    font-size: 13px;
+    margin: 0 0 6px 0;
+  }
+
+  .project-name {
+    font-size: 20px;
+  }
+
+  .project-description {
+    font-size: 20px;
+  }
 }

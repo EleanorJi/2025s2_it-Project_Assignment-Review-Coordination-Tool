@@ -2,7 +2,7 @@
 (function () {
     const $  = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
-  
+
     // ---------- 状态管理 ----------
     const state = {
       upcoming: [],
@@ -40,7 +40,8 @@
               project_id: project.project_id,
               created_at: project.created_at,
               file_counts: project.file_counts,
-              rubric_id: project.rubric_id
+              rubric_id: project.rubric_id,
+              status: project.status // 添加状态信息
             });
           }
           // 将completed状态的项目归类为completed
@@ -51,7 +52,8 @@
               project_id: project.project_id,
               created_at: project.created_at,
               file_counts: project.file_counts,
-              rubric_id: project.rubric_id
+              rubric_id: project.rubric_id,
+              status: project.status // 添加状态信息
             });
           }
         });
@@ -84,6 +86,17 @@
           desc.className = 'tm-description';
           desc.textContent = item.description;
           left.appendChild(desc);
+        }
+
+        // 如果项目状态是draft，添加灰色draft字样
+        if (item.status === 'draft') {
+          const draftBadge = document.createElement('div');
+          draftBadge.className = 'tm-draft-badge';
+          draftBadge.textContent = 'Draft';
+          draftBadge.style.color = '#6B7280'; // 灰色文字
+          draftBadge.style.fontSize = '0.875rem'; // 较小的字体
+          draftBadge.style.marginTop = '4px'; // 与描述有一些间距
+          left.appendChild(draftBadge);
         }
 
         const act = document.createElement('div');
