@@ -7,7 +7,7 @@ exports.getCoordinatorDashboard = (req, res) => {
     return res.redirect('/login');
   }
   // 发送对应的HTML文件
-  res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/coordinator-dashboard.html'));
+  res.sendFile(path.join(__dirname, '../../frontend/Coordinator/coordinator-dashboard.html'));
 };
 
 exports.getCoordinatorInvitePage = (req, res) => {
@@ -17,7 +17,7 @@ exports.getCoordinatorInvitePage = (req, res) => {
   }
 
   // 发送对应的HTML文件
-  res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/invite.html'));
+  res.sendFile(path.join(__dirname, '../../frontend/Coordinator/invite.html'));
 };
 
 exports.getCoordinatorUploadPage = (req, res) => {
@@ -34,7 +34,7 @@ exports.getCoordinatorUploadPage = (req, res) => {
   }
 
   // 发送对应的HTML文件
-  res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/upload-assignment.html'));
+  res.sendFile(path.join(__dirname, '../../frontend/Coordinator/upload-assignment.html'));
 };
 
 exports.getCoordinatorFeedbackPage = (req, res) => {
@@ -43,7 +43,7 @@ exports.getCoordinatorFeedbackPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/feedback.html'));
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/feedback.html'));
 }
 
 exports.getCoordinatorTaskManagementPage = (req, res) => {
@@ -53,7 +53,7 @@ exports.getCoordinatorTaskManagementPage = (req, res) => {
     }
 
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/task-management.html'));
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/task-management.html'));
 }
 exports.getCoordinatorViewRubricPage = (req, res) => {
     // 检查角色权限
@@ -61,7 +61,7 @@ exports.getCoordinatorViewRubricPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/rubric.html'));
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/rubric.html'));
 }
 
 exports.getCoordinatorMarkPage = (req, res) => {
@@ -70,7 +70,7 @@ exports.getCoordinatorMarkPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/mark-assignment.html'));
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/mark-assignment.html'));
 }
 
 exports.getCoordinatorAnalysisPage = (req, res) => {
@@ -79,7 +79,7 @@ exports.getCoordinatorAnalysisPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/feedback.html'));
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/feedback.html'));
 }
 
 exports.getCoordinatorPastPage = (req, res) => {
@@ -89,14 +89,14 @@ exports.getCoordinatorPastPage = (req, res) => {
     }
 
     // 发送对应的HTML文件
-    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/past-assignment.html'));
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/past-assignment.html'));
 }
 
 exports.getMarkerDashboard = (req, res) => {
   if (req.user.role !== 'MARKER') {
     return res.redirect('/login');
   }
-  res.sendFile(path.join(__dirname, '../../../frontend/Marker/marker-dashboard.html'));
+  res.sendFile(path.join(__dirname, '../../frontend/Marker/marker-dashboard.html'));
 };
 
 exports.redirectToRoleDashboard = (req, res) => {
