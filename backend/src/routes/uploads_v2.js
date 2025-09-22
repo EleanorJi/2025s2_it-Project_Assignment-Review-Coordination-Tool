@@ -191,6 +191,7 @@ router.post('/commit', async (req, res) => {
     
     let recordId = null;
     let newVersionNumber = 1;
+    let assignmentIsPublished;
 
     if (file_type === 'rubric') {
       // 获取rubric的下一个版本号
@@ -232,7 +233,7 @@ router.post('/commit', async (req, res) => {
       const assignmentResult = await client.query(
         `INSERT INTO assignment (name, description, due_at, round, project_id, version) 
          VALUES ($1, $2, $3, $4, $5, $6) 
-         RETURNING assignment_id`,
+         RETURNING assignment_id, is_published`,
         [
           `Moderation ${round}`,
           `Assignment for round ${round}`,
@@ -243,8 +244,9 @@ router.post('/commit', async (req, res) => {
         ]
       );
       recordId = assignmentResult.rows[0].assignment_id;
-      
-      console.log(`✅ 创建assignment记录: assignment_id=${recordId}, round=${round}, version=${newVersionNumber}`);
+      assignmentIsPublished = assignmentResult.rows[0].is_published;
+
+      console.log(`✅ 创建assignment记录: assignment_id=${recordId}, round=${round}, version=${newVersionNumber}, is_published=${assignmentIsPublished}`);
     }
 
     // 移动文件到永久存储
@@ -359,42 +361,28 @@ router.post('/commit', async (req, res) => {
       }
     }
 
-    // 检查项目是否应该自动发布
+    // 检查项目是否应该自动激活（存在已发布的 assignment 时）
     let projectAutoPublished = false;
     let currentProjectStatus = 'draft';
-    
-    // 检查项目完整性
-    const rubricCheck = await client.query(
-      'SELECT rubric_id FROM rubric WHERE project_id = $1 ORDER BY version DESC LIMIT 1',
+    const projectStatusCheck = await client.query(
+      'SELECT status FROM project WHERE project_id = $1',
       [project_id]
     );
-    
-    const assignmentCheck = await client.query(
-      'SELECT assignment_id FROM assignment WHERE project_id = $1',
+    currentProjectStatus = projectStatusCheck.rows[0]?.status || 'draft';
+
+    const publishedAssignmentCheck = await client.query(
+      'SELECT 1 FROM assignment WHERE project_id = $1 AND is_published = true LIMIT 1',
       [project_id]
     );
-    
-    const hasRubric = rubricCheck.rows.length > 0;
-    const hasAssignments = assignmentCheck.rows.length > 0;
-    
-    // 如果项目现在完整了，自动发布
-    if (hasRubric && hasAssignments) {
-      const projectStatusCheck = await client.query(
-        'SELECT status FROM project WHERE project_id = $1',
+
+    if (currentProjectStatus === 'draft' && publishedAssignmentCheck.rows.length > 0) {
+      await client.query(
+        'UPDATE project SET status = \'active\' WHERE project_id = $1',
         [project_id]
       );
-      
-      if (projectStatusCheck.rows[0].status === 'draft') {
-        await client.query(
-          'UPDATE project SET status = \'published\' WHERE project_id = $1',
-          [project_id]
-        );
-        projectAutoPublished = true;
-        currentProjectStatus = 'published';
-        console.log(`🚀 项目自动发布: project_id=${project_id} (rubric + assignment complete)`);
-      } else {
-        currentProjectStatus = projectStatusCheck.rows[0].status;
-      }
+      projectAutoPublished = true;
+      currentProjectStatus = 'active';
+      console.log(`🚀 项目自动激活: project_id=${project_id} (has published assignment)`);
     }
 
     await client.query('COMMIT');
@@ -408,7 +396,7 @@ router.post('/commit', async (req, res) => {
     }
 
     const response = {
-      message: 'File published successfully',
+      message: 'File submitted successfully',
       upload_id: uploadId,
       file_type: file_type,
       version: newVersionNumber,
@@ -423,7 +411,10 @@ router.post('/commit', async (req, res) => {
       project_status: currentProjectStatus,
       ...(projectAutoPublished && { 
         auto_published: true,
-        message_note: 'Project automatically published (rubric + assignment complete)'
+        message_note: 'Project automatically activated (published assignment exists)'
+      }),
+      ...(file_type === 'assignment' && typeof assignmentIsPublished !== 'undefined' && {
+        assignment_status: { assignment_id: recordId, is_published: assignmentIsPublished }
       }),
       ...(tableInfo && { table_info: tableInfo }),
       ...(due_date && { due_date: new Date(due_date).toISOString() })
@@ -551,8 +542,8 @@ router.get('/project/:project_id/status', async (req, res) => {
         } : null
       })),
       status_info: {
-        meets_publish_requirements: meetsPublishRequirements,
-        can_be_published: meetsPublishRequirements && project.status === 'draft',
+        meets_publish_requirements: hasRubric && hasAssignments,
+        can_be_published: hasRubric && hasAssignments && project.status === 'draft',
         has_rubric: hasRubric,
         has_assignments: hasAssignments,
         assignment_count: assignmentsResult.rows.length,
@@ -560,7 +551,7 @@ router.get('/project/:project_id/status', async (req, res) => {
           rubric: hasRubric ? '✅' : '❌ Missing rubric',
           assignments: hasAssignments ? '✅' : '❌ Missing assignments'
         },
-        note: 'Projects auto-publish when rubric + assignment are uploaded'
+        note: 'Project becomes active when at least one assignment is published'
       }
     };
 
@@ -577,12 +568,68 @@ router.get('/project/:project_id/status', async (req, res) => {
   }
 });
 
-// 5) 发布项目：POST /api/uploads/project/:project_id/publish (简化版，无draft状态)
-router.post('/project/:project_id/publish', async (req, res) => {
+// 获取项目最新的 rubric_id、assignment1 与 assignment2 的最新 id
+// GET /api/uploads/project/:project_id/latest-ids
+router.get('/project/:project_id/latest-ids', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+
+    // 最新 rubric（按 version 最大）
+    const rubricResult = await db.query(
+      `SELECT rubric_id, version
+       FROM rubric WHERE project_id = $1
+       ORDER BY version DESC
+       LIMIT 1`,
+      [project_id]
+    );
+
+    // 最新 assignment round=1
+    const a1Result = await db.query(
+      `SELECT assignment_id, version
+       FROM assignment
+       WHERE project_id = $1 AND round = 1
+       ORDER BY version DESC
+       LIMIT 1`,
+      [project_id]
+    );
+
+    // 最新 assignment round=2
+    const a2Result = await db.query(
+      `SELECT assignment_id, version
+       FROM assignment
+       WHERE project_id = $1 AND round = 2
+       ORDER BY version DESC
+       LIMIT 1`,
+      [project_id]
+    );
+
+    return res.json({
+      project_id: parseInt(project_id),
+      rubric: rubricResult.rows.length ? {
+        rubric_id: rubricResult.rows[0].rubric_id,
+        version: rubricResult.rows[0].version
+      } : null,
+      assignment1: a1Result.rows.length ? {
+        assignment_id: a1Result.rows[0].assignment_id,
+        version: a1Result.rows[0].version
+      } : null,
+      assignment2: a2Result.rows.length ? {
+        assignment_id: a2Result.rows[0].assignment_id,
+        version: a2Result.rows[0].version
+      } : null
+    });
+  } catch (error) {
+    console.error('❌ 获取latest-ids失败:', error);
+    return res.status(500).json({ error: 'Failed to get latest ids', details: error.message });
+  }
+});
+
+// 5) 激活项目：POST /api/uploads/project/:project_id/activate (由draft切到active)
+router.post('/project/:project_id/activate', async (req, res) => {
   try {
     const { project_id } = req.params;
     
-    console.log(`🚀 发布项目: project_id=${project_id}`);
+    console.log(`🚀 激活项目: project_id=${project_id}`);
 
     // 验证项目存在
     const projectCheck = await db.query(
@@ -594,53 +641,50 @@ router.post('/project/:project_id/publish', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // 检查发布条件
-    const rubricCheck = await db.query(
-      'SELECT rubric_id FROM rubric WHERE project_id = $1 ORDER BY version DESC LIMIT 1',
+    // 激活条件：至少存在一个已发布的 assignment
+    const publishedAssignment = await db.query(
+      'SELECT 1 FROM assignment WHERE project_id = $1 AND is_published = true LIMIT 1',
       [project_id]
     );
 
-    const assignmentCheck = await db.query(
-      'SELECT assignment_id FROM assignment WHERE project_id = $1',
-      [project_id]
-    );
-
-    const hasRubric = rubricCheck.rows.length > 0;
-    const hasAssignments = assignmentCheck.rows.length > 0;
-
-    if (!hasRubric || !hasAssignments) {
+    if (publishedAssignment.rows.length === 0) {
       return res.status(400).json({ 
-        error: 'Cannot publish project',
+        error: 'Cannot activate project',
         details: {
-          has_rubric: hasRubric,
-          has_assignments: hasAssignments,
-          requirements: 'Project must have at least one rubric and one assignment'
+          requirements: 'At least one published assignment is required to activate the project'
         }
       });
     }
 
-    // 将项目状态从draft改为published
+    // 将项目状态从draft改为active
     await db.query(
-      'UPDATE project SET status = \'published\' WHERE project_id = $1',
+      'UPDATE project SET status = \'active\' WHERE project_id = $1',
       [project_id]
     );
 
-    console.log(`✅ 项目发布成功: project_id=${project_id}`);
+    console.log(`✅ 项目激活成功: project_id=${project_id}`);
 
     res.json({
-      message: 'Project published successfully',
+      message: 'Project activated successfully',
       project_id: parseInt(project_id),
-      status: 'published',
-      published_at: new Date().toISOString()
+      status: 'active',
+      activated_at: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('❌ 项目发布失败:', error);
+    console.error('❌ 项目激活失败:', error);
     res.status(500).json({ 
-      error: 'Failed to publish project',
+      error: 'Failed to activate project',
       details: error.message 
     });
   }
+});
+
+// 5b) 兼容旧路由：发布项目（内部转到激活）POST /api/uploads/project/:project_id/publish
+router.post('/project/:project_id/publish', async (req, res) => {
+  // 为了兼容旧客户端，重用激活逻辑
+  req.url = `/project/${req.params.project_id}/activate`;
+  return router.handle(req, res);
 });
 
 // 6) 文件下载：GET /api/uploads/:id/download (保持与原API完全一致)
@@ -1780,6 +1824,122 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
   }
 });
 
+// 获取 assignment 状态：GET /api/uploads/assignment/:assignment_id/status
+router.get('/assignment/:assignment_id/status', async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+
+    const result = await db.query(
+      `SELECT assignment_id, is_published, name, round, version, project_id, due_at, created_at
+       FROM assignment WHERE assignment_id = $1`,
+      [assignment_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    const row = result.rows[0];
+    return res.json({
+      assignment: {
+        assignment_id: parseInt(row.assignment_id),
+        name: row.name,
+        round: row.round,
+        version: row.version,
+        project_id: row.project_id,
+        due_at: row.due_at,
+        created_at: row.created_at,
+        is_published: row.is_published
+      }
+    });
+  } catch (error) {
+    console.error('❌ 获取assignment状态失败:', error);
+    return res.status(500).json({ error: 'Failed to get assignment status', details: error.message });
+  }
+});
+
+// 恢复并增强：手动更新 assignment 发布状态
+// PUT /api/uploads/assignment/:assignment_id/publish
+router.put('/assignment/:assignment_id/publish', async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    const { is_published } = req.body;
+
+    if (typeof is_published !== 'boolean') {
+      return res.status(400).json({ error: 'is_published must be a boolean' });
+    }
+
+    // 获取 assignment 及其 project
+    const assignmentResult = await db.query(
+      'SELECT assignment_id, project_id, is_published FROM assignment WHERE assignment_id = $1',
+      [assignment_id]
+    );
+
+    if (assignmentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    const projectId = assignmentResult.rows[0].project_id;
+
+    // 如果要发布，校验项目至少有 rubric 且至少有一个 assignment
+    if (is_published === true) {
+      const rubricExists = await db.query(
+        'SELECT 1 FROM rubric WHERE project_id = $1 LIMIT 1',
+        [projectId]
+      );
+
+      const assignmentExists = await db.query(
+        'SELECT 1 FROM assignment WHERE project_id = $1 LIMIT 1',
+        [projectId]
+      );
+
+      if (rubricExists.rows.length === 0 || assignmentExists.rows.length === 0) {
+        return res.status(400).json({
+          error: 'Cannot publish assignment',
+          details: {
+            has_rubric: rubricExists.rows.length > 0,
+            has_assignment: assignmentExists.rows.length > 0,
+            requirements: 'Project must have at least one rubric and one assignment before publishing an assignment'
+          }
+        });
+      }
+    }
+
+    // 更新 assignment 发布状态
+    const updateResult = await db.query(
+      'UPDATE assignment SET is_published = $1 WHERE assignment_id = $2 RETURNING assignment_id, is_published, project_id',
+      [is_published, assignment_id]
+    );
+
+    // 若发布成功且项目仍为 draft，则激活项目
+    let projectStatus;
+    if (is_published === true) {
+      const statusResult = await db.query('SELECT status FROM project WHERE project_id = $1', [projectId]);
+      const currentStatus = statusResult.rows[0]?.status || 'draft';
+      if (currentStatus === 'draft') {
+        await db.query('UPDATE project SET status = \'active\' WHERE project_id = $1', [projectId]);
+        projectStatus = 'active';
+      } else {
+        projectStatus = currentStatus;
+      }
+    }
+
+    console.log(`📝 assignment 发布状态更新: assignment_id=${assignment_id}, is_published=${is_published}`);
+
+    return res.json({
+      message: 'Assignment publish status updated',
+      assignment: {
+        assignment_id: parseInt(updateResult.rows[0].assignment_id),
+        is_published: updateResult.rows[0].is_published
+      },
+      ...(projectStatus && { project_status: projectStatus })
+    });
+  } catch (error) {
+    console.error('❌ 更新assignment发布状态失败:', error);
+    return res.status(500).json({ error: 'Failed to update assignment publish status', details: error.message });
+  }
+});
+
 /**
  * Coordinator专用 - 批量设置/更新baseline分数
  * POST /api/uploads/scoring/baseline/batch
@@ -2468,6 +2628,51 @@ router.get('/debug/criterion/:criterion_id/info', async (req, res) => {
     console.error('❌ 查找criterion信息失败:', error);
     res.status(500).json({
       error: 'Failed to get criterion info',
+      details: error.message
+    });
+  }
+});
+
+//==========
+// 新增接口：通过project_id获取最新的rubric_id
+// GET /api/project/:project_id/latest-rubric
+router.get('/project/:project_id/latest-rubric', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+
+    console.log(`🔍 通过project_id查找最新rubric: project_id=${project_id}`);
+
+    // 查询该project_id下所有rubric，按version降序排列，取最新的一个
+    const result = await db.query(`
+      SELECT rubric_id, project_id, version, created_at
+      FROM rubric
+      WHERE project_id = $1
+      ORDER BY version DESC
+      LIMIT 1
+    `, [project_id]);
+
+    if (result.rows.length === 0) {
+      console.log(`❌ 未找到project_id=${project_id}对应的rubric`);
+      return res.status(404).json({
+        error: 'No rubric found for this project',
+        project_id: parseInt(project_id)
+      });
+    }
+
+    const latestRubric = result.rows[0];
+    console.log(`✅ 找到最新rubric: rubric_id=${latestRubric.rubric_id}, version=${latestRubric.version}`);
+
+    res.json({
+      project_id: parseInt(project_id),
+      rubric_id: latestRubric.rubric_id,
+      version: latestRubric.version,
+      created_at: latestRubric.created_at
+    });
+
+  } catch (error) {
+    console.error('❌ 获取最新rubric失败:', error);
+    res.status(500).json({
+      error: 'Failed to get latest rubric',
       details: error.message
     });
   }
