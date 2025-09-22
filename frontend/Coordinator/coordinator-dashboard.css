@@ -18,7 +18,7 @@
   .brand-sub{font-size:12px;color:var(--muted)}
   .account{color:var(--text);font-weight:600}
   .caret{margin-left:4px;color:var(--muted)}
-  
+
   /* Layout */
   .app{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
   .sidebar{
@@ -28,9 +28,9 @@
   .nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
   .nav-item{
     width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
-    background:#fff;color:var(--text);font-weight:600;cursor:pointer;
+    background:#fff;color:var(--text);font-weight:600;cursor:pointer;text-decoration:none;
   }
-  .nav-item.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .nav-item.active,[aria-current="page"].nav-item{background:var(--primary);color:#fff;border-color:var(--primary)}
   
   .main{padding-right:16px}
   .panel{

@@ -1,99 +1,157 @@
+/* ===================== Design System ===================== */
 :root{
-    --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
-    --primary:#0F172A; --warn:#F59E0B; --bad:#DC2626;
-    --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);
-    font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
-  
-  /* Top bar */
-  .topbar{
-    height:64px; display:flex; align-items:center; justify-content:space-between;
-    padding:0 18px; background:#fff; border-bottom:1px solid var(--border);
-  }
-  .brand{display:flex; align-items:center; gap:12px}
-  .brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
-  .brand-title{font-weight:800}
-  .brand-sub{font-size:12px;color:var(--muted)}
-  .account{color:var(--text);font-weight:600}
-  .caret{margin-left:4px;color:var(--muted)}
-  
-  /* Layout */
-  .app{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
-  .sidebar{
-    background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;
-    height:calc(100vh - 96px);
-  }
-  .nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-  .nav-item{
-    width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
-    background:#fff;color:var(--text);font-weight:600;cursor:pointer;
-  }
-  .nav-item.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-  
-  .main{padding-right:16px}
-  .panel{
-    background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
-    padding:18px 18px 22px;
-  }
-  
-  /* Typography & cards */
-  h1{font-size:28px;margin:0 0 14px 0}
-  .group{margin-top:16px}
-  .group-title{font-weight:800;margin:4px 0 10px 6px}
-  .card{
-    background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;
-  }
-  .cards-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  
-  /* ---- Upload page additions ---- */
-  .assign .assign-title{font-weight:800;margin-bottom:8px;font-size:20px;}
-  .label{font-size:12px;color:var(--muted);margin:4px 0 6px 2px}
-  
-  .form-row{
-    display:grid;
-    grid-template-columns:200px 180px 120px; /* Round / Due / Deviation */
-    gap:12px;
-    margin-bottom:12px;
-  }
-  .input{
-    height:36px; width:100%;
-    border:1px solid var(--border); border-radius:10px;
-    padding:0 12px; background:#fff; color:var(--text); font-weight:600;
-  }
-  
-  /* zones */
-  .zones-2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-  .sub-title{font-weight:700;margin-bottom:6px;margin-top: 12px;}
-  .drop{
-    border:1px dashed #CFD7E6; border-radius:12px;
-    height:168px; display:flex; align-items:center; justify-content:center;
-    color:var(--muted); text-align:center; padding:10px; cursor:pointer; background:#FCFDFE;
-  }
-  .drop:hover{background:#F8FAFF}
-  .hint{font-size:12px;color:var(--muted)}
+  --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
+  --primary:#0F172A; --warn:#F59E0B; --bad:#DC2626; --good:#16a34a;
+  --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
 
-  .zones-2{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:12px;
+  /* Upload page sizes */
+  --card-h:430px; --drop-h:190px; --pub-w:110px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+
+/* ===================== Topbar & Layout ===================== */
+.topbar{
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;background:#fff;border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
+.brand-title{font-weight:800}
+.brand-sub{font-size:12px;color:var(--muted)}
+.account{color:var(--text);font-weight:600}
+.caret{margin-left:4px;color:var(--muted)}
+
+.app{display:grid;grid-template-columns:1fr;gap:16px;padding:16px}
+.main{padding:0 16px}
+.panel,.tm-panel{
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:24px;
+}
+
+.panel h1 {
+  font-size: 14px; /* 改成和description一样的字体大小 */
+  color: var(--muted); /* 改成Project description的颜色（灰色） */
+  margin: 0 0 8px 0; /* 调整间距 */
+  font-weight: 600; /* 保持粗体但去掉italic */
+  font-style: normal; /* 去掉斜体 */
+  text-align: center;
+}
+
+/* ===================== Buttons ===================== */
+.btn{
+  height:36px;padding:0 16px;border-radius:10px;border:1px solid var(--border);
+  background:#fff;color:var(--text);font-weight:600;cursor:pointer;
+}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn[disabled]{opacity:.6;cursor:not-allowed}
+
+/* ===================== Upload Page ===================== */
+.grid-3{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:24px;
+  justify-content:center;
+  margin-bottom:24px;
+}
+.card{
+  background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;
+  display:flex;flex-direction:column;justify-content:space-between;min-height:var(--card-h);
+}
+.card h3{margin:2px 0 12px 2px;font-weight:800;font-size:16px;text-align:center}
+.label{font-size:12px;color:var(--muted);margin:8px 0 6px 2px}
+.date{width:100%;height:34px;border:1px solid var(--border);border-radius:10px;padding:0 10px}
+
+.drop{
+  border:2px dashed var(--border);border-radius:12px;height:var(--drop-h);
+  display:grid;place-items:center;text-align:center;color:var(--muted);padding:14px;background:#fff;
+  transition:background .15s,border-color .15s; cursor:pointer;
+}
+.drop.dragging{background:#f3f7ff;border-color:#c5d7ff}
+.drop .drop-title{font-weight:600}
+.drop .helper{font-size:12px;color:var(--muted);margin-top:4px}
+
+.card-footer{display:flex;justify-content:center;margin-top:16px}
+.btn.primary.publish{width:var(--pub-w)}
+
+.valid{
+  margin-top:24px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+}
+.valid .line{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+
+/* Toast（通用） */
+.toast{
+  position:fixed;right:16px;bottom:16px;background:#0F172A;color:#fff;
+  padding:10px 12px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.2);
+  opacity:0;transform:translateY(6px);transition:.2s;z-index:10000;font-weight:700
+}
+.toast.show{opacity:1;transform:none}
+.toast.error{background:#b91c1c}
+
+/* 简单 Modal（通用，若你用自带JS创建） */
+.ui-modal{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;place-items:center;padding:16px;z-index:9999}
+.ui-modal.show{display:grid}
+.ui-modal .modal-card{
+  max-width:820px;width:100%;background:#fff;border:1px solid var(--border);
+  border-radius:16px;box-shadow:0 20px 60px rgba(2,6,23,.15);overflow:hidden
+}
+.ui-modal .modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid var(--border)
+}
+.ui-modal .modal-body{padding:16px}
+.ui-modal .progress{height:10px;background:#EEF2F7;border-radius:999px;overflow:hidden}
+.ui-modal .progress span{display:block;height:100%;width:0%;background:#2563eb}
+
+/* ===================== Responsive ===================== */
+@media (max-width:1100px){
+  .grid-3{grid-template-columns:1fr; max-width:500px; margin:0 auto}
+}
+
+@media (max-width:768px){
+  .app{padding:12px}
+  .main{padding:0}
+  .panel{padding:18px}
+  .grid-3{gap:18px}
+}
+
+/* ===================== Project Info ===================== */
+.project-info {
+  text-align: center;
+  margin: 0 0 24px 0; /* 调整间距 */
+  padding: 0 20px;
+}
+
+.project-name {
+  font-size: 22px; /* 改成原来h1的字体大小 */
+  font-weight: 800; /* 改成原来h1的粗体程度 */
+  font-style: italic; /* 改成原来h1的斜体 */
+  color: var(--text); /* 改成原来h1的文本颜色 */
+  margin-bottom: 6px;
+}
+
+
+.project-description {
+  font-size: 22px; /* 和Project name一样大 */
+  color: var(--muted); /* 保持灰色 */
+  line-height: 1.4;
+  font-weight: 600; /* 适当的粗体 */
+}
+
+@media (max-width: 768px) {
+  .panel h1 {
+    font-size: 13px;
+    margin: 0 0 6px 0;
   }
-  .right{display:flex;gap:10px;justify-content:flex-end;margin-top:125px}
-  .btn{
-    height:36px;padding:0 16px;border-radius:10px;border:1px solid var(--border);
-    background:#fff;color:var(--text);font-weight:600;cursor:pointer;
+
+  .project-name {
+    font-size: 20px;
   }
-  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-  .muted{color:var(--muted)}
-  .list{list-style:none;padding-left:0;margin:8px 0 0}
-  .list li{display:flex;align-items:center;gap:8px}
-  
-  /* Responsive */
-  @media (max-width: 1100px){
-    .app{grid-template-columns:1fr}
-    .sidebar{height:auto}
-    .cards-2{grid-template-columns:1fr}
-    .form-row{grid-template-columns:1fr 1fr; }
+
+  .project-description {
+    font-size: 20px;
   }
-  
+}
