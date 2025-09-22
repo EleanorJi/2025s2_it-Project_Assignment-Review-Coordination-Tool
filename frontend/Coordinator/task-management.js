@@ -1,12 +1,11 @@
-// Task Management – list + modal + dropzones (consistent with your DS)
+// Task Management – New Prototype Design
 (function () {
     const $  = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 
     // ---------- 状态管理 ----------
     const state = {
-      upcoming: [],
-      completed: []
+      tasks: []
     };
 
     // API endpoints
@@ -14,8 +13,6 @@
       listProjects: '/api/uploads/projects',
       createProject: '/api/uploads/project',
     };
-
-    let currentProjectId = null;
 
     // 从后端获取项目数据
     async function fetchProjects() {
@@ -27,35 +24,41 @@
         const data = await response.json();
 
         // 清空当前状态
-        state.upcoming = [];
-        state.completed = [];
+        state.tasks = [];
 
-        // 根据状态分类项目
+        // 处理项目数据
         data.projects.forEach(project => {
-          // 将published状态的项目归类为upcoming
-          if (project.status === 'published'|| project.status === 'draft') {
-            state.upcoming.push({
+          // 确定task状态：如果有任何assignment被publish，则为active，否则为draft
+          let taskStatus = 'draft';
+          let hasPublishedAssignment = false;
+          
+          // 这里需要根据实际数据结构调整
+          if (project.status === 'published' || project.file_counts?.assignment > 0) {
+            hasPublishedAssignment = true;
+            taskStatus = 'active';
+          }
+
+          state.tasks.push({
+            id: project.project_id,
               title: project.name,
               description: project.description,
-              project_id: project.project_id,
               created_at: project.created_at,
               file_counts: project.file_counts,
               rubric_id: project.rubric_id,
-              status: project.status // 添加状态信息
-            });
-          }
-          // 将completed状态的项目归类为completed
-          else if (project.status === 'completed') {
-            state.completed.push({
-              title: project.name,
-              description: project.description,
-              project_id: project.project_id,
-              created_at: project.created_at,
-              file_counts: project.file_counts,
-              rubric_id: project.rubric_id,
-              status: project.status // 添加状态信息
-            });
-          }
+            status: taskStatus,
+            assignments: [
+              {
+                id: 'assignment1',
+                title: 'Assignment 1',
+                status: project.file_counts?.assignment > 0 ? 'published' : 'unpublished'
+              },
+              {
+                id: 'assignment2', 
+                title: 'Assignment 2',
+                status: 'unpublished' // 默认第二个assignment是unpublished
+              }
+            ]
+          });
         });
 
         // 重新渲染界面
@@ -66,98 +69,280 @@
       }
     }
 
-    const upcomingList  = $('#upcomingList');
-    const completedList = $('#completedList');
+    const taskSections = $('#taskSections');
 
     function render() {
-      const makeRow = (item, isUpcoming) => {
-        const box = document.createElement('div');
-        box.className = 'tm-box';
-        const row = document.createElement('div');
-        row.className = 'tm-item';
-
-        const left = document.createElement('div');
-        left.className = 'tm-title';
-        left.textContent = item.title;
-
-        // 添加描述信息（如果有）
-        if (item.description) {
-          const desc = document.createElement('div');
-          desc.className = 'tm-description';
-          desc.textContent = item.description;
-          left.appendChild(desc);
-        }
-
-        // 如果项目状态是draft，添加灰色draft字样
-        if (item.status === 'draft') {
-          const draftBadge = document.createElement('div');
-          draftBadge.className = 'tm-draft-badge';
-          draftBadge.textContent = 'Draft';
-          draftBadge.style.color = '#6B7280'; // 灰色文字
-          draftBadge.style.fontSize = '0.875rem'; // 较小的字体
-          draftBadge.style.marginTop = '4px'; // 与描述有一些间距
-          left.appendChild(draftBadge);
-        }
-
-        const act = document.createElement('div');
-        act.className = 'tm-actions';
-
-        // Upcoming 项目：显示 Upload Rubric/Assignment + View Rubric + Mark Assignment
-        if (isUpcoming) {
-          const btnUpload = btn('Upload Rubric/Assignment', () => {
-            location.href = `/dashboard/coordinator/upload?project=${item.project_id}`;
-          });
-
-          // 只有非 draft 状态的项目才显示 View Rubric
-          let buttons = [btnUpload];
-
-          if (item.status !== 'draft' && item.file_counts?.rubric > 0) {
-            const btnViewRubric = btn('View Rubric', () => (location.href = `/dashboard/coordinator/rubric?project=${item.project_id}`));
-            buttons.push(btnViewRubric);
-          }
-
-          const btnMark = btn('Mark Assignment', () => (location.href = `/dashboard/coordinator/mark?project=${item.project_id}`));
-          buttons.push(btnMark);
-
-          act.append(...buttons);
-        }
-        // Completed 项目：显示 View Rubric + View Analysis
-        else {
-          // 只有有 rubric 文件的项目才显示 View Rubric
-          if (item.file_counts?.rubric > 0) {
-            const btnViewRubric = btn('View Rubric', () => (location.href = `/dashboard/coordinator/rubric?project=${item.project_id}`));
-            act.append(btnViewRubric);
-          }
-
-          const btnAna = btn('View Analysis', () => (location.href = `/dashboard/coordinator/analysis?project=${item.project_id}`));
-          act.append(btnAna);
-        }
-
-        row.append(left, act);
-        box.append(row);
-        return box;
-      };
-
-      upcomingList.innerHTML = '';
-      state.upcoming.forEach(it => upcomingList.append(makeRow(it, true))); // true 表示 upcoming
-
-      completedList.innerHTML = '';
-      state.completed.forEach(it => completedList.append(makeRow(it, false))); // false 表示 completed
+      taskSections.innerHTML = '';
+      
+      state.tasks.forEach(task => {
+        const taskSection = createTaskSection(task);
+        taskSections.appendChild(taskSection);
+      });
     }
 
-    function btn(text, onClick){
-      const b = document.createElement('button');
-      b.className = 'btn';
-      b.textContent = text;
-      b.addEventListener('click', onClick);
-      return b;
+    function createTaskSection(task) {
+      const section = document.createElement('div');
+      section.className = 'tm-task-section';
+      section.dataset.taskId = task.id;
+
+      // Task header
+      const header = document.createElement('div');
+      header.className = 'tm-task-header';
+      
+      const titleContainer = document.createElement('div');
+      titleContainer.style.display = 'flex';
+      titleContainer.style.alignItems = 'center';
+      
+      const title = document.createElement('div');
+      title.className = 'tm-task-title';
+      title.textContent = task.title;
+      
+      const status = document.createElement('span');
+      status.className = `tm-task-status ${task.status}`;
+      status.textContent = task.status === 'draft' ? 'Draft' : 'Active';
+      
+      titleContainer.appendChild(title);
+      titleContainer.appendChild(status);
+      
+      const chevron = document.createElement('div');
+      chevron.className = 'tm-task-chevron';
+      chevron.innerHTML = '▾';
+      chevron.addEventListener('click', () => toggleTaskSection(section));
+      
+      header.appendChild(titleContainer);
+      header.appendChild(chevron);
+
+      // Task content
+      const content = document.createElement('div');
+      content.className = 'tm-task-content';
+      
+      // Rubric section
+      const rubricSection = createRubricSection(task);
+      content.appendChild(rubricSection);
+      
+      // Assignment sections
+      task.assignments.forEach(assignment => {
+        const assignmentSection = createAssignmentSection(task, assignment);
+        content.appendChild(assignmentSection);
+      });
+
+      section.appendChild(header);
+      section.appendChild(content);
+
+      return section;
     }
 
-    function previewFile(url, name){
-      if(!url){ alert('No rubric uploaded for this assignment.'); return; }
-      const a = document.createElement('a');
-      a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.download = name || '';
-      a.click();
+    function createRubricSection(task) {
+      const section = document.createElement('div');
+      section.className = 'tm-rubric-section';
+      
+      const header = document.createElement('div');
+      header.className = 'tm-rubric-header';
+      
+      const title = document.createElement('div');
+      title.className = 'tm-rubric-title';
+      title.textContent = 'Rubric';
+      
+      const chevron = document.createElement('div');
+      chevron.className = 'tm-rubric-chevron';
+      chevron.innerHTML = '▾';
+      chevron.addEventListener('click', () => toggleRubricSection(section));
+      
+      header.appendChild(title);
+      header.appendChild(chevron);
+      
+      const actions = document.createElement('div');
+      actions.className = 'tm-rubric-actions';
+      
+      const uploadBtn = createButton('Upload Rubric', () => {
+        location.href = `/dashboard/coordinator/upload?project=${task.id}&type=rubric`;
+      });
+      
+      const viewBtn = createButton('View Rubric', () => {
+        location.href = `/dashboard/coordinator/rubric?project=${task.id}`;
+      });
+      
+      // 只有有rubric文件时才显示View按钮
+      if (task.file_counts?.rubric > 0) {
+        actions.appendChild(uploadBtn);
+        actions.appendChild(viewBtn);
+      } else {
+        actions.appendChild(uploadBtn);
+      }
+      
+      section.appendChild(header);
+      section.appendChild(actions);
+      
+      return section;
+    }
+
+    function createAssignmentSection(task, assignment) {
+      const section = document.createElement('div');
+      section.className = 'tm-assignment-item';
+      
+      const header = document.createElement('div');
+      header.className = 'tm-assignment-header';
+      
+      const titleContainer = document.createElement('div');
+      titleContainer.style.display = 'flex';
+      titleContainer.style.alignItems = 'center';
+      
+      const title = document.createElement('div');
+      title.className = 'tm-assignment-title';
+      title.textContent = assignment.title;
+      
+      const status = document.createElement('span');
+      status.className = `tm-assignment-status ${assignment.status}`;
+      status.textContent = assignment.status;
+      
+      titleContainer.appendChild(title);
+      titleContainer.appendChild(status);
+      
+      const chevron = document.createElement('div');
+      chevron.className = 'tm-assignment-chevron';
+      chevron.innerHTML = '▾';
+      chevron.addEventListener('click', () => toggleAssignmentSection(section));
+      
+      header.appendChild(titleContainer);
+      header.appendChild(chevron);
+      
+      const actions = document.createElement('div');
+      actions.className = 'tm-assignment-actions';
+      
+      const uploadBtn = createButton('Upload', () => {
+        location.href = `/dashboard/coordinator/upload?project=${task.id}&assignment=${assignment.id}`;
+      });
+      
+      const viewBtn = createButton('View', () => {
+        location.href = `/dashboard/coordinator/view?project=${task.id}&assignment=${assignment.id}`;
+      });
+      
+      const publishBtn = createButton('Publish Assignment', () => {
+        publishAssignment(task.id, assignment.id);
+      });
+      
+      const markBtn = createButton('Mark Assignment', () => {
+        location.href = `/dashboard/coordinator/mark?project=${task.id}&assignment=${assignment.id}`;
+      });
+      
+      const feedbackBtn = createButton('Feedback', () => {
+        location.href = `/dashboard/coordinator/feedback?project=${task.id}&assignment=${assignment.id}`;
+      });
+      
+      actions.appendChild(uploadBtn);
+      
+      // 只有有assignment文件时才显示其他按钮
+      if (assignment.status === 'published' || task.file_counts?.assignment > 0) {
+        actions.appendChild(viewBtn);
+        actions.appendChild(markBtn);
+        actions.appendChild(feedbackBtn);
+      } else {
+        actions.appendChild(publishBtn);
+      }
+      
+      section.appendChild(header);
+      section.appendChild(actions);
+      
+      return section;
+    }
+
+    function createButton(text, onClick) {
+      const button = document.createElement('button');
+      button.className = 'btn';
+      button.textContent = text;
+      button.addEventListener('click', onClick);
+      return button;
+    }
+
+    // ---------- 交互功能 ----------
+    
+    // 切换task section的展开/收起
+    function toggleTaskSection(section) {
+      const content = section.querySelector('.tm-task-content');
+      const chevron = section.querySelector('.tm-task-chevron');
+      
+      // 关闭其他所有task sections
+      $$('.tm-task-section').forEach(otherSection => {
+        if (otherSection !== section) {
+          const otherContent = otherSection.querySelector('.tm-task-content');
+          const otherChevron = otherSection.querySelector('.tm-task-chevron');
+          otherContent.classList.remove('expanded');
+          otherChevron.classList.remove('expanded');
+        }
+      });
+      
+      // 切换当前section
+      content.classList.toggle('expanded');
+      chevron.classList.toggle('expanded');
+      
+      // 关闭所有assignment和rubric的展开状态
+      if (content.classList.contains('expanded')) {
+        $$('.tm-assignment-actions, .tm-rubric-actions').forEach(actions => {
+          actions.classList.remove('expanded');
+        });
+        $$('.tm-assignment-chevron, .tm-rubric-chevron').forEach(chevron => {
+          chevron.classList.remove('expanded');
+        });
+      }
+    }
+    
+    // 切换rubric section的展开/收起
+    function toggleRubricSection(section) {
+      const actions = section.querySelector('.tm-rubric-actions');
+      const chevron = section.querySelector('.tm-rubric-chevron');
+      
+      // 关闭其他所有rubric和assignment的展开状态
+      $$('.tm-assignment-actions').forEach(otherActions => {
+        otherActions.classList.remove('expanded');
+      });
+      $$('.tm-assignment-chevron').forEach(otherChevron => {
+        otherChevron.classList.remove('expanded');
+      });
+      
+      // 切换当前section
+      actions.classList.toggle('expanded');
+      chevron.classList.toggle('expanded');
+    }
+    
+    // 切换assignment section的展开/收起
+    function toggleAssignmentSection(section) {
+      const actions = section.querySelector('.tm-assignment-actions');
+      const chevron = section.querySelector('.tm-assignment-chevron');
+      
+      // 关闭其他所有assignment和rubric的展开状态
+      $$('.tm-assignment-actions').forEach(otherActions => {
+        if (otherActions !== actions) {
+          otherActions.classList.remove('expanded');
+        }
+      });
+      $$('.tm-assignment-chevron').forEach(otherChevron => {
+        if (otherChevron !== chevron) {
+          otherChevron.classList.remove('expanded');
+        }
+      });
+      $$('.tm-rubric-actions').forEach(otherActions => {
+        otherActions.classList.remove('expanded');
+      });
+      $$('.tm-rubric-chevron').forEach(otherChevron => {
+        otherChevron.classList.remove('expanded');
+      });
+      
+      // 切换当前section
+      actions.classList.toggle('expanded');
+      chevron.classList.toggle('expanded');
+    }
+    
+    // 发布assignment
+    async function publishAssignment(taskId, assignmentId) {
+      try {
+        // 这里需要调用实际的API来发布assignment
+        toast('Assignment published successfully!');
+        // 重新加载数据
+        await fetchProjects();
+      } catch (error) {
+        console.error('Failed to publish assignment:', error);
+        toast('Failed to publish assignment. Please try again.');
+      }
     }
 
     // ---------- 项目创建弹窗 ----------
@@ -308,7 +493,7 @@
     }
     fetchProjects();
 
-    // 将 Create New Task 按钮改为打开项目创建弹窗
+    // 将 Add New Assignment 按钮改为打开项目创建弹窗
     const btnAdd = $('#btnAdd');
     if (btnAdd) {
         btnAdd.addEventListener('click', openProjectModal);

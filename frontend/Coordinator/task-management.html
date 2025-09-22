@@ -8,14 +8,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/Coordinator/task-management.css">
+  <link rel="stylesheet" href=".Coordinator/task-management.css">
 
 </head>
 <body>
   <!-- Top bar -->
   <header class="topbar">
     <div class="brand">
-      <div class="brand-title">HPS302 Assignment Moderation Tool</div>
+      <div class="brand-title">Deakin Moderation</div>
     </div>
     <div class="account">
       <span id="username"></span><span class="caret">▾</span>
@@ -36,26 +36,14 @@
     <!-- Main -->
     <main class="main">
       <section class="tm-panel">
-        <h1>Task Management</h1>
-
-        <div class="tm-grid2">
-          <!-- Upcoming -->
-          <div class="tm-section">
-            <h3>Upcoming Assignment</h3>
-            <div id="upcomingList">
-              <!-- JS 渲染 tm-box / tm-item -->
-            </div>
-          </div>
-
-          <!-- Completed -->
-          <div class="tm-section">
-            <h3>Completed Assignment</h3>
-            <div id="completedList"></div>
-          </div>
+        <div class="tm-header">
+          <h1>Task Management</h1>
+          <button id="btnAdd" class="btn primary">Add New Task</button>
         </div>
 
-        <div class="tm-center-row">
-          <button id="btnAdd" class="btn primary" style="height:42px;padding:0 22px">Create New Task</button>
+        <!-- Task Sections Container -->
+        <div id="taskSections" class="tm-sections">
+          <!-- JS 动态生成任务区域 -->
         </div>
       </section>
     </main>
@@ -117,6 +105,6 @@
     </div>
   </div>
 
-  <script src="/Coordinator/task-management.js" defer></script>
+  <script src=".Coordinator/task-management.js" defer></script>
 </body>
 </html>
