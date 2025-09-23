@@ -1,5 +1,5 @@
-// Task Management – New Prototype Design
-(function () {
+  // Task Management – New Prototype Design
+  (function () {
     const $  = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 
@@ -39,9 +39,9 @@
           }
 
           state.tasks.push({
-            id: project.project_id,
               title: project.name,
               description: project.description,
+              project_id: project.project_id,
               created_at: project.created_at,
               file_counts: project.file_counts,
               rubric_id: project.rubric_id,
@@ -83,7 +83,7 @@
     function createTaskSection(task) {
       const section = document.createElement('div');
       section.className = 'tm-task-section';
-      section.dataset.taskId = task.id;
+      section.dataset.taskId = task.project_id;
 
       // Task header
       const header = document.createElement('div');
@@ -155,11 +155,11 @@
       actions.className = 'tm-rubric-actions';
       
       const uploadBtn = createButton('Upload Rubric', () => {
-        location.href = `/dashboard/coordinator/upload?project=${task.id}&type=rubric`;
+        location.href = `/dashboard/coordinator/upload?project=${task.project_id}&type=rubric`;
       });
       
       const viewBtn = createButton('View Rubric', () => {
-        location.href = `/dashboard/coordinator/rubric?project=${task.id}`;
+        location.href = `/dashboard/coordinator/rubric?project=${task.project_id}`;
       });
       
       // 只有有rubric文件时才显示View按钮
@@ -210,23 +210,23 @@
       actions.className = 'tm-assignment-actions';
       
       const uploadBtn = createButton('Upload', () => {
-        location.href = `/dashboard/coordinator/upload?project=${task.id}&assignment=${assignment.id}`;
+        location.href = `/dashboard/coordinator/upload?project=${task.project_id}&assignment=${assignment.id}`;
       });
       
       const viewBtn = createButton('View', () => {
-        location.href = `/dashboard/coordinator/view?project=${task.id}&assignment=${assignment.id}`;
+        location.href = `/dashboard/coordinator/view?project=${task.project_id}&assignment=${assignment.id}`;
       });
       
       const publishBtn = createButton('Publish Assignment', () => {
-        publishAssignment(task.id, assignment.id);
+        publishAssignment(task.project_id, assignment.id);
       });
       
       const markBtn = createButton('Mark Assignment', () => {
-        location.href = `/dashboard/coordinator/mark?project=${task.id}&assignment=${assignment.id}`;
+        location.href = `/dashboard/coordinator/mark?project=${task.project_id}&assignment=${assignment.id}`;
       });
       
       const feedbackBtn = createButton('Feedback', () => {
-        location.href = `/dashboard/coordinator/feedback?project=${task.id}&assignment=${assignment.id}`;
+        location.href = `/dashboard/coordinator/feedback?project=${task.project_id}&assignment=${assignment.id}`;
       });
       
       actions.appendChild(uploadBtn);
@@ -499,4 +499,4 @@
         btnAdd.addEventListener('click', openProjectModal);
     }
 
-})();
+  })();
