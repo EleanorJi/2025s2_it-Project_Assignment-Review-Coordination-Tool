@@ -1871,7 +1871,7 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
 
     // 获取 assignment 及其 project
     const assignmentResult = await db.query(
-      'SELECT assignment_id, project_id, is_published FROM assignment WHERE assignment_id = $1',
+      'SELECT assignment_id, project_id, is_published, round FROM assignment WHERE assignment_id = $1',
       [assignment_id]
     );
 
@@ -1880,6 +1880,7 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
     }
 
     const projectId = assignmentResult.rows[0].project_id;
+    const currentRound = parseInt(assignmentResult.rows[0].round);
 
     // 如果要发布，校验项目至少有 rubric 且至少有一个 assignment
     if (is_published === true) {
@@ -1903,6 +1904,32 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
           }
         });
       }
+    }
+
+    // 额外限制：round=2 发布前，要求 round=1 最新版本已发布
+    if (currentRound === 2) {
+    const latestRound1 = await db.query(
+      `SELECT is_published
+       FROM assignment
+       WHERE project_id = $1 AND round = 1
+       ORDER BY version DESC
+       LIMIT 1`,
+      [projectId]
+    );
+
+    if (latestRound1.rows.length === 0) {
+      return res.status(400).json({
+        error: '发布失败',
+        message: '未找到作业1最新版本，请先提交作业1再尝试发布作业2'
+      });
+    }
+
+    if (latestRound1.rows[0].is_published !== true) {
+      return res.status(400).json({
+        error: '发布失败',
+        message: '请先发布作业1'
+      });
+    }
     }
 
     // 更新 assignment 发布状态

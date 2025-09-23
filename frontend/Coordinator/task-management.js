@@ -17,54 +17,103 @@
     // 从后端获取项目数据
     async function fetchProjects() {
       try {
+        console.log('🔄 开始获取项目数据...');
         const response = await fetch(API.listProjects);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+        console.log(`📊 获取到 ${data.projects?.length || 0} 个项目`);
 
         // 清空当前状态
         state.tasks = [];
 
         // 处理项目数据
-        data.projects.forEach(project => {
-          // 确定task状态：如果有任何assignment被publish，则为active，否则为draft
-          let taskStatus = 'draft';
-          let hasPublishedAssignment = false;
-          
-          // 这里需要根据实际数据结构调整
-          if (project.status === 'published' || project.file_counts?.assignment > 0) {
-            hasPublishedAssignment = true;
-            taskStatus = 'active';
+        for (const project of data.projects) {
+          console.log(`\n📋 处理项目: ${project.name} (ID: ${project.project_id})`);
+
+          let assignment1Status = 'unpublished';
+          let assignment2Status = 'unpublished';
+
+          try {
+            // 1. 首先获取项目的最新assignment IDs
+            const latestIdsResponse = await fetch(`/api/uploads/project/${project.project_id}/latest-ids`);
+            if (latestIdsResponse.ok) {
+              const latestIds = await latestIdsResponse.json();
+              console.log('📦 获取到最新IDs:', latestIds);
+
+              // 2. 获取assignment1的状态
+              if (latestIds.assignment1) {
+                const statusResponse1 = await fetch(`/api/uploads/assignment/${latestIds.assignment1.assignment_id}/status`);
+                if (statusResponse1.ok) {
+                  const statusData1 = await statusResponse1.json();
+                  assignment1Status = statusData1.assignment.is_published ? 'published' : 'unpublished';
+                  console.log(`📄 Assignment1 发布状态: ${statusData1.assignment.is_published}`);
+                } else {
+                  console.warn('⚠️ 获取assignment1状态失败');
+                }
+              } else {
+                console.log('📄 Assignment1: 无数据');
+              }
+
+              // 3. 获取assignment2的状态
+              if (latestIds.assignment2) {
+                const statusResponse2 = await fetch(`/api/uploads/assignment/${latestIds.assignment2.assignment_id}/status`);
+                if (statusResponse2.ok) {
+                  const statusData2 = await statusResponse2.json();
+                  assignment2Status = statusData2.assignment.is_published ? 'published' : 'unpublished';
+                  console.log(`📄 Assignment2 发布状态: ${statusData2.assignment.is_published}`);
+                } else {
+                  console.warn('⚠️ 获取assignment2状态失败');
+                }
+              } else {
+                console.log('📄 Assignment2: 无数据');
+              }
+            } else {
+              console.warn('⚠️ 获取最新IDs失败');
+            }
+          } catch (error) {
+            console.error('❌ 获取assignment状态过程中出错:', error);
           }
 
+          // 确定task状态：如果有任何assignment被publish，则为active，否则为draft
+          let taskStatus = 'draft';
+          if (assignment1Status === 'published' || assignment2Status === 'published') {
+            taskStatus = 'active';
+          }
+          console.log(`🏷️ 项目状态: ${taskStatus}`);
+          console.log(`📊 Assignment1状态: ${assignment1Status}, Assignment2状态: ${assignment2Status}`);
+
           state.tasks.push({
-              title: project.name,
-              description: project.description,
-              project_id: project.project_id,
-              created_at: project.created_at,
-              file_counts: project.file_counts,
-              rubric_id: project.rubric_id,
+            title: project.name,
+            description: project.description,
+            project_id: project.project_id,
+            created_at: project.created_at,
+            file_counts: project.file_counts,
+            rubric_id: project.rubric_id,
             status: taskStatus,
             assignments: [
               {
                 id: 'assignment1',
                 title: 'Assignment 1',
-                status: project.file_counts?.assignment > 0 ? 'published' : 'unpublished'
+                status: assignment1Status
               },
               {
-                id: 'assignment2', 
+                id: 'assignment2',
                 title: 'Assignment 2',
-                status: 'unpublished' // 默认第二个assignment是unpublished
+                status: assignment2Status
               }
             ]
           });
-        });
 
+          console.log(`✅ 项目 ${project.name} 处理完成`);
+        }
+
+        console.log('🎉 所有项目数据处理完成，开始渲染界面');
         // 重新渲染界面
         render();
       } catch (error) {
-        console.error('获取项目数据失败:', error);
+        console.error('❌ 获取项目数据失败:', error);
         toast('Failed to load projects. Please try again later.');
       }
     }
@@ -193,6 +242,7 @@
       
       const status = document.createElement('span');
       status.className = `tm-assignment-status ${assignment.status}`;
+       console.log(`📝 Assignment状态显示: assignmentId=${assignment.id}, projectId=${task.project_id}, status=${assignment.status}`);
       status.textContent = assignment.status;
       
       titleContainer.appendChild(title);
@@ -335,13 +385,71 @@
     // 发布assignment
     async function publishAssignment(taskId, assignmentId) {
       try {
-        // 这里需要调用实际的API来发布assignment
+        // 获取最新的assignment_id
+        const latestIdsResponse = await fetch(`/api/uploads/project/${taskId}/latest-ids`);
+
+        if (!latestIdsResponse.ok) {
+          throw new Error('Failed to fetch latest assignment IDs');
+        }
+
+        const latestIds = await latestIdsResponse.json();
+
+        // 前端校验：检查assignment是否存在
+        let targetAssignmentId;
+        let assignmentName;
+
+        if (assignmentId === 'assignment1') {
+          targetAssignmentId = latestIds.assignment1?.assignment_id;
+          assignmentName = 'Assignment 1';
+        } else if (assignmentId === 'assignment2') {
+          targetAssignmentId = latestIds.assignment2?.assignment_id;
+          assignmentName = 'Assignment 2';
+        }
+
+        // 前端明确校验
+        if (!targetAssignmentId) {
+          toast(`${assignmentName} is empty. Please create it first.`);
+          return null; // 直接返回，不继续后续操作
+        }
+
+        // 调用发布接口
+        const publishResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/publish`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            is_published: true
+          })
+        });
+
+        if (!publishResponse.ok) {
+          const errorData = await publishResponse.json();
+          throw new Error(errorData.error || errorData.message || 'Publish failed');
+        }
+
+        const result = await publishResponse.json();
+
         toast('Assignment published successfully!');
         // 重新加载数据
         await fetchProjects();
+
+        return result;
       } catch (error) {
-        console.error('Failed to publish assignment:', error);
-        toast('Failed to publish assignment. Please try again.');
+        console.error('发布作业失败:', error);
+
+        // 区分处理不同的错误类型（前端显示用英文）
+        if (error.message.includes('Assignment not found')) {
+          toast('Assignment not found. Please refresh the page and try again.');
+        } else if (error.message.includes('请先发布作业1') || error.message.includes('未找到作业1最新版本')) {
+          toast('Please publish Assignment 1 first before publishing Assignment 2.');
+        } else if (error.message.includes('Cannot publish assignment')) {
+          toast('Cannot publish assignment. Please make sure the project has at least one rubric and one assignment.');
+        } else {
+          toast('Failed to publish assignment. Please try again.');
+        }
+
+        throw error;
       }
     }
 
