@@ -184,115 +184,157 @@
     function createRubricSection(task) {
       const section = document.createElement('div');
       section.className = 'tm-rubric-section';
-      
+
       const header = document.createElement('div');
       header.className = 'tm-rubric-header';
-      
+
       const title = document.createElement('div');
       title.className = 'tm-rubric-title';
       title.textContent = 'Rubric';
-      
+
       const chevron = document.createElement('div');
       chevron.className = 'tm-rubric-chevron';
       chevron.innerHTML = '▾';
       chevron.addEventListener('click', () => toggleRubricSection(section));
-      
+
       header.appendChild(title);
       header.appendChild(chevron);
-      
+
       const actions = document.createElement('div');
       actions.className = 'tm-rubric-actions';
-      
+
       const uploadBtn = createButton('Upload Rubric', () => {
         location.href = `/dashboard/coordinator/upload?project=${task.project_id}&type=rubric`;
       });
-      
+
       const viewBtn = createButton('View Rubric', () => {
         location.href = `/dashboard/coordinator/rubric?project=${task.project_id}`;
       });
-      
-      // 只有有rubric文件时才显示View按钮
-      if (task.file_counts?.rubric > 0) {
-        actions.appendChild(uploadBtn);
-        actions.appendChild(viewBtn);
+
+      // 检查A1是否已发布，如果已发布则隐藏Upload按钮
+      const isA1Published = task.assignments.find(a => a.id === 'assignment1')?.status === 'published';
+
+      console.log(`📊 Rubric按钮显示逻辑: A1发布状态=${isA1Published}, 有rubric文件=${task.file_counts?.rubric > 0}`);
+
+      if (isA1Published) {
+        // A1已发布，只显示View按钮（如果有rubric文件）
+        if (task.file_counts?.rubric > 0) {
+          actions.appendChild(viewBtn);
+          console.log('🔘 Rubric显示: View按钮');
+        } else {
+          console.log('🔘 Rubric显示: 无按钮（A1已发布且无rubric文件）');
+        }
       } else {
-        actions.appendChild(uploadBtn);
+        // A1未发布，正常显示按钮
+        if (task.file_counts?.rubric > 0) {
+          actions.appendChild(uploadBtn);
+          actions.appendChild(viewBtn);
+          console.log('🔘 Rubric显示: Upload, View按钮');
+        } else {
+          actions.appendChild(uploadBtn);
+          console.log('🔘 Rubric显示: Upload按钮');
+        }
       }
-      
+
       section.appendChild(header);
       section.appendChild(actions);
-      
+
       return section;
     }
 
     function createAssignmentSection(task, assignment) {
       const section = document.createElement('div');
       section.className = 'tm-assignment-item';
-      
+
       const header = document.createElement('div');
       header.className = 'tm-assignment-header';
-      
+
       const titleContainer = document.createElement('div');
       titleContainer.style.display = 'flex';
       titleContainer.style.alignItems = 'center';
-      
+
       const title = document.createElement('div');
       title.className = 'tm-assignment-title';
       title.textContent = assignment.title;
-      
+
       const status = document.createElement('span');
       status.className = `tm-assignment-status ${assignment.status}`;
       console.log(`📝 Assignment状态显示: assignmentId=${assignment.id}, projectId=${task.project_id}, status=${assignment.status}`);
-      status.textContent = assignment.status;
+
+      // 正确格式化状态显示文本
+      if (assignment.status === 'published') {
+        status.textContent = 'Published';
+        console.log(`✅ ${assignment.title} 状态: 已发布`);
+      } else if (assignment.status === 'unpublished') {
+        status.textContent = 'Unpublished';
+        console.log(`⏸️ ${assignment.title} 状态: 未发布`);
+      } else {
+        status.textContent = assignment.status;
+        console.log(`❓ ${assignment.title} 状态: ${assignment.status} (未知状态)`);
+      }
 
       titleContainer.appendChild(title);
       titleContainer.appendChild(status);
-      
+
       const chevron = document.createElement('div');
       chevron.className = 'tm-assignment-chevron';
       chevron.innerHTML = '▾';
       chevron.addEventListener('click', () => toggleAssignmentSection(section));
-      
+
       header.appendChild(titleContainer);
       header.appendChild(chevron);
-      
+
       const actions = document.createElement('div');
       actions.className = 'tm-assignment-actions';
-      
+
       const uploadBtn = createButton('Upload', () => {
         location.href = `/dashboard/coordinator/upload?project=${task.project_id}&assignment=${assignment.id}`;
       });
-      
+
       const viewBtn = createButton('View', () => {
         location.href = `/dashboard/coordinator/view?project=${task.project_id}&assignment=${assignment.id}`;
       });
-      
+
       const publishBtn = createButton('Publish Assignment', () => {
         publishAssignment(task.project_id, assignment.id);
       });
-      
+
       const markBtn = createButton('Mark Assignment', () => {
         location.href = `/dashboard/coordinator/mark?project=${task.project_id}&assignment=${assignment.id}`;
       });
-      
+
       const feedbackBtn = createButton('Feedback', () => {
         location.href = `/dashboard/coordinator/feedback?project=${task.project_id}&assignment=${assignment.id}`;
       });
-      
-      actions.appendChild(uploadBtn);
-      
-      // 只有有assignment文件时才显示其他按钮
-      if (assignment.status === 'published' || task.file_counts?.assignment > 0) {
+
+      console.log(`🔄 为 ${assignment.title} 设置按钮: status=${assignment.status}, file_counts=${task.file_counts?.assignment}`);
+
+      // 根据assignment状态显示不同的按钮
+      if (assignment.status === 'published') {
+
+        // 已发布：隐藏Upload按钮，显示其他按钮
         actions.appendChild(viewBtn);
         actions.appendChild(markBtn);
         actions.appendChild(feedbackBtn);
+        console.log(`🔘 ${assignment.title} 显示按钮: View, Mark, Feedback (已发布，隐藏Upload)`);
       } else {
-        actions.appendChild(publishBtn);
+        // 未发布：显示Upload按钮
+        actions.appendChild(uploadBtn);
+
+        // 只有有assignment文件时才显示View按钮和发布按钮
+        if (task.file_counts?.assignment > 0) {
+          actions.appendChild(viewBtn);
+          actions.appendChild(publishBtn);
+          console.log(`🔘 ${assignment.title} 显示按钮: Upload, View, Publish`);
+        } else {
+          actions.appendChild(publishBtn);
+          console.log(`🔘 ${assignment.title} 显示按钮: Upload, Publish`);
+        }
       }
-      
+
       section.appendChild(header);
       section.appendChild(actions);
-      
+
       return section;
     }
 
