@@ -242,9 +242,9 @@
       
       const status = document.createElement('span');
       status.className = `tm-assignment-status ${assignment.status}`;
-       console.log(`📝 Assignment状态显示: assignmentId=${assignment.id}, projectId=${task.project_id}, status=${assignment.status}`);
+      console.log(`📝 Assignment状态显示: assignmentId=${assignment.id}, projectId=${task.project_id}, status=${assignment.status}`);
       status.textContent = assignment.status;
-      
+
       titleContainer.appendChild(title);
       titleContainer.appendChild(status);
       
