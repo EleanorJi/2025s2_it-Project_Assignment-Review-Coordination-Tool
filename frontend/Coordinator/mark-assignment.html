@@ -10,283 +10,283 @@
   <link rel="stylesheet" href="/Coordinator/mark-assignment.css">
 </head>
 <body>
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-title">HPS302 Assignment Moderation Tool</div>
-    </div>
-    <div class="account">
-      <span id="username"></span><span class="caret">▾</span>
-    </div>
-  </header>
-
-  <div class="app">
-    <!-- Main content -->
-    <main class="main-content">
-        <!-- Title and Back button row -->
-      <div class="title-row">
-        <h1>Mark Assignment</h1>
-        <button class="back-btn">Back</button>
-      </div>
-
-      <!-- Assignment details -->
-      <div class="assignment-details">
-        <div class="assignment-info">
-          <div class="assignment-title">2025 - Semester 1 - Assignment 1</div>
-          <div class="due-date">Due: Tue Sep 16, 2025 10:00</div>
-        </div>
-      </div>
-
-      <!-- Three column layout -->
-      <div class="marking-container">
-        <!-- Left: Document thumbnails sidebar -->
-        <div class="document-thumbnails-sidebar">
-          <div class="thumbnails-header">
-            <h4>Pages</h4>
-          </div>
-          <div class="document-thumbnails">
-            <div class="thumbnail active" data-page="1">1</div>
-            <div class="thumbnail" data-page="2">2</div>
-          </div>
-        </div>
-
-        <!-- Middle: Document viewer -->
-        <div class="document-viewer">
-          <div class="document-controls">
-            <div class="pagination">1 of 2</div>
-            <div class="view-controls">
-              <button class="view-btn">View as text</button>
-              <button class="download-btn">Download</button>
-            </div>
-          </div>
-
-          <div class="document-content">
-            <div class="document-title">The Case for Friction: Why Good Design Isn't Always Seamless</div>
-            <div class="document-text">
-              <h2>Introduction</h2>
-              <p>In the world of design, there's an almost universal push toward seamlessness. We want our apps to be intuitive, our websites to be frictionless, and our user experiences to be as smooth as possible. But what if this relentless pursuit of seamlessness is actually counterproductive? This paper explores the concept of intentional friction in user interface design and argues that strategic friction can enhance user experience, learning outcomes, and ethical decision-making.</p>
-              
-              <p>Friction—those moments of pause, confirmation, or even difficulty in an interface—is often seen as the enemy of good design. Yet, when applied thoughtfully, friction can be a powerful tool for creating better, more ethical, and more meaningful user experiences. This research examines various contexts where friction serves beneficial purposes, from educational technology to financial applications.</p>
-              
-              <h3>Theoretical Framework</h3>
-              <p>Our analysis is grounded in cognitive load theory (Sweller, 1988) and the concept of deliberate practice (Ericsson et al., 1993). These frameworks suggest that certain types of difficulty can enhance learning and skill development. We also draw from behavioral economics, particularly the work of Thaler and Sunstein (2008) on choice architecture and nudging.</p>
-              
-              <h2>Literature Review</h2>
-              <p>Previous research on user experience has largely focused on reducing cognitive load and streamlining interactions. Norman (2013) emphasized the importance of intuitive design, while Nielsen (1994) established principles for usability that prioritize efficiency. However, recent studies have begun to question this paradigm.</p>
-              
-              <p>Research by O'Brien and Toms (2008) introduced the concept of "engagement" as a positive user experience factor that may require some level of challenge or friction. Similarly, Hassenzahl (2010) distinguished between pragmatic and hedonic quality, suggesting that users value both efficiency and meaningful experiences.</p>
-              
-              <h2>Methodology</h2>
-              <p>This study employed a mixed-methods approach, combining quantitative usability testing with qualitative user interviews. We conducted experiments with 120 participants across three different application domains: educational software, financial planning tools, and social media platforms.</p>
-              
-              <p>Participants were randomly assigned to either a "frictionless" or "friction-enhanced" version of each application. We measured task completion rates, time to completion, user satisfaction, and learning outcomes. Qualitative data was collected through semi-structured interviews exploring user perceptions and decision-making processes.</p>
-              
-              <h2>Results</h2>
-              <p>Our findings reveal several key insights about the role of friction in user experience design. In educational contexts, participants using friction-enhanced interfaces showed 23% better retention rates and 18% higher confidence in their learning outcomes. The additional cognitive effort required by these interfaces appeared to enhance rather than hinder the learning process.</p>
-              
-              <p>In financial applications, strategic friction significantly improved decision quality. Users of friction-enhanced interfaces made more thoughtful investment choices, with 31% fewer impulsive decisions and 27% better long-term outcomes. The additional time required for transactions was perceived as valuable rather than burdensome.</p>
-              
-              <h3>Case Study: Confirmation Screens</h3>
-              <p>Consider the confirmation screen before deleting important data. While it might seem like an unnecessary step, this moment of friction serves a crucial purpose: it prevents costly mistakes and gives users a chance to reconsider their actions. This is friction in service of user protection.</p>
-              
-              <p>Our analysis of 50,000 deletion events across various applications showed that confirmation screens reduced accidental deletions by 67% while only adding an average of 2.3 seconds to the user workflow. User satisfaction surveys indicated that 89% of participants appreciated these protective measures.</p>
-              
-              <h2>Discussion</h2>
-              <p>In educational contexts, friction can enhance learning. When students must work through challenging problems or navigate complex interfaces, they develop deeper understanding and problem-solving skills. The struggle itself becomes part of the learning process, as suggested by the "desirable difficulties" framework (Bjork, 1994).</p>
-              
-              <p>Ethical design often requires friction. Consent forms, privacy settings, and data sharing agreements need to be clear and deliberate, not hidden or rushed. This friction ensures users make informed decisions about their data and privacy. Our research shows that users who engage with more detailed privacy settings are 45% more likely to make privacy-conscious decisions.</p>
-              
-              <p>Social interactions also benefit from intentional friction. The slight delay in messaging apps, the need to confirm friend requests, or the process of joining a group—these moments of friction create space for reflection and intentional connection. This aligns with research on "slow technology" (Hallnäs & Redström, 2001) that emphasizes the value of contemplative interaction.</p>
-              
-              <h2>Implications for Design</h2>
-              <p>Even in physical design, friction serves important purposes. The gates at train stations, while seemingly inconvenient, help manage crowd flow and prevent accidents. The resistance in a good door handle provides tactile feedback about the door's state. These examples demonstrate that friction can be both functional and meaningful.</p>
-              
-              <p>The key is not to eliminate friction entirely, but to use it strategically. Good friction serves a purpose: it protects, educates, creates space for reflection, or enhances the overall experience. Bad friction is simply an obstacle with no clear benefit. Our framework for evaluating friction includes three criteria: purpose, proportionality, and user agency.</p>
-              
-              <h2>Conclusion</h2>
-              <p>As designers, we should ask ourselves: What is this friction protecting? What is it teaching? What is it enabling? When we can answer these questions clearly, friction becomes not just acceptable, but essential to good design. The future of user experience design lies not in the elimination of all obstacles, but in the thoughtful integration of meaningful challenges that serve user goals and values.</p>
-              
-              <p>This research contributes to the growing body of work questioning the "frictionless" paradigm in user experience design. By providing empirical evidence for the benefits of strategic friction, we hope to inspire designers to consider when and how to introduce meaningful challenges into their interfaces.</p>
-              
-              <h3>References</h3>
-              <p>Bjork, R. A. (1994). Memory and metamemory considerations in the training of human beings. In J. Metcalfe & A. Shimamura (Eds.), Metacognition: Knowing about knowing (pp. 185-205). MIT Press.</p>
-              <p>Ericsson, K. A., Krampe, R. T., & Tesch-Römer, C. (1993). The role of deliberate practice in the acquisition of expert performance. Psychological Review, 100(3), 363-406.</p>
-              <p>Hallnäs, L., & Redström, J. (2001). Slow technology – designing for reflection. Personal and Ubiquitous Computing, 5(3), 201-212.</p>
-              <p>Hassenzahl, M. (2010). Experience design: Technology for all the right reasons. Morgan & Claypool Publishers.</p>
-              <p>Norman, D. (2013). The design of everyday things: Revised and expanded edition. Basic Books.</p>
-              <p>O'Brien, H. L., & Toms, E. G. (2008). What is user engagement? A conceptual framework for defining user engagement with technology. Journal of the American Society for Information Science and Technology, 59(6), 938-955.</p>
-              <p>Sweller, J. (1988). Cognitive load during problem solving: Effects on learning. Cognitive Science, 12(2), 257-285.</p>
-              <p>Thaler, R. H., & Sunstein, C. R. (2008). Nudge: Improving decisions about health, wealth, and happiness. Yale University Press.</p>
-            </div>
-          </div>
-        </div>
-
-
-        <!-- Right: Marking criteria -->
-        <div class="marking-criteria">
-          <div class="criterion" data-criterion="1">
-            <div class="criterion-header">
-              <div class="criterion-number">1.</div>
-              <div class="criterion-title">Introduction: Applies theoretical framework to topic</div>
-            </div>
-            
-            <div class="grade-selector">
-              <button class="grade-arrow left">‹</button>
-              <div class="grade-options">
-                <div class="grade-option active" data-grade="3">High Distinction</div>
-                <div class="grade-option" data-grade="2">Distinction</div>
-                <div class="grade-option" data-grade="1">Credit</div>
-                <div class="grade-option" data-grade="0">Pass</div>
-              </div>
-              <button class="grade-arrow right">›</button>
-            </div>
-            
-            <div class="score-input-section">
-              <div class="score-input-container">
-                <label for="score-input-1">Manual Score:</label>
-                <input type="number" id="score-input-1" class="score-input" min="0" max="15" value="15" />
-                <span class="max-score">/ 15</span>
-              </div>
-            </div>
-            
-            <div class="grade-info">
-              <div class="grade-level">High Distinction</div>
-              <div class="grade-score">15/15</div>
-            </div>
-            
-            <div class="grade-description">
-              <strong>12-15 points:</strong>
-              <ul>
-                <li>Articulates a compelling justification for investigating the phenomenon.</li>
-                <li>Provides a clear, comprehensive definition of all relevant key terms and constructs.</li>
-                <li>Applies highly relevant theoretical framework/s to provide an insightful explanation of the impacts of caregiving on development.</li>
-              </ul>
-            </div>
-            
-            <div class="feedback-section">
-              <button class="show-feedback-btn">+ Add Feedback</button>
-              <div class="criterion-feedback hidden">
-                <div class="feedback-header">
-                  <span>Criterion Feedback</span>
-                  <button class="close-feedback">×</button>
-                </div>
-                <textarea placeholder="will be included in the overall feedback and visible to students"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <div class="criterion" data-criterion="2">
-            <div class="criterion-header">
-              <div class="criterion-number">2.</div>
-              <div class="criterion-title">Introduction: Locates, synthesises and critically analyses literature</div>
-            </div>
-            
-            <div class="grade-selector">
-              <button class="grade-arrow left">‹</button>
-              <div class="grade-options">
-                <div class="grade-option active" data-grade="3">High Distinction</div>
-                <div class="grade-option" data-grade="2">Distinction</div>
-                <div class="grade-option" data-grade="1">Credit</div>
-                <div class="grade-option" data-grade="0">Pass</div>
-              </div>
-              <button class="grade-arrow right">›</button>
-            </div>
-            
-            <div class="score-input-section">
-              <div class="score-input-container">
-                <label for="score-input-2">Manual Score:</label>
-                <input type="number" id="score-input-2" class="score-input" min="0" max="10" value="10" />
-                <span class="max-score">/ 10</span>
-              </div>
-            </div>
-            
-            <div class="grade-info">
-              <div class="grade-level">High Distinction</div>
-              <div class="grade-score">10/10</div>
-            </div>
-            
-            <div class="grade-description">
-              <strong>8-10 points:</strong>
-              <ul>
-                <li>Locates most relevant, influential, contemporary, peer-reviewed papers.</li>
-                <li>Concisely synthesizes the key findings relevant to the topic.</li>
-                <li>Critically evaluates key strengths, weaknesses and gaps in the literature.</li>
-              </ul>
-            </div>
-            
-            <div class="feedback-section">
-              <button class="show-feedback-btn">+ Add Feedback</button>
-              <div class="criterion-feedback hidden">
-                <div class="feedback-header">
-                  <span>Criterion Feedback</span>
-                  <button class="close-feedback">×</button>
-                </div>
-                <textarea placeholder="will be included in the overall feedback and visible to students"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <div class="criterion" data-criterion="3">
-            <div class="criterion-header">
-              <div class="criterion-number">3.</div>
-              <div class="criterion-title">Results: Develops significant themes</div>
-            </div>
-            
-            <div class="grade-selector">
-              <button class="grade-arrow left">‹</button>
-              <div class="grade-options">
-                <div class="grade-option active" data-grade="3">High Distinction</div>
-                <div class="grade-option" data-grade="2">Distinction</div>
-                <div class="grade-option" data-grade="1">Credit</div>
-                <div class="grade-option" data-grade="0">Pass</div>
-              </div>
-              <button class="grade-arrow right">›</button>
-            </div>
-            
-            <div class="score-input-section">
-              <div class="score-input-container">
-                <label for="score-input-3">Manual Score:</label>
-                <input type="number" id="score-input-3" class="score-input" min="0" max="10" value="10" />
-                <span class="max-score">/ 10</span>
-              </div>
-            </div>
-            
-            <div class="grade-info">
-              <div class="grade-level">High Distinction</div>
-              <div class="grade-score">10/10</div>
-            </div>
-            
-            <div class="grade-description">
-              <strong>8-10 points:</strong>
-              <ul>
-                <li>Locates most relevant, influential, contemporary, peer-reviewed papers.</li>
-                <li>Concisely synthesizes the key findings relevant to the topic.</li>
-                <li>Critically evaluates key strengths, weaknesses and gaps in the literature.</li>
-              </ul>
-        </div>
-
-            <div class="feedback-section">
-              <button class="show-feedback-btn">+ Add Feedback</button>
-              <div class="criterion-feedback hidden">
-                <div class="feedback-header">
-                  <span>Criterion Feedback</span>
-                  <button class="close-feedback">×</button>
-                </div>
-                <textarea placeholder="will be included in the overall feedback and visible to students"></textarea>
-              </div>
-            </div>
-            
-            <!-- Action buttons in third criterion -->
-            <div class="action-buttons">
-              <button class="btn btn-secondary" id="saveBtn">Save Draft</button>
-              <button class="btn btn-primary" id="submitBtn">Submit Marks</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
+<!-- Top bar -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-title">HPS302 Assignment Moderation Tool</div>
   </div>
+  <div class="account">
+    <span id="username"></span><span class="caret">▾</span>
+  </div>
+</header>
 
-  <script src="/Coordinator/mark-assignment.js" defer></script>
+<div class="app">
+  <!-- Main content -->
+  <main class="main-content">
+    <!-- Title and Back button row -->
+    <div class="title-row">
+      <h1>Mark Assignment</h1>
+      <button class="back-btn">Back</button>
+    </div>
+
+    <!-- Assignment details -->
+    <div class="assignment-details">
+      <div class="assignment-info">
+        <div class="assignment-title">2025 - Semester 1 - Assignment 1</div>
+        <div class="due-date">Due: Tue Sep 16, 2025 10:00</div>
+      </div>
+    </div>
+
+    <!-- Three column layout -->
+    <div class="marking-container">
+      <!-- Left: Document thumbnails sidebar -->
+      <div class="document-thumbnails-sidebar">
+        <div class="thumbnails-header">
+          <h4>Pages</h4>
+        </div>
+        <div class="document-thumbnails">
+          <div class="thumbnail active" data-page="1">1</div>
+          <div class="thumbnail" data-page="2">2</div>
+        </div>
+      </div>
+
+      <!-- Middle: Document viewer -->
+      <div class="document-viewer">
+        <div class="document-controls">
+          <div class="pagination">1 of 2</div>
+          <div class="view-controls">
+            <button class="view-btn">View as text</button>
+            <button class="download-btn">Download</button>
+          </div>
+        </div>
+
+        <div class="document-content">
+          <div class="document-title">The Case for Friction: Why Good Design Isn't Always Seamless</div>
+          <div class="document-text">
+            <h2>Introduction</h2>
+            <p>In the world of design, there's an almost universal push toward seamlessness. We want our apps to be intuitive, our websites to be frictionless, and our user experiences to be as smooth as possible. But what if this relentless pursuit of seamlessness is actually counterproductive? This paper explores the concept of intentional friction in user interface design and argues that strategic friction can enhance user experience, learning outcomes, and ethical decision-making.</p>
+
+            <p>Friction—those moments of pause, confirmation, or even difficulty in an interface—is often seen as the enemy of good design. Yet, when applied thoughtfully, friction can be a powerful tool for creating better, more ethical, and more meaningful user experiences. This research examines various contexts where friction serves beneficial purposes, from educational technology to financial applications.</p>
+
+            <h3>Theoretical Framework</h3>
+            <p>Our analysis is grounded in cognitive load theory (Sweller, 1988) and the concept of deliberate practice (Ericsson et al., 1993). These frameworks suggest that certain types of difficulty can enhance learning and skill development. We also draw from behavioral economics, particularly the work of Thaler and Sunstein (2008) on choice architecture and nudging.</p>
+
+            <h2>Literature Review</h2>
+            <p>Previous research on user experience has largely focused on reducing cognitive load and streamlining interactions. Norman (2013) emphasized the importance of intuitive design, while Nielsen (1994) established principles for usability that prioritize efficiency. However, recent studies have begun to question this paradigm.</p>
+
+            <p>Research by O'Brien and Toms (2008) introduced the concept of "engagement" as a positive user experience factor that may require some level of challenge or friction. Similarly, Hassenzahl (2010) distinguished between pragmatic and hedonic quality, suggesting that users value both efficiency and meaningful experiences.</p>
+
+            <h2>Methodology</h2>
+            <p>This study employed a mixed-methods approach, combining quantitative usability testing with qualitative user interviews. We conducted experiments with 120 participants across three different application domains: educational software, financial planning tools, and social media platforms.</p>
+
+            <p>Participants were randomly assigned to either a "frictionless" or "friction-enhanced" version of each application. We measured task completion rates, time to completion, user satisfaction, and learning outcomes. Qualitative data was collected through semi-structured interviews exploring user perceptions and decision-making processes.</p>
+
+            <h2>Results</h2>
+            <p>Our findings reveal several key insights about the role of friction in user experience design. In educational contexts, participants using friction-enhanced interfaces showed 23% better retention rates and 18% higher confidence in their learning outcomes. The additional cognitive effort required by these interfaces appeared to enhance rather than hinder the learning process.</p>
+
+            <p>In financial applications, strategic friction significantly improved decision quality. Users of friction-enhanced interfaces made more thoughtful investment choices, with 31% fewer impulsive decisions and 27% better long-term outcomes. The additional time required for transactions was perceived as valuable rather than burdensome.</p>
+
+            <h3>Case Study: Confirmation Screens</h3>
+            <p>Consider the confirmation screen before deleting important data. While it might seem like an unnecessary step, this moment of friction serves a crucial purpose: it prevents costly mistakes and gives users a chance to reconsider their actions. This is friction in service of user protection.</p>
+
+            <p>Our analysis of 50,000 deletion events across various applications showed that confirmation screens reduced accidental deletions by 67% while only adding an average of 2.3 seconds to the user workflow. User satisfaction surveys indicated that 89% of participants appreciated these protective measures.</p>
+
+            <h2>Discussion</h2>
+            <p>In educational contexts, friction can enhance learning. When students must work through challenging problems or navigate complex interfaces, they develop deeper understanding and problem-solving skills. The struggle itself becomes part of the learning process, as suggested by the "desirable difficulties" framework (Bjork, 1994).</p>
+
+            <p>Ethical design often requires friction. Consent forms, privacy settings, and data sharing agreements need to be clear and deliberate, not hidden or rushed. This friction ensures users make informed decisions about their data and privacy. Our research shows that users who engage with more detailed privacy settings are 45% more likely to make privacy-conscious decisions.</p>
+
+            <p>Social interactions also benefit from intentional friction. The slight delay in messaging apps, the need to confirm friend requests, or the process of joining a group—these moments of friction create space for reflection and intentional connection. This aligns with research on "slow technology" (Hallnäs & Redström, 2001) that emphasizes the value of contemplative interaction.</p>
+
+            <h2>Implications for Design</h2>
+            <p>Even in physical design, friction serves important purposes. The gates at train stations, while seemingly inconvenient, help manage crowd flow and prevent accidents. The resistance in a good door handle provides tactile feedback about the door's state. These examples demonstrate that friction can be both functional and meaningful.</p>
+
+            <p>The key is not to eliminate friction entirely, but to use it strategically. Good friction serves a purpose: it protects, educates, creates space for reflection, or enhances the overall experience. Bad friction is simply an obstacle with no clear benefit. Our framework for evaluating friction includes three criteria: purpose, proportionality, and user agency.</p>
+
+            <h2>Conclusion</h2>
+            <p>As designers, we should ask ourselves: What is this friction protecting? What is it teaching? What is it enabling? When we can answer these questions clearly, friction becomes not just acceptable, but essential to good design. The future of user experience design lies not in the elimination of all obstacles, but in the thoughtful integration of meaningful challenges that serve user goals and values.</p>
+
+            <p>This research contributes to the growing body of work questioning the "frictionless" paradigm in user experience design. By providing empirical evidence for the benefits of strategic friction, we hope to inspire designers to consider when and how to introduce meaningful challenges into their interfaces.</p>
+
+            <h3>References</h3>
+            <p>Bjork, R. A. (1994). Memory and metamemory considerations in the training of human beings. In J. Metcalfe & A. Shimamura (Eds.), Metacognition: Knowing about knowing (pp. 185-205). MIT Press.</p>
+            <p>Ericsson, K. A., Krampe, R. T., & Tesch-Römer, C. (1993). The role of deliberate practice in the acquisition of expert performance. Psychological Review, 100(3), 363-406.</p>
+            <p>Hallnäs, L., & Redström, J. (2001). Slow technology – designing for reflection. Personal and Ubiquitous Computing, 5(3), 201-212.</p>
+            <p>Hassenzahl, M. (2010). Experience design: Technology for all the right reasons. Morgan & Claypool Publishers.</p>
+            <p>Norman, D. (2013). The design of everyday things: Revised and expanded edition. Basic Books.</p>
+            <p>O'Brien, H. L., & Toms, E. G. (2008). What is user engagement? A conceptual framework for defining user engagement with technology. Journal of the American Society for Information Science and Technology, 59(6), 938-955.</p>
+            <p>Sweller, J. (1988). Cognitive load during problem solving: Effects on learning. Cognitive Science, 12(2), 257-285.</p>
+            <p>Thaler, R. H., & Sunstein, C. R. (2008). Nudge: Improving decisions about health, wealth, and happiness. Yale University Press.</p>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Right: Marking criteria -->
+      <div class="marking-criteria">
+        <div class="criterion" data-criterion="1">
+          <div class="criterion-header">
+            <div class="criterion-number">1.</div>
+            <div class="criterion-title">Introduction: Applies theoretical framework to topic</div>
+          </div>
+
+          <div class="grade-selector">
+            <button class="grade-arrow left">‹</button>
+            <div class="grade-options">
+              <div class="grade-option active" data-grade="3">High Distinction</div>
+              <div class="grade-option" data-grade="2">Distinction</div>
+              <div class="grade-option" data-grade="1">Credit</div>
+              <div class="grade-option" data-grade="0">Pass</div>
+            </div>
+            <button class="grade-arrow right">›</button>
+          </div>
+
+          <div class="score-input-section">
+            <div class="score-input-container">
+              <label for="score-input-1">Manual Score:</label>
+              <input type="number" id="score-input-1" class="score-input" min="0" max="15" value="15" />
+              <span class="max-score">/ 15</span>
+            </div>
+          </div>
+
+          <div class="grade-info">
+            <div class="grade-level">High Distinction</div>
+            <div class="grade-score">15/15</div>
+          </div>
+
+          <div class="grade-description">
+            <strong>12-15 points:</strong>
+            <ul>
+              <li>Articulates a compelling justification for investigating the phenomenon.</li>
+              <li>Provides a clear, comprehensive definition of all relevant key terms and constructs.</li>
+              <li>Applies highly relevant theoretical framework/s to provide an insightful explanation of the impacts of caregiving on development.</li>
+            </ul>
+          </div>
+
+          <div class="feedback-section">
+            <button class="show-feedback-btn">+ Add Feedback</button>
+            <div class="criterion-feedback hidden">
+              <div class="feedback-header">
+                <span>Criterion Feedback</span>
+                <button class="close-feedback">×</button>
+              </div>
+              <textarea placeholder="will be included in the overall feedback and visible to students"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="criterion" data-criterion="2">
+          <div class="criterion-header">
+            <div class="criterion-number">2.</div>
+            <div class="criterion-title">Introduction: Locates, synthesises and critically analyses literature</div>
+          </div>
+
+          <div class="grade-selector">
+            <button class="grade-arrow left">‹</button>
+            <div class="grade-options">
+              <div class="grade-option active" data-grade="3">High Distinction</div>
+              <div class="grade-option" data-grade="2">Distinction</div>
+              <div class="grade-option" data-grade="1">Credit</div>
+              <div class="grade-option" data-grade="0">Pass</div>
+            </div>
+            <button class="grade-arrow right">›</button>
+          </div>
+
+          <div class="score-input-section">
+            <div class="score-input-container">
+              <label for="score-input-2">Manual Score:</label>
+              <input type="number" id="score-input-2" class="score-input" min="0" max="10" value="10" />
+              <span class="max-score">/ 10</span>
+            </div>
+          </div>
+
+          <div class="grade-info">
+            <div class="grade-level">High Distinction</div>
+            <div class="grade-score">10/10</div>
+          </div>
+
+          <div class="grade-description">
+            <strong>8-10 points:</strong>
+            <ul>
+              <li>Locates most relevant, influential, contemporary, peer-reviewed papers.</li>
+              <li>Concisely synthesizes the key findings relevant to the topic.</li>
+              <li>Critically evaluates key strengths, weaknesses and gaps in the literature.</li>
+            </ul>
+          </div>
+
+          <div class="feedback-section">
+            <button class="show-feedback-btn">+ Add Feedback</button>
+            <div class="criterion-feedback hidden">
+              <div class="feedback-header">
+                <span>Criterion Feedback</span>
+                <button class="close-feedback">×</button>
+              </div>
+              <textarea placeholder="will be included in the overall feedback and visible to students"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="criterion" data-criterion="3">
+          <div class="criterion-header">
+            <div class="criterion-number">3.</div>
+            <div class="criterion-title">Results: Develops significant themes</div>
+          </div>
+
+          <div class="grade-selector">
+            <button class="grade-arrow left">‹</button>
+            <div class="grade-options">
+              <div class="grade-option active" data-grade="3">High Distinction</div>
+              <div class="grade-option" data-grade="2">Distinction</div>
+              <div class="grade-option" data-grade="1">Credit</div>
+              <div class="grade-option" data-grade="0">Pass</div>
+            </div>
+            <button class="grade-arrow right">›</button>
+          </div>
+
+          <div class="score-input-section">
+            <div class="score-input-container">
+              <label for="score-input-3">Manual Score:</label>
+              <input type="number" id="score-input-3" class="score-input" min="0" max="10" value="10" />
+              <span class="max-score">/ 10</span>
+            </div>
+          </div>
+
+          <div class="grade-info">
+            <div class="grade-level">High Distinction</div>
+            <div class="grade-score">10/10</div>
+          </div>
+
+          <div class="grade-description">
+            <strong>8-10 points:</strong>
+            <ul>
+              <li>Locates most relevant, influential, contemporary, peer-reviewed papers.</li>
+              <li>Concisely synthesizes the key findings relevant to the topic.</li>
+              <li>Critically evaluates key strengths, weaknesses and gaps in the literature.</li>
+            </ul>
+          </div>
+
+          <div class="feedback-section">
+            <button class="show-feedback-btn">+ Add Feedback</button>
+            <div class="criterion-feedback hidden">
+              <div class="feedback-header">
+                <span>Criterion Feedback</span>
+                <button class="close-feedback">×</button>
+              </div>
+              <textarea placeholder="will be included in the overall feedback and visible to students"></textarea>
+            </div>
+          </div>
+
+          <!-- Action buttons in third criterion -->
+          <div class="action-buttons">
+            <button class="btn btn-secondary" id="saveBtn">Save Draft</button>
+            <button class="btn btn-primary" id="submitBtn">Submit Marks</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/Coordinator/mark-assignment.js" defer></script>
 </body>
 </html>

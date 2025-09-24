@@ -2705,4 +2705,33 @@ router.get('/project/:project_id/latest-rubric', async (req, res) => {
   }
 });
 
+//获取 assignment 关联的文件信息 - GET /api/uploads/assignment/:assignment_id/files
+router.get('/assignment/:assignment_id/files', async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+
+    const result = await db.query(
+      `SELECT u.upload_id, u.file_name, u.storage_path, u.file_type, u.mime_type, u.created_at
+       FROM upload u
+       WHERE u.assignment_id = $1
+       ORDER BY u.created_at DESC`,
+      [assignment_id]
+    );
+
+    return res.json({
+      assignment_id: parseInt(assignment_id),
+      files: result.rows.map(row => ({
+        upload_id: row.upload_id,
+        file_name: row.file_name,
+        file_type: row.file_type,
+        mime_type: row.mime_type,
+        created_at: row.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('❌ 获取assignment文件失败:', error);
+    return res.status(500).json({ error: 'Failed to get assignment files' });
+  }
+});
+
 module.exports = router;
