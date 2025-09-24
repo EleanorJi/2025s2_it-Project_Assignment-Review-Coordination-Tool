@@ -30,6 +30,7 @@
 
         // 处理项目数据
         for (const project of data.projects) {
+          console.log('🔍 Processing project data:', project);
           console.log(`\n📋 处理项目: ${project.name} (ID: ${project.project_id})`);
 
           let assignment1Status = 'unpublished';
@@ -84,7 +85,9 @@
           console.log(`🏷️ 项目状态: ${taskStatus}`);
           console.log(`📊 Assignment1状态: ${assignment1Status}, Assignment2状态: ${assignment2Status}`);
 
-          state.tasks.push({
+          console.log(`📋 准备添加任务，project_id: ${project.project_id} (类型: ${typeof project.project_id})`);
+          
+          const taskObj = {
             title: project.name,
             description: project.description,
             project_id: project.project_id,
@@ -104,7 +107,12 @@
                 status: assignment2Status
               }
             ]
-          });
+          };
+          
+          console.log(`📋 创建的任务对象:`, taskObj);
+          console.log(`📋 任务对象的project_id: ${taskObj.project_id}`);
+          
+          state.tasks.push(taskObj);
 
           console.log(`✅ 项目 ${project.name} 处理完成`);
         }
@@ -201,7 +209,20 @@
       actions.className = 'tm-rubric-actions';
 
       const uploadBtn = createButton('Upload Rubric', () => {
-        location.href = `/dashboard/coordinator/upload?project=${task.project_id}&type=rubric`;
+        console.log('🔍 Upload Rubric button clicked for task:', task);
+        console.log('🆔 Task project_id:', task.project_id);
+        
+        // 强制确保 project_id 存在
+        const projectId = task.project_id || task.id || 'unknown';
+        console.log('🆔 使用的 project_id:', projectId);
+        
+        if (!projectId || projectId === 'unknown') {
+          console.error('❌ 无法获取有效的 project_id');
+          alert('Error: Cannot get project ID. Please refresh the page and try again.');
+          return;
+        }
+        
+        location.href = `/dashboard/coordinator/upload?project=${projectId}&type=rubric`;
       });
 
       const viewBtn = createButton('View Rubric', () => {
