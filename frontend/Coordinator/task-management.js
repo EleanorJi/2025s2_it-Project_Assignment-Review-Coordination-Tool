@@ -473,7 +473,6 @@
           toast(`${assignmentName} is empty. Please create it first.`);
           return null; // 直接返回，不继续后续操作
         }
-      }
 
         // 调用发布接口
         const publishResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/publish`, {
