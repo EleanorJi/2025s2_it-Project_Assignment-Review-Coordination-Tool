@@ -795,7 +795,6 @@
     if (!modal) return;
     
     // 重置表单
-    $('#assignment1Name').value = '';
     $('#assignment1Due').value = '';
     $('#assignment1File').value = '';
     $('#assignment1Text').textContent = 'Upload assignment...';
@@ -813,7 +812,6 @@
     const modal = $('#assignment1Modal');
     const closeBtn = $('#assignment1Close');
     const submitBtn = $('#assignment1Submit');
-    const nameInput = $('#assignment1Name');
     const dueInput = $('#assignment1Due');
     const fileInput = $('#assignment1File');
     const dropArea = $('#assignment1Drop');
@@ -864,12 +862,11 @@
 
     // 提交
     submitBtn.addEventListener('click', async () => {
-      const name = nameInput.value.trim();
       const due = dueInput.value.trim();
       const file = fileInput.files[0];
 
       // 验证表单
-      if (!name || !due || !file) {
+      if (!due || !file) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please complete all required fields.';
         return;
@@ -897,7 +894,6 @@
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_id', projectId);
-        formData.append('assignment_name', name);
         formData.append('due_date', formatDateForDisplay(due)); // 转换为 dd/mm/yyyy 格式
         formData.append('assignment_type', 'assignment1');
 
@@ -926,7 +922,6 @@
     if (!modal) return;
     
     // 重置表单
-    $('#assignment2Name').value = '';
     $('#assignment2Due').value = '';
     $('#assignment2File').value = '';
     $('#assignment2Text').textContent = 'Upload assignment...';
@@ -944,7 +939,6 @@
     const modal = $('#assignment2Modal');
     const closeBtn = $('#assignment2Close');
     const submitBtn = $('#assignment2Submit');
-    const nameInput = $('#assignment2Name');
     const dueInput = $('#assignment2Due');
     const fileInput = $('#assignment2File');
     const dropArea = $('#assignment2Drop');
@@ -995,12 +989,11 @@
 
     // 提交
     submitBtn.addEventListener('click', async () => {
-      const name = nameInput.value.trim();
       const due = dueInput.value.trim();
       const file = fileInput.files[0];
 
       // 验证表单
-      if (!name || !due || !file) {
+      if (!due || !file) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please complete all required fields.';
         return;
@@ -1028,7 +1021,6 @@
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_id', projectId);
-        formData.append('assignment_name', name);
         formData.append('due_date', formatDateForDisplay(due)); // 转换为 dd/mm/yyyy 格式
         formData.append('assignment_type', 'assignment2');
 
