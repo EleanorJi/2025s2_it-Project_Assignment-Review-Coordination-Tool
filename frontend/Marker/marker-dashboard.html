@@ -24,19 +24,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Marker Dashboard – Deakin Moderation</title>
-  <link rel="stylesheet" href="./marker-dashboard.css" />
+  <link rel="stylesheet" href="/Marker/marker-dashboard.css" />
 </head>
 <body>
   <!-- Top bar -->
   <header class="topbar">
     <div class="brand">
-      <img src="../deakin-logo.png" alt="Deakin University logo" />
-      <div class="brand-text">
-        <div class="brand-title">Deakin Moderation</div>
-      </div>
+      <div class="brand-title">HPS302 Assignment Moderation Tool</div>
     </div>
     <div class="account">
-      <span>Marker Name</span><span class="caret">▾</span>
+      <span id="username"></span><span class="caret">▾</span>
     </div>
   </header>
 
@@ -47,7 +44,7 @@
         <button class="nav-item active" data-view="overview">Overview</button>
         <button class="nav-item" data-view="mark">Mark Assignment</button>
         <button class="nav-item" data-view="report">Feedback / Report</button>
-        <button class="nav-item" data-view="past">Past Assignment</button>
+        <button class="nav-item" data-view="past">Past Task</button>
       </nav>
     </aside>
 
@@ -169,6 +166,6 @@
     </main>
   </div>
 
-  <script src="./marker.js"></script>
+  <script src="/Coordinator/marker.js"></script>
 </body>
 </html>

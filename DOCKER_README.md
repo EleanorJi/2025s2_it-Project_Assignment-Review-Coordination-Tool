@@ -162,6 +162,78 @@ docker-compose exec -T database psql -U postgres assignment_mod < backup.sql
 docker-compose logs database
 ```
 
+### ⚠️ 数据库初始化机制（重要！）
+
+Docker PostgreSQL 容器有特殊的初始化机制，理解这个机制对开发很重要：
+
+#### 🔄 初始化流程
+1. **第一次启动**（全新数据卷）:
+   - PostgreSQL 检测到空的数据卷 `assignment_postgres_data`
+   - 自动执行 `/docker-entrypoint-initdb.d/` 目录中的初始化脚本：
+     ```
+     01-init.sql    (database/IT SQL.sql - 创建所有表结构)
+     02-seeds.sql   (database/seeds/initial_data.sql - 插入初始数据)
+     ```
+   - 创建完整的数据库结构和初始数据
+
+2. **后续启动**（已有数据卷）:
+   - PostgreSQL 发现数据卷已存在数据库文件
+   - **跳过所有初始化脚本**，直接启动现有数据库
+   - 即使修改了 `IT SQL.sql`，也不会重新执行
+
+#### 🚨 常见误区
+很多开发者会遇到这个问题：
+- ✅ 修改了 `database/IT SQL.sql` 文件
+- ❌ 重新运行 `docker-compose up --build`
+- ❌ 发现数据库结构没有更新
+
+**原因**: Docker 跳过了初始化阶段，因为数据卷已经存在！
+
+#### 🛠️ 如何应用数据库结构修改
+
+**方法 1: 重新初始化（开发环境推荐）**
+```bash
+# 1. 停止所有服务
+docker-compose down
+
+# 2. 删除数据卷（⚠️ 这会清空所有数据！）
+docker volume rm assignment_postgres_data
+
+# 3. 重新启动，会重新执行初始化脚本
+docker-compose up -d database
+```
+
+**方法 2: 手动执行修改（保留现有数据）**
+```bash
+# 直接在运行的数据库中执行SQL命令
+docker-compose exec database psql -U postgres -d assignment_mod -c "
+ALTER TABLE project ADD COLUMN new_field TEXT;
+"
+
+# 或者执行SQL文件
+docker-compose exec -i database psql -U postgres -d assignment_mod < your_changes.sql
+```
+
+**方法 3: 数据库迁移（生产环境推荐）**
+- 创建版本化的迁移脚本
+- 使用专门的数据库迁移工具
+- 不修改原始的初始化文件
+
+#### 📋 检查数据库状态
+```bash
+# 查看所有表
+docker-compose exec database psql -U postgres -d assignment_mod -c "\dt"
+
+# 查看特定表结构
+docker-compose exec database psql -U postgres -d assignment_mod -c "\d project"
+
+# 检查数据卷是否存在
+docker volume ls | grep assignment
+
+# 查看初始化日志（第一次启动时）
+docker-compose logs database
+```
+
 ### 调试和开发
 ```bash
 # 进入容器内部
@@ -278,6 +350,23 @@ FRONTEND_PORT=80
    
    # 清理未使用的卷
    docker volume prune
+   ```
+
+7. **修改数据库结构后没有生效**
+   ```bash
+   # 问题：修改了 database/IT SQL.sql 但数据库结构没有更新
+   # 原因：Docker 只在第一次启动时执行初始化脚本
+   
+   # 解决方案 1: 重新初始化数据库（开发环境）
+   docker-compose down
+   docker volume rm assignment_postgres_data
+   docker-compose up -d database
+   
+   # 解决方案 2: 手动执行修改（保留数据）
+   docker-compose exec database psql -U postgres -d assignment_mod -c "YOUR_SQL_COMMAND;"
+   
+   # 验证修改是否生效
+   docker-compose exec database psql -U postgres -d assignment_mod -c "\dt"
    ```
 
 ### 完全重置

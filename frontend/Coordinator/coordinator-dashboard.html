@@ -1,67 +1,29 @@
 <!doctype html>
 <html lang="en">
-  <script>
-    (function guard(){
-      const userId = localStorage.getItem('userId');
-      const userRole = localStorage.getItem('userRole'); // 如果你有存 role
-
-      if (!userId || userRole !== 'COORDINATOR') {
-        window.location.href = '/login.html';
-        return;
-      }
-
-      const u = localStorage.getItem('user');
-
-      try {
-        const user = JSON.parse(u);
-
-        // 访问 coordinator 页
-        if (location.pathname.includes('coordinator') && user.role !== 'COORDINATOR') {
-          location.replace('/Marker/marker-dashboard.html');
-        }
-
-        // 访问 marker 页
-        if (location.pathname.includes('marker') && user.role !== 'MARKER') {
-          location.replace('/login.html');
-        }
-
-      } catch (err) {
-        console.error('Guard error:', err);
-        location.replace('/login.html'); // 出错时兜底
-      }
-    })();
-</script>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Coordinator Dashboard – Deakin Moderation</title>
-  <link rel="stylesheet" href="./coordinator-dashboard.css" />
+  <link rel="stylesheet" href="/Coordinator/coordinator-dashboard.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <img alt="Deakin University logo"
-        <img src="../deakin-logo.png" alt="Deakin University logo" />
-        <div class="brand-title">Deakin Moderation</div>
-        <div class="brand-sub">Psychology · Calibration Portal</div>
-      </div>
+      <div class="brand-title">HPS302 Assignment Moderation Tool</div>
     </div>
     <div class="account">
-      <span>Carrie</span>
-      <span class="caret">▾</span>
+      <span id="username"></span><span class="caret">▾</span>
     </div>
   </header>
 
   <div class="app">
     <!-- Sidebar -->
     <aside class="sidebar">
-       <nav class="nav">
-        <a class="nav-item active" href="coordinator-dashboard.html">Overview</a>
-        <a class="nav-item" aria-current="page" href="invite.html">Invite Markers</a>
-        <a class="nav-item" href="upload-assignment.html">Upload Assignment / Rubric</a>
-        <a class="nav-item" href="mark.html">Mark Assignment</a>
-        <a class="nav-item" href="feedback.html">Feedback / Report</a>
-        <a class="nav-item" href="past.html">Past Assignment</a>
+      <nav class="nav">
+        <a class="nav-item active" href="/dashboard/coordinator">Overview</a>
+        <a class="nav-item" href="/dashboard/coordinator/invite">Markers Management</a>
+        <a class="nav-item" href="/dashboard/coordinator/taskManagement">Task Management</a>
+        <a class="nav-item" href="/dashboard/coordinator/past">Past Task</a>
       </nav>
     </aside>
 
@@ -142,6 +104,48 @@
     </main>
   </div>
 
-  <script src="./coordinator.js"></script>
+  <script src="/Coordinator/coordinator.js"></script>
+  <!-- 在 body 的最后临时添加 TODO: 要删logout按钮-->
+  <div style="position: fixed; bottom: 10px; right: 10px; z-index: 1000;">
+    <button onclick="logout()" style="background: red; color: white; padding: 5px 10px; border: none; border-radius: 3px;">
+      Logout (Test)
+    </button>
+  </div>
+
+  <script>
+    async function logout() {
+      try {
+        // 调用后端登出接口
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include' // 重要：携带 Cookie
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // 清除前端存储
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+
+          // 强制清除 Cookie（前端备用）
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+          alert("Logged out successfully!");
+          window.location.href = '/login';
+        } else {
+          alert("Logout failed: " + data.message);
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+        // 即使后端失败，也强制前端清除
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        alert("Logged out (frontend only)");
+        window.location.href = '/login';
+      }
+    }
+  </script>
 </body>
 </html>

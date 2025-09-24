@@ -7,139 +7,99 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./upload-assignment.css">
+  <link rel="stylesheet" href="/Coordinator/upload-assignment.css">
 </head>
-<body>
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="brand">
-      <img src="./deakin-logo.png" alt="Deakin University">
-      <div>
-        <div class="brand-title">Deakin Moderation</div>
-        <div class="brand-sub">Coordinator Portal</div>
+<body data-page="upload">
+<!-- Top bar -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-title">HPS302 Assignment Moderation Tool</div>
+  </div>
+  <div class="account">
+    <span id="username"></span><span class="caret">▾</span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Main -->
+  <main class="main">
+    <section class="panel">
+      <h1>Upload Rubric &amp; Assignment</h1>
+      <div class="project-info">
+        <div class="project-name" id="project-name">Project Name</div>
+        <div class="project-description" id="project-description">Project description will appear here</div>
       </div>
-    </div>
-    <div class="account">Carrie <span class="caret">▾</span></div>
-  </header>
-
-  <div class="app">
-    <!-- Sidebar -->
-    <aside class="sidebar">
- <nav class="nav">
-        <a class="nav-item" href="coordinator-dashboard.html">Overview</a>
-        <a class="nav-item" aria-current="page" href="invite.html">Invite Markers</a>
-        <a class="nav-item active" href="upload-assignment.html">Upload Assignment / Rubric</a>
-        <a class="nav-item" href="mark.html">Mark Assignment</a>
-        <a class="nav-item" href="feedback.html">Feedback / Report</a>
-        <a class="nav-item" href="past.html">Past Assignment</a>
-      </nav>    </aside>
-
-    <!-- Main -->
-    <main class="main">
-      <section class="panel">
-        <h1>Upload Assignment &amp; Rubric</h1>
-
-        <div class="cards-2 group">
-          <!-- Assignment 1 -->
-          <div class="card assign">
-            <div class="assign-title">Assignment 1</div>
-
-            <div class="form-row">
-              <div class="field">
-                <div class="label">Round</div>
-                <input class="input" value="Moderation 1 ▾" aria-label="Round">
+      <div class="grid-3">
+        <!-- Rubric -->
+        <div class="card" data-role="rubric">
+          <div>
+            <h3 class="rubric">Rubric</h3>
+            <div class="label">Rubric (DOCX/CSV)</div>
+            <div class="drop" data-accept=".docx,.csv,.xlsx,.xls">
+              <input class="file-input" type="file" accept=".docx,.csv,.xlsx,.xls" style="display:none" />
+              <div>
+                <div class="drop-title">Upload rubric...</div>
+                <div class="helper">.docx / .csv / .xlsx</div>
               </div>
-              <div class="field">
-                <div class="label">Due date</div>
-                <input class="input" placeholder="YYYY-MM-DD" aria-label="Due date">
-              </div>
-              <div class="field">
-                <div class="label">Deviation (%)</div>
-                <input class="input" value="5" aria-label="Deviation">
-              </div>
-            </div>
-
-            <div class="zones-2">
-              <div class="zone">
-                <div class="sub-title">Assignment file (PDF)</div>
-                <label class="drop">
-                  <input type="file" accept="application/pdf" hidden>
-                  <div>Upload assignment…<div class="hint">PDF only</div></div>
-                </label>
-              </div>
-
-              <div class="zone">
-                <div class="sub-title">Rubric (DOCX/CSV)</div>
-                <label class="drop">
-                  <input type="file" accept=".doc,.docx,.csv,.xlsx" hidden>
-                  <div>Upload rubric…<div class="hint">.docx / .csv / .xlsx</div></div>
-                </label>
-              </div>
-            </div>
-
-            <div class="group">
-              <div class="sub-title">Validation</div>
-              <ul class="list muted">
-                <li>✖ Assignment PDF selected</li>
-                <li>✖ Rubric file selected</li>
-                <li>✖ Due date set</li>
-              </ul>
-            </div>
-
-            <div class="right">
-              <button class="btn">Save draft</button>
-              <button class="btn primary">Publish</button>
             </div>
           </div>
-
-          <!-- Assignment 2 -->
-          <div class="card assign">
-            <div class="assign-title">Assignment 2</div>
-
-            <div class="form-row">
-              <div class="field">
-                <div class="label">Round</div>
-                <input class="input" value="Moderation 1 ▾" aria-label="Round">
-              </div>
-              <div class="field">
-                <div class="label">Due date</div>
-                <input class="input" placeholder="YYYY-MM-DD" aria-label="Due date">
-              </div>
-              <div class="field">
-                <div class="label">Deviation (%)</div>
-                <input class="input" value="5" aria-label="Deviation">
-              </div>
-            </div>
-
-            <div class="zones-2">
-              <div class="zone">
-                <div class="sub-title">Assignment file (PDF)</div>
-                <label class="drop">
-                  <input type="file" accept="application/pdf" hidden>
-                  <div>Upload assignment…<div class="hint">PDF only</div></div>
-                </label>
-              </div>
-
-              
-            </div>
-
-            <div class="group">
-              <div class="sub-title">Validation</div>
-              <ul class="list muted">
-                <li>✖ Assignment PDF selected</li>
-                <li>✖ Rubric file selected</li>
-                <li>✖ Due date set</li>
-              </ul>
-            </div>
-
-            <div class="right">
-              <button class="btn">Save draft</button>
-              <button class="btn primary">Publish</button>
-            </div>
+          <div class="card-footer">
+            <button class="btn primary">Publish</button>
           </div>
         </div>
-      </section>
-    </main>
-  </div>
+
+        <!-- Assignment 1 -->
+        <div class="card" data-role="a1">
+          <div>
+            <h3>Assignment 1</h3>
+            <div class="label">Due date</div>
+            <input class="date" type="text" placeholder="YYYY-MM-DD" />
+            <div class="label">Assignment file (PDF)</div>
+            <div class="drop" data-accept=".pdf">
+              <input class="file-input" type="file" accept=".pdf" style="display:none" />
+              <div>
+                <div class="drop-title">Upload assignment...</div>
+                <div class="helper">PDF only</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn primary">Publish</button>
+          </div>
+        </div>
+
+        <!-- Assignment 2 -->
+        <div class="card" data-role="a2">
+          <div>
+            <h3>Assignment 2</h3>
+            <div class="label">Due date</div>
+            <input class="date" type="text" placeholder="YYYY-MM-DD" />
+            <div class="label">Assignment file (PDF)</div>
+            <div class="drop" data-accept=".pdf">
+              <input class="file-input" type="file" accept=".pdf" style="display:none" />
+              <div>
+                <div class="drop-title">Upload assignment...</div>
+                <div class="helper">PDF only</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn primary">Publish</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validation -->
+      <div class="valid">
+        <div class="label" style="margin-left:2px;">Validation</div>
+        <div class="line" data-val="a1-pdf">✖ Assignment PDF selected</div>
+        <div class="line" data-val="rubric-file">✖ Rubric file selected</div>
+        <div class="line" data-val="a1-date">✖ Due date set</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/Coordinator/upload-assignment.js" defer></script>
 </body>
 </html>
