@@ -50,6 +50,7 @@
   .btn:hover{background:#f8fafc;border-color:#cbd5e1}
   .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
   .btn.primary:hover{background:#1e293b;border-color:#1e293b}
+
   /* ===== Upload page ===== */
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
   .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px}
@@ -172,6 +173,7 @@
     .tm-assignment-actions, .tm-rubric-actions{gap:6px}
     .btn{font-size:13px;padding:0 12px;height:32px}
   }
+
   @media (max-width:768px){
     .tm-shell{padding:8px}
     .tm-panel{padding:14px}

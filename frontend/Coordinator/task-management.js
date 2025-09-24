@@ -30,6 +30,7 @@
 
         // 处理项目数据
         for (const project of data.projects) {
+
           console.log('🔍 Processing project data:', project);
           console.log(`\n📋 处理项目: ${project.name} (ID: ${project.project_id})`);
 
@@ -88,6 +89,7 @@
           console.log(`📋 准备添加任务，project_id: ${project.project_id} (类型: ${typeof project.project_id})`);
           
           const taskObj = {
+
             title: project.name,
             description: project.description,
             project_id: project.project_id,
@@ -471,6 +473,7 @@
           toast(`${assignmentName} is empty. Please create it first.`);
           return null; // 直接返回，不继续后续操作
         }
+      }
 
         // 调用发布接口
         const publishResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/publish`, {
