@@ -617,3 +617,39 @@ body {
     order: 3;
   }
 }
+
+/* Total Score Section */
+.total-score-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.total-score-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.total-score-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.total-score-display {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.total-percentage {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--muted);
+}

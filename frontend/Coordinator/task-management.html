@@ -49,58 +49,111 @@
     </main>
   </div>
 
-  <!-- Modal -->
-  <div class="tm-modal" id="modal">
-    <div class="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+  <!-- Rubric Upload Modal -->
+  <div class="tm-modal" id="rubricModal">
+    <div class="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="rubricTitle">
       <div class="tm-dialog-hd">
-        <h3 id="dlgTitle">Create Assignment</h3>
-        <button class="btn" id="btnClose">Close</button>
+        <h3 id="rubricTitle">Upload Rubric</h3>
+        <button class="btn" id="rubricClose">Close</button>
       </div>
 
       <div class="tm-dialog-bd">
-        <div class="tm-two">
-          <!-- Rubric -->
-          <div class="tm-card" data-role="rubric">
-            <h4>Rubric</h4>
-            <div class="tm-label">Rubric (DOCX/CSV)</div>
-            <div class="tm-drop" id="rubricDrop" data-accept=".docx,.csv,.xlsx,.xls">
-              <input id="rubricFile" type="file" accept=".docx,.csv,.xlsx,.xls" hidden />
-              <div>
-                <div id="rubricText">Upload rubric...</div>
-                <div class="tm-help">.docx / .csv / .xlsx</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Assignment -->
-          <div class="tm-card" data-role="a1">
-            <h4>Assignment 1</h4>
-            <div class="tm-two" style="grid-template-columns:1fr 1fr;gap:10px">
-              <div>
-                <div class="tm-label">Name</div>
-                <input id="asgnName" class="tm-input" placeholder="e.g., 2025 · S1 · Assignment 1" />
-              </div>
-              <div>
-                <div class="tm-label">Due date</div>
-                <input id="asgnDue" class="tm-input" type="text" placeholder="YYYY-MM-DD" />
-              </div>
-            </div>
-
-            <div class="tm-label" style="margin-top:10px">Assignment file (PDF)</div>
-            <div class="tm-drop" id="asgnDrop" data-accept=".pdf">
-              <input id="asgnFile" type="file" accept=".pdf" hidden />
-              <div>
-                <div id="asgnText">Upload assignment...</div>
-                <div class="tm-help">PDF only</div>
-              </div>
+        <div class="tm-card">
+          <h4>Rubric</h4>
+          <div class="tm-label">Rubric (DOCX/CSV)</div>
+          <div class="tm-drop" id="rubricDrop" data-accept=".docx,.csv,.xlsx,.xls">
+            <input id="rubricFile" type="file" accept=".docx,.csv,.xlsx,.xls" hidden />
+            <div>
+              <div id="rubricText">Upload rubric...</div>
+              <div class="tm-help">.docx / .csv / .xlsx</div>
             </div>
           </div>
         </div>
-        <div id="errLine" class="tm-err" style="display:none">Please complete all required fields.</div>
+        <div id="rubricErrLine" class="tm-err" style="display:none">Please select a rubric file.</div>
       </div>
 
       <div class="tm-dialog-ft">
-        <button id="btnSubmit" class="btn primary" style="min-width:160px">Submit</button>
+        <button id="rubricSubmit" class="btn primary" style="min-width:160px">Publish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assignment 1 Upload Modal -->
+  <div class="tm-modal" id="assignment1Modal">
+    <div class="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="assignment1Title">
+      <div class="tm-dialog-hd">
+        <h3 id="assignment1Title">Assignment 1</h3>
+        <button class="btn" id="assignment1Close">Close</button>
+      </div>
+
+      <div class="tm-dialog-bd">
+        <div class="tm-card">
+          <h4>Assignment 1</h4>
+          <div class="tm-two" style="grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <div class="tm-label">Name</div>
+              <input id="assignment1Name" class="tm-input" placeholder="e.g., 2025 · S1 · Assignment 1" />
+            </div>
+            <div>
+              <div class="tm-label">Due date</div>
+              <input id="assignment1Due" class="tm-input" type="date" />
+            </div>
+          </div>
+
+          <div class="tm-label" style="margin-top:10px">Assignment file (PDF)</div>
+          <div class="tm-drop" id="assignment1Drop" data-accept=".pdf">
+            <input id="assignment1File" type="file" accept=".pdf" hidden />
+            <div>
+              <div id="assignment1Text">Upload assignment...</div>
+              <div class="tm-help">PDF only</div>
+            </div>
+          </div>
+        </div>
+        <div id="assignment1ErrLine" class="tm-err" style="display:none">Please complete all required fields.</div>
+      </div>
+
+      <div class="tm-dialog-ft">
+        <button id="assignment1Submit" class="btn primary" style="min-width:160px">Publish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assignment 2 Upload Modal -->
+  <div class="tm-modal" id="assignment2Modal">
+    <div class="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="assignment2Title">
+      <div class="tm-dialog-hd">
+        <h3 id="assignment2Title">Assignment 2</h3>
+        <button class="btn" id="assignment2Close">Close</button>
+      </div>
+
+      <div class="tm-dialog-bd">
+        <div class="tm-card">
+          <h4>Assignment 2</h4>
+          <div class="tm-two" style="grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <div class="tm-label">Name</div>
+              <input id="assignment2Name" class="tm-input" placeholder="e.g., 2025 · S1 · Assignment 2" />
+            </div>
+            <div>
+              <div class="tm-label">Due date</div>
+              <input id="assignment2Due" class="tm-input" type="date" />
+            </div>
+          </div>
+
+          <div class="tm-label" style="margin-top:10px">Assignment file (PDF)</div>
+          <div class="tm-drop" id="assignment2Drop" data-accept=".pdf">
+            <input id="assignment2File" type="file" accept=".pdf" hidden />
+            <div>
+              <div id="assignment2Text">Upload assignment...</div>
+              <div class="tm-help">PDF only</div>
+            </div>
+          </div>
+        </div>
+        <div id="assignment2ErrLine" class="tm-err" style="display:none">Please complete all required fields.</div>
+      </div>
+
+      <div class="tm-dialog-ft">
+        <button id="assignment2Submit" class="btn primary" style="min-width:160px">Publish</button>
       </div>
     </div>
   </div>

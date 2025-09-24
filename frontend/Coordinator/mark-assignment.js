@@ -16,7 +16,8 @@
 
   // API Configuration
   const API_BASE_URL = 'http://localhost:3000/api'; // Adjust based on your backend
-  const ASSIGNMENT_ID = 'assignment_1_2025_sem1'; // This should come from URL params or state
+  let ASSIGNMENT_ID = null; // 改为变量，动态获取
+  let PROJECT_ID = null; // 存储project_id
 
   // Current state
   let currentPage = 1;
@@ -39,6 +40,14 @@
     } catch (err) {
       console.error("Failed to load username:", err);
     }
+
+    // ✅ 从URL获取project_id和assignment标识
+    await resolveAssignmentId();
+
+    if (!ASSIGNMENT_ID) {
+      throw new Error('无法确定assignment ID');
+    }
+
     setupDocumentNavigation();
     setupGradeSelection();
     setupScoreInputs();
@@ -50,23 +59,347 @@
     updateAllCriterionDisplays();
   }
 
+  // 解析URL参数，获取真实的assignment_id
+  async function resolveAssignmentId() {
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('project');
+    const assignmentParam = urlParams.get('assignment');
+
+    if (!projectId) {
+      throw new Error('URL中缺少project_id参数');
+    }
+
+    if (!assignmentParam || !['assignment1', 'assignment2'].includes(assignmentParam)) {
+      throw new Error('assignment参数必须是assignment1或assignment2');
+    }
+
+    PROJECT_ID = projectId;
+
+    try {
+      // 调用现有接口获取latest-ids
+      const response = await fetch(`${API_BASE_URL}/uploads/project/${PROJECT_ID}/latest-ids`);
+      if (!response.ok) {
+        throw new Error('获取项目信息失败');
+      }
+
+      const data = await response.json();
+
+      // 根据assignment参数选择对应的assignment_id
+      if (assignmentParam === 'assignment1' && data.assignment1) {
+        ASSIGNMENT_ID = data.assignment1.assignment_id;
+      } else if (assignmentParam === 'assignment2' && data.assignment2) {
+        ASSIGNMENT_ID = data.assignment2.assignment_id;
+      } else {
+        throw new Error(`找不到对应的assignment: ${assignmentParam}`);
+      }
+
+      console.log(`✅ 解析成功: ${assignmentParam} -> assignment_id=${ASSIGNMENT_ID}`);
+
+    } catch (error) {
+      console.error('解析assignment ID失败:', error);
+      throw new Error(`无法解析assignment ID: ${error.message}`);
+    }
+  }
+
   // Load rubric data from backend
   async function loadRubricData() {
     try {
-      const response = await fetch(`${API_BASE_URL}/assignments/${ASSIGNMENT_ID}/rubric`);
+      if (!PROJECT_ID) {
+        throw new Error('Project ID is not available');
+      }
+
+      // 获取项目的最新ID信息
+      const idsResponse = await fetch(`${API_BASE_URL}/uploads/project/${PROJECT_ID}/latest-ids`);
+      if (!idsResponse.ok) {
+        throw new Error('Failed to load project IDs');
+      }
+
+      const idsData = await idsResponse.json();
+      if (!idsData.rubric) {
+        throw new Error('No rubric found for this project');
+      }
+
+      // 使用获取到的rubric_id来获取评分标准详情
+      const rubricId = idsData.rubric.rubric_id;
+      const response = await fetch(`${API_BASE_URL}/uploads/rubric/${rubricId}/details`);
       if (!response.ok) {
         throw new Error('Failed to load rubric data');
       }
+
       const data = await response.json();
-      criterionData = data.criteria;
-      
-      // Update UI with loaded data
-      updateRubricUI();
+      window.currentRubricData = data;
+
+      console.log('✅ Rubric data loaded successfully:', data);
+
+      // 动态生成评分标准UI
+      createDynamicRubricUI(data.criteria);
+
     } catch (error) {
       console.error('Error loading rubric:', error);
       // Fallback to default data
       loadDefaultRubricData();
     }
+  }
+
+  // 动态生成评分标准UI
+  function createDynamicRubricUI(criteria) {
+    const markingCriteriaContainer = $('.marking-criteria');
+
+    // 清空现有内容
+    markingCriteriaContainer.innerHTML = '';
+
+    // 按seq_no排序
+    const sortedCriteria = criteria.sort((a, b) => a.seq_no - b.seq_no);
+
+    // 为每个评分标准生成HTML
+    sortedCriteria.forEach((criterion, index) => {
+      const criterionNumber = index + 1;
+      const maxScore = criterion.max_score;
+
+      // 生成等级选项（按分数从高到低排序）
+      const sortedLevels = criterion.grade_levels.sort((a, b) => b.max_score - a.max_score);
+      const gradeOptionsHTML = sortedLevels.map((level, levelIndex) => `
+        <div class="grade-option ${levelIndex === 0 ? 'active' : ''}"
+             data-grade-level-id="${level.grade_level_id}"
+             data-min-score="${level.min_score}"
+             data-max-score="${level.max_score}">
+          ${level.level_name}
+        </div>
+      `).join('');
+
+      // 生成等级描述
+      const gradeDescriptionsHTML = sortedLevels.map(level => `
+        <div class="grade-level-description" data-level-id="${level.grade_level_id}">
+          <strong>${level.min_score}-${level.max_score} points:</strong>
+          <p>${level.description}</p>
+        </div>
+      `).join('');
+
+      const criterionHTML = `
+        <div class="criterion" data-criterion-id="${criterion.criterion_id}" data-criterion-number="${criterionNumber}">
+          <div class="criterion-header">
+            <div class="criterion-number">${criterionNumber}.</div>
+            <div class="criterion-title">${criterion.title}</div>
+          </div>
+
+          ${criterion.description ? `
+            <div class="criterion-description">
+              <p>${criterion.description}</p>
+            </div>
+          ` : ''}
+
+          <div class="grade-selector">
+            <button class="grade-arrow left">‹</button>
+            <div class="grade-options">
+              ${gradeOptionsHTML}
+            </div>
+            <button class="grade-arrow right">›</button>
+          </div>
+
+          <div class="score-input-section">
+            <div class="score-input-container">
+              <label for="score-input-${criterionNumber}">Manual Score:</label>
+              <input type="number" id="score-input-${criterionNumber}"
+                     class="score-input"
+                     min="0"
+                     max="${maxScore}"
+                     step="0.1"
+                     value="0"
+                     data-criterion-id="${criterion.criterion_id}" />
+              <span class="max-score">/ ${maxScore}</span>
+            </div>
+          </div>
+
+          <div class="grade-info">
+            <div class="grade-level">Not Graded</div>
+            <div class="grade-score">0/${maxScore}</div>
+          </div>
+
+          <div class="grade-description">
+            ${gradeDescriptionsHTML}
+          </div>
+
+          <div class="feedback-section">
+            <button class="show-feedback-btn">+ Add Feedback</button>
+            <div class="criterion-feedback hidden">
+              <div class="feedback-header">
+                <span>Criterion Feedback</span>
+                <button class="close-feedback">×</button>
+              </div>
+              <textarea placeholder="will be included in the overall feedback and visible to students"
+                        data-criterion-id="${criterion.criterion_id}"></textarea>
+            </div>
+          </div>
+        </div>
+      `;
+
+      markingCriteriaContainer.append(criterionHTML);
+    });
+
+    // 添加总分显示区域
+    const totalScoreHTML = `
+      <div class="total-score-section">
+        <div class="total-score-container">
+          <div class="total-score-label">Total Score:</div>
+          <div class="total-score-display">
+            <span id="current-total">0</span> / <span id="max-total">${sortedCriteria.reduce((sum, criterion) => sum + criterion.max_score, 0)}</span>
+          </div>
+        </div>
+        <div class="total-percentage">
+          <span id="total-percentage">0%</span>
+        </div>
+      </div>
+    `;
+
+    markingCriteriaContainer.append(totalScoreHTML);
+
+    // 重新绑定事件
+    bindCriterionEvents();
+
+    // 初始化总分显示
+    updateTotalScore();
+
+    console.log(`✅ Generated ${sortedCriteria.length} criteria dynamically`);
+  }
+
+  // 绑定评分标准事件
+  function bindCriterionEvents() {
+    // 等级选择箭头事件
+    $('.grade-arrow').off('click').on('click', function() {
+      const $gradeOptions = $(this).siblings('.grade-options');
+      const $activeOption = $gradeOptions.find('.grade-option.active');
+      const $allOptions = $gradeOptions.find('.grade-option');
+      const currentIndex = $allOptions.index($activeOption);
+
+      if ($(this).hasClass('left')) {
+        // 向左选择（选择更低的等级）
+        const prevIndex = (currentIndex + 1) % $allOptions.length;
+        $allOptions.removeClass('active').eq(prevIndex).addClass('active');
+      } else {
+        // 向右选择（选择更高的等级）
+        const nextIndex = (currentIndex - 1 + $allOptions.length) % $allOptions.length;
+        $allOptions.removeClass('active').eq(nextIndex).addClass('active');
+      }
+
+      updateScoreFromGradeSelection($(this).closest('.criterion'));
+    });
+
+    // 分数输入变化事件
+    $('.score-input').off('input').on('input', function() {
+      updateGradeSelectionFromScore($(this).closest('.criterion'));
+      updateTotalScore(); // 自动更新总分
+    });
+
+    // 反馈按钮事件
+    $('.show-feedback-btn').off('click').on('click', function() {
+      $(this).siblings('.criterion-feedback').removeClass('hidden');
+      $(this).hide();
+    });
+
+    $('.close-feedback').off('click').on('click', function() {
+      $(this).closest('.criterion-feedback').addClass('hidden');
+      $(this).closest('.criterion').find('.show-feedback-btn').show();
+    });
+  }
+
+  // 根据等级选择更新分数
+  function updateScoreFromGradeSelection($criterion) {
+    const $activeGrade = $criterion.find('.grade-option.active');
+    const minScore = parseFloat($activeGrade.data('min-score'));
+    const maxScore = parseFloat($activeGrade.data('max-score'));
+    const levelName = $activeGrade.text();
+
+    // 设置分数为最高分（或平均值，根据你的需求调整）
+    const score = maxScore;
+    $criterion.find('.score-input').val(score);
+
+    // 更新显示信息
+    $criterion.find('.grade-level').text(levelName);
+    $criterion.find('.grade-score').text(`${score}/${$criterion.find('.score-input').attr('max')}`);
+    
+    // 更新总分
+    updateTotalScore();
+  }
+
+  // 根据分数输入更新等级选择
+  function updateGradeSelectionFromScore($criterion) {
+    const score = parseFloat($criterion.find('.score-input').val()) || 0;
+    const maxScore = parseFloat($criterion.find('.score-input').attr('max'));
+    const $gradeOptions = $criterion.find('.grade-option');
+
+    // 找到匹配的等级
+    let matchedLevel = null;
+    $gradeOptions.each(function() {
+      const minScore = parseFloat($(this).data('min-score'));
+      const maxScore = parseFloat($(this).data('max-score'));
+
+      if (score >= minScore && score <= maxScore) {
+        matchedLevel = $(this);
+        return false; // 退出循环
+      }
+    });
+
+    if (matchedLevel) {
+      $gradeOptions.removeClass('active');
+      matchedLevel.addClass('active');
+      $criterion.find('.grade-level').text(matchedLevel.text());
+    } else {
+      $criterion.find('.grade-level').text('Custom Score');
+    }
+
+    // 格式化显示分数，保留一位小数
+    const formattedScore = score % 1 === 0 ? score.toString() : score.toFixed(1);
+    $criterion.find('.grade-score').text(`${formattedScore}/${maxScore}`);
+  }
+
+  // 更新总分显示
+  function updateTotalScore() {
+    let currentTotal = 0;
+    let maxTotal = 0;
+    
+    $('.criterion').each(function() {
+      const score = parseFloat($(this).find('.score-input').val()) || 0;
+      const maxScore = parseFloat($(this).find('.score-input').attr('max')) || 0;
+      
+      currentTotal += score;
+      maxTotal += maxScore;
+    });
+    
+    // 格式化显示
+    const formattedCurrentTotal = currentTotal % 1 === 0 ? currentTotal.toString() : currentTotal.toFixed(1);
+    const percentage = maxTotal > 0 ? Math.round((currentTotal / maxTotal) * 100) : 0;
+    
+    // 更新显示
+    const $currentTotal = $('#current-total');
+    const $totalPercentage = $('#total-percentage');
+    
+    if ($currentTotal.length) {
+      $currentTotal.text(formattedCurrentTotal);
+    }
+    
+    if ($totalPercentage.length) {
+      $totalPercentage.text(`${percentage}%`);
+    }
+    
+    console.log(`📊 总分更新: ${formattedCurrentTotal}/${maxTotal} (${percentage}%)`);
+  }
+
+  // 获取所有评分数据
+  function getAllScores() {
+    const scores = {};
+    $('.criterion').each(function() {
+      const criterionId = $(this).data('criterion-id');
+      const score = parseFloat($(this).find('.score-input').val()) || 0;
+      const feedback = $(this).find('.criterion-feedback textarea').val() || '';
+
+      scores[criterionId] = {
+        score: score,
+        feedback: feedback,
+        gradeLevelId: $(this).find('.grade-option.active').data('grade-level-id')
+      };
+    });
+    return scores;
   }
 
   // Fallback default rubric data
@@ -103,29 +436,6 @@
         }
       }
     };
-  }
-
-  // Update rubric UI with loaded data
-  function updateRubricUI() {
-    Object.keys(criterionData).forEach(criterionId => {
-      const criterion = $(`.criterion[data-criterion="${criterionId}"]`);
-      if (criterion) {
-        const titleElement = criterion.querySelector('.criterion-title');
-        if (titleElement) {
-          titleElement.textContent = criterionData[criterionId].title;
-        }
-        
-        const scoreInput = criterion.querySelector('.score-input');
-        if (scoreInput) {
-          scoreInput.max = criterionData[criterionId].maxScore;
-        }
-        
-        const maxScoreElement = criterion.querySelector('.max-score');
-        if (maxScoreElement) {
-          maxScoreElement.textContent = `/ ${criterionData[criterionId].maxScore}`;
-        }
-      }
-    });
   }
 
   // Document navigation
@@ -443,8 +753,8 @@
     const scores = {};
     const scoreInputs = $$('.score-input');
     scoreInputs.forEach(input => {
-      const criterionId = parseInt(input.id.split('-')[2]);
-      scores[criterionId] = parseInt(input.value) || 0;
+      const criterionId = input.dataset.criterionId;
+      scores[criterionId] = parseFloat(input.value) || 0;
     });
     return scores;
   }
@@ -454,9 +764,8 @@
     const feedback = {};
     const feedbackTextareas = $$('.criterion-feedback textarea');
     feedbackTextareas.forEach(textarea => {
-      const criterion = textarea.closest('.criterion');
-      if (criterion) {
-        const criterionId = parseInt(criterion.dataset.criterion);
+      const criterionId = textarea.dataset.criterionId;
+      if (criterionId) {
         feedback[criterionId] = textarea.value;
       }
     });
