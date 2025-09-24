@@ -2476,5 +2476,46 @@ router.get('/debug/criterion/:criterion_id/info', async (req, res) => {
     });
   }
 });
+// ============ 前端 analysis 页面需要的接口 ============
+
+// 模拟 analysis 数据 (后面你可以改成从 DB 算出来)
+router.get('/analysis', async (req, res) => {
+  try {
+    const rows = [
+      { criterion: "Introduction: Applies theoretical framework / 15", chair: 10.65, lower: 9.9,  upper: 11.4,  percent:71, markers:{A:10.2,  B:12}, total: 69 },
+      { criterion: "Introduction: Locates, synthesises and critically analyses literature / 10", chair: 6.00, lower: 5.5,  upper: 6.5,  percent:60, markers:{A:5.9,   B:7}, total: 66 }
+      // ... 你 dataset 里的数据，可以完整搬过来
+    ];
+    res.json({ rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load analysis data' });
+  }
+});
+
+// 获取当前用户
+router.get('/me', async (req, res) => {
+  try {
+    // 如果你有用户系统，这里应该从 session 或 token 拿
+    res.json({ name: 'Carrie' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load user info' });
+  }
+});
+
+// 保存 feedback
+router.post('/feedback', async (req, res) => {
+  try {
+    const { marker, text } = req.body;
+    if (!marker || !text) {
+      return res.status(400).json({ error: 'marker and text are required' });
+    }
+    // TODO: 存数据库，现在先模拟
+    console.log(`💬 Feedback for Marker ${marker}: ${text}`);
+    res.json({ success: true, marker, text });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save feedback' });
+  }
+});
+
 
 module.exports = router;

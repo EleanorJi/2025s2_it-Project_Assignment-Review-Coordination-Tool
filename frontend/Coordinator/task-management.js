@@ -473,7 +473,7 @@
         const result = await publishResponse.json();
 
         toast('Assignment published successfully!');
-        // 重新加载数据
+        // 重新加载数据   
         await fetchProjects();
 
         return result;
