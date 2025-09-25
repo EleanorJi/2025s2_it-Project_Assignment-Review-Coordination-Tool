@@ -438,7 +438,7 @@
           <div class="score-input-section">
             <div class="score-input-container">
               <label for="score-input-${criterionId}">Manual Score:</label>
-              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${criterion.maxScore}" />
+              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${criterion.maxScore}" step="0.1"/>
               <span class="max-score">/ ${criterion.maxScore}</span>
             </div>
           </div>
@@ -480,6 +480,7 @@
     console.log('✅ Action buttons added to last criterion:', lastCriterionId);
   }
 
+  // 生成单个评分标准的等级选项HTML
   function generateGradeOptions(criterionId, currentGrade) {
     const grades = gradeData[criterionId];
     if (!grades) {
@@ -616,16 +617,17 @@
     updateCriterionDisplay(criterionId);
   }
 
+  // 更新单个评分标准的显示
   function updateCriterionDisplay(criterionId) {
     const criterion = $(`.criterion[data-criterion="${criterionId}"]`);
     if (!criterion) return;
 
     const grade = currentGrades[criterionId];
     const gradeInfo = gradeData[criterionId][grade];
-    console.log('gradeData:', gradeData);
-    console.log('criterionId:', criterionId);
-    console.log('grade:', grade);
-    console.log('gradeInfo:', gradeInfo);
+    // console.log('gradeData:', gradeData);
+    // console.log('criterionId:', criterionId);
+    // console.log('grade:', grade);
+    // console.log('gradeInfo:', gradeInfo);
 
     // ✅ 添加安全检查
     const criterionInfo = criterionData[criterionId];
@@ -657,8 +659,8 @@
     if (gradeLevel) gradeLevel.textContent = gradeInfo.name;
     if (gradeScore && scoreInput) {
       const maxScore = criterionInfo.maxScore;
-      const currentScore = parseInt(scoreInput.value) || 0;
-      gradeScore.textContent = `${currentScore}/${maxScore}`;
+      const currentScore = parseFloat(scoreInput.value) || 0;
+      gradeScore.textContent = `${currentScore.toFixed(1)}/${maxScore}`;
     }
 
     // 更新description
@@ -673,36 +675,58 @@
     }
   }
 
+  // 更新所有评分标准的显示
   function updateAllCriterionDisplays() {
     Object.keys(currentGrades).forEach(criterionId => {
       updateCriterionDisplay(parseInt(criterionId));
     });
   }
 
-  // Score input functionality
+  // 当手动输入分数时，自动选择对应的等级
   function setupScoreInputs() {
     const scoreInputs = $$('.score-input');
 
     scoreInputs.forEach(input => {
       input.addEventListener('input', () => {
         const criterionId = parseInt(input.id.split('-')[2]);
-        const score = parseInt(input.value) || 0;
-        const maxScore = parseInt(input.max);
+        const score = parseFloat(input.value) || 0;
+        const maxScore = parseFloat(input.max);
 
-        // Calculate grade based on score
-        const grade = calculateGradeFromScore(score, maxScore);
+        // 传递 criterionId 参数
+        const grade = calculateGradeFromScore(score, maxScore, criterionId);
         selectGrade(criterionId, grade);
       });
     });
   }
 
-  function calculateGradeFromScore(score, maxScore) {
-    const percentage = (score / maxScore) * 100;
+  // 根据分数计算对应的等级（假设5个等级）
+  function calculateGradeFromScore(score, maxScore, criterionId) {
+    const grades = gradeData[criterionId];
+    if (!grades) {
+      console.warn('Grade data not found for criterion:', criterionId);
+      return 4; // 默认返回最高等级
+    }
 
-    if (percentage >= 80) return 3; // High Distinction
-    if (percentage >= 70) return 2; // Distinction
-    if (percentage >= 60) return 1; // Credit
-    return 0; // Pass
+    // 按等级从高到低排序
+    const sortedGrades = Object.keys(grades)
+      .map(grade => parseInt(grade))
+      .sort((a, b) => b - a);
+
+    // 遍历等级，找到分数对应的等级
+    for (const grade of sortedGrades) {
+      const gradeInfo = grades[grade];
+      if (gradeInfo && gradeInfo.min_score !== undefined && gradeInfo.max_score !== undefined) {
+        if (score >= gradeInfo.min_score && score <= gradeInfo.max_score) {
+          return grade;
+        }
+      }
+    }
+
+    // 如果分数超出范围，返回最接近的等级
+    if (score < (grades[sortedGrades[sortedGrades.length - 1]]?.min_score || 0)) {
+      return sortedGrades[sortedGrades.length - 1]; // 返回最低等级
+    }
+    return sortedGrades[0]; // 返回最高等级
   }
 
 
@@ -836,7 +860,7 @@
     const scoreInputs = $$('.score-input');
     scoreInputs.forEach(input => {
       const criterionId = parseInt(input.id.split('-')[2]);
-      scores[criterionId] = parseInt(input.value) || 0;
+      scores[criterionId] = parseFloat(input.value) || 0;
     });
     return scores;
   }

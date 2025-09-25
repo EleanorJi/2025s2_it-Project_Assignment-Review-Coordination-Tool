@@ -410,7 +410,7 @@ body {
 }
 
 .score-input {
-  width: 60px;
+  width: 80px;
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
