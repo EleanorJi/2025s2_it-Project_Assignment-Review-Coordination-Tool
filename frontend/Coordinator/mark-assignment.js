@@ -57,6 +57,7 @@
     setupActionButtons();
 
     updateAllCriterionDisplays();
+    updateTotalScoreDisplay();
   }
 
   // 解析URL参数，获取真实的assignment_id
@@ -466,6 +467,7 @@
           ${isLastCriterion ? `
             <!-- 只在最后一个标准添加操作按钮 -->
             <div class="action-buttons">
+              <div class="total-score-display">/100</div>
               <button class="btn btn-secondary" id="saveBtn">Save Draft</button>
               <button class="btn btn-primary" id="submitBtn">Submit Marks</button>
             </div>
@@ -478,6 +480,41 @@
 
     console.log('✅ Criteria HTML generated for', criterionIds.length, 'criteria');
     console.log('✅ Action buttons added to last criterion:', lastCriterionId);
+  }
+
+  // 更新总分显示
+  function updateTotalScoreDisplay() {
+    const totalScoreElement = document.querySelector('.total-score-display');
+    if (totalScoreElement) {
+      const totalScore = calculateWeightedTotalScore();
+      totalScoreElement.textContent = totalScore === 0 ? '/100' : `${totalScore}/100`;
+    }
+  }
+  // 计算加权总分（基于100分制）
+  function calculateWeightedTotalScore() {
+    const scores = getCurrentScores();
+    let totalWeightedScore = 0;
+    let totalMaxScore = 0;
+
+    // 计算每个criterion的权重分数
+    Object.keys(scores).forEach(criterionId => {
+      const score = scores[criterionId];
+      const criterion = criterionData[criterionId];
+
+      if (criterion) {
+        const maxScore = criterion.maxScore;
+        // 计算该criterion在100分中的权重分数
+        const weightedScore = (score / maxScore) * (maxScore / 100) * 100;
+        totalWeightedScore += weightedScore;
+        totalMaxScore += maxScore;
+      }
+    });
+
+    // 如果总分不是100，需要按比例调整
+    const scalingFactor = totalMaxScore > 0 ? 100 / totalMaxScore : 0;
+    const finalScore = totalWeightedScore * scalingFactor;
+
+    return Math.round(finalScore * 10) / 10; // 保留一位小数
   }
 
   // 生成单个评分标准的等级选项HTML
@@ -615,6 +652,7 @@
   function selectGrade(criterionId, grade) {
     currentGrades[criterionId] = grade;
     updateCriterionDisplay(criterionId);
+    updateTotalScoreDisplay();
   }
 
   // 更新单个评分标准的显示
@@ -695,6 +733,7 @@
         // 传递 criterionId 参数
         const grade = calculateGradeFromScore(score, maxScore, criterionId);
         selectGrade(criterionId, grade);
+        updateTotalScoreDisplay();
       });
     });
   }
