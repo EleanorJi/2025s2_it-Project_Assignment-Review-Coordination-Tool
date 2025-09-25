@@ -480,14 +480,20 @@
     console.log('✅ Action buttons added to last criterion:', lastCriterionId);
   }
 
-  function generateGradeOptions(criterionId) {
-    // 根据gradeData生成对应的等级选项
+  function generateGradeOptions(criterionId, currentGrade) {
     const grades = gradeData[criterionId];
-    if (!grades) return '';
+    if (!grades) {
+      console.warn('No grade data for criterion:', criterionId);
+      return '';
+    }
 
-    return Object.keys(grades).map(grade => {
+    // 按等级从高到低排序（4, 3, 2, 1, 0）- 确保HTML显示顺序正确
+    const sortedGrades = Object.keys(grades).sort((a, b) => b - a);
+
+    return sortedGrades.map(grade => {
       const gradeInfo = grades[grade];
-      return `<div class="grade-option ${grade == currentGrades[criterionId] ? 'active' : ''}" data-grade="${grade}">${gradeInfo.name}</div>`;
+      const isActive = parseInt(grade) === parseInt(currentGrade);
+      return `<div class="grade-option ${isActive ? 'active' : ''}" data-grade="${grade}">${gradeInfo.name}</div>`;
     }).join('');
   }
 

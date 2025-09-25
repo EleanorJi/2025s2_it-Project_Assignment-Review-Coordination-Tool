@@ -136,7 +136,7 @@ body {
 /* Three column layout with thumbnails sidebar on the left */
 .marking-container {
   display: grid;
-  grid-template-columns: 80px 1fr 400px;
+  grid-template-columns: 80px 1fr 450px;
   gap: 16px;
   height: calc(100vh - 200px);
 }
