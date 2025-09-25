@@ -9,10 +9,11 @@
   --bad: #DC2626;
   --radius: 4px;
   --shadow: 0 2px 8px rgba(2,6,23,0.08);
-  --grade-pass: #DC2626;
-  --grade-credit: #F59E0B;
-  --grade-distinction: #10B981;
-  --grade-high-distinction: #3B82F6;
+  --grade-high-distinction: #4caf50;  /* 绿色 */
+  --grade-distinction: #8bc34a;       /* 浅绿色 */
+  --grade-credit: #ffc107;            /* 黄色 */
+  --grade-pass: #ff9800;              /* 橙色 */
+  --grade-fail: #ff4444;              /* 红色 - 新增 */
 }
 
 * {
@@ -366,20 +367,23 @@ body {
   transition: all 0.2s;
 }
 
-.grade-option.active {
-  background: var(--grade-high-distinction);
-  color: #fff;
+.grade-option[data-grade="0"].active {
+  background: var(--grade-fail);
 }
 
-.grade-option[data-grade="0"].active {
-  background: var(--grade-pass);
+.grade-option[data-grade="4"].active {
+  background: var(--grade-high-distinction);
 }
 
 .grade-option[data-grade="1"].active {
-  background: var(--grade-credit);
+  background: var(--grade-pass);
 }
 
 .grade-option[data-grade="2"].active {
+  background: var(--grade-credit);
+}
+
+.grade-option[data-grade="3"].active {
   background: var(--grade-distinction);
 }
 

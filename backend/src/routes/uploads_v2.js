@@ -2139,6 +2139,55 @@ router.post('/scoring/baseline/batch', async (req, res) => {
 });
 
 /**
+ * Coordinator专用 - 确认baseline分数
+ * POST /api/uploads/scoring/baseline/submit
+ */
+router.post('/scoring/baseline/submit', async (req, res) => {
+    try {
+        // 1. 获取请求参数（根据你的实际需求调整）
+        const { baseline_id } = req.body;
+
+        // 2. 参数验证
+        if (!baseline_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'baseline_id 是必需的参数'
+            });
+        }
+
+        // 3. 更新数据库
+        const result = await pool.query(
+            'UPDATE baseline_score SET finalized = true WHERE id = $1 RETURNING *',
+            [baseline_id]
+        );
+
+        // 4. 检查是否成功更新
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '未找到对应的 baseline_score 记录'
+            });
+        }
+
+        // 5. 返回成功响应
+        res.json({
+            success: true,
+            message: 'Baseline 分数已确认',
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('确认baseline分数时出错:', error);
+        res.status(500).json({
+            success: false,
+            message: '服务器内部错误',
+            error: error.message
+        });
+    }
+});
+
+
+/**
  * Marker专用 - 批量设置/更新marker分数
  * POST /api/uploads/scoring/marker/batch
  */
@@ -2321,6 +2370,55 @@ router.post('/scoring/marker/batch', async (req, res) => {
     });
   }
 });
+
+/**
+ * Marker专用 - 确认marker分数
+ * POST /api/uploads/scoring/marker/submit
+ */
+router.post('/scoring/marker/submit', async (req, res) => {
+    try {
+        // 1. 获取请求参数
+        const { marker_score_id } = req.body;
+
+        // 2. 参数验证
+        if (!marker_score_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'marker_score_id 是必需的参数'
+            });
+        }
+
+        // 3. 更新数据库 - 将finalized字段改为true
+        const result = await pool.query(
+            'UPDATE marker_score SET finalized = true WHERE id = $1 RETURNING *',
+            [marker_score_id]
+        );
+
+        // 4. 检查是否成功更新
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '未找到对应的 marker_score 记录'
+            });
+        }
+
+        // 5. 返回成功响应
+        res.json({
+            success: true,
+            message: 'Marker 分数已确认',
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('确认marker分数时出错:', error);
+        res.status(500).json({
+            success: false,
+            message: '服务器内部错误',
+            error: error.message
+        });
+    }
+});
+
 
 /**
  * 生成Assignment Moderation对比报告
