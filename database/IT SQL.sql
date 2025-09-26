@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS public.baseline_score
     assignment_id bigint NOT NULL,
     criterion_id bigint NOT NULL,
     score numeric(5, 2) NOT NULL,
+	finalized boolean DEFAULT false,
     comment text COLLATE pg_catalog."default",
     CONSTRAINT baseline_score_pkey PRIMARY KEY (baseline_id),
     CONSTRAINT uq_baseline_assignment_criterion UNIQUE (assignment_id, criterion_id)
