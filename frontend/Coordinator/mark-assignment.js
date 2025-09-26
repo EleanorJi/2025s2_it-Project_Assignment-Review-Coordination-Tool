@@ -460,7 +460,7 @@
                 <span>Criterion Feedback</span>
                 <button class="close-feedback">×</button>
               </div>
-              <textarea placeholder="will be included in the overall feedback and visible to students"></textarea>
+              <textarea placeholder="Please write your feedback on this criterion."></textarea>
             </div>
           </div>
 
