@@ -609,7 +609,7 @@
                 <button class="btn btn-secondary" id="saveBtn">Save Draft</button>
                 <button class="btn btn-primary" id="submitBtn">Submit Marks</button>
               ` : `
-                <div class="finalized-message">Marks have been submitted and cannot be modified</div>
+                <div class="finalized-message">Marks have been submitted.</div>
               `}
             </div>
           ` : ''}
@@ -1372,8 +1372,9 @@
     if (actionButtons) {
       actionButtons.innerHTML = `
         <div class="total-score-display">/100</div>
-        <div class="finalized-message">Marks have been submitted</div>
+        <div class="finalized-message">Marks have been submitted.</div>
       `;
+      updateTotalScoreDisplay();
     }
   }
 
