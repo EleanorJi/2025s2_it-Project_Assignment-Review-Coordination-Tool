@@ -1085,13 +1085,43 @@
     scoreInputs.forEach(input => {
       input.addEventListener('input', () => {
         const criterionId = parseInt(input.id.split('-')[2]);
-        const score = parseFloat(input.value) || 0;
         const maxScore = parseFloat(input.max);
+        let score = parseFloat(input.value) || 0;
+
+        // 添加分数验证
+        let scoreAdjusted = false;
+        if (score > maxScore) {
+          score = maxScore;
+          input.value = maxScore;
+          scoreAdjusted = true;
+
+          // 显示提示信息
+          showNotification(`Score cannot exceed maximum ${maxScore} points`, 'warning');
+        }
 
         // 传递 criterionId 参数
         const grade = calculateGradeFromScore(score, maxScore, criterionId);
         selectGrade(criterionId, grade);
         updateTotalScoreDisplay();
+
+        // 如果分数被调整，强制更新当前criterion的显示
+        if (scoreAdjusted) {
+          updateCriterionDisplay(criterionId);
+        }
+      });
+
+      // 添加 blur 事件进行最终验证
+      input.addEventListener('blur', () => {
+        const criterionId = parseInt(input.id.split('-')[2]);
+        const maxScore = parseFloat(input.max);
+        let score = parseFloat(input.value) || 0;
+
+        if (score > maxScore) {
+          score = maxScore;
+          input.value = maxScore;
+          showNotification(`Score adjusted to maximum ${maxScore} points`, 'info');
+          updateCriterionDisplay(criterionId); // 强制更新显示
+        }
       });
     });
   }
@@ -1166,34 +1196,32 @@
   }
 
   // Action buttons functionality
-    // Action buttons functionality
-    function setupActionButtons() {
-      const saveBtn = $('#saveBtn');
-      const submitBtn = $('#submitBtn');
+  function setupActionButtons() {
+    const saveBtn = $('#saveBtn');
+    const submitBtn = $('#submitBtn');
 
-      saveBtn?.addEventListener('click', async () => {
+    saveBtn?.addEventListener('click', async () => {
+      try {
+        await saveMarks();
+        showNotification('Draft saved successfully', 'success');
+      } catch (error) {
+        console.error('Error saving marks:', error);
+        showNotification('Failed to save draft', 'error');
+      }
+    });
+     submitBtn?.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to submit these marks? This action cannot be undone.')) {
         try {
-          await saveMarks();
-          showNotification('Draft saved successfully', 'success');
+          await submitMarks();
+          showNotification('Marks submitted successfully', 'success');
+          // Optionally redirect or disable editing
         } catch (error) {
-          console.error('Error saving marks:', error);
-          showNotification('Failed to save draft', 'error');
+          console.error('Error submitting marks:', error);
+          showNotification('Failed to submit marks', 'error');
         }
-      });
-
-      submitBtn?.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to submit these marks? This action cannot be undone.')) {
-          try {
-            await submitMarks();
-            showNotification('Marks submitted successfully', 'success');
-            // Optionally redirect or disable editing
-          } catch (error) {
-            console.error('Error submitting marks:', error);
-            showNotification('Failed to submit marks', 'error');
-          }
-        }
-      });
-    }
+      }
+    });
+  }
 
 
   //===========================存分数到后端===========================
