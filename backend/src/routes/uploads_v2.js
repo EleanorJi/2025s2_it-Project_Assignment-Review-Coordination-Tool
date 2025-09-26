@@ -2139,45 +2139,49 @@ router.post('/scoring/baseline/batch', async (req, res) => {
 });
 
 /**
- * Coordinator专用 - 确认baseline分数
+ * Coordinator专用 - 批量确认baseline分数
  * POST /api/uploads/scoring/baseline/submit
  */
 router.post('/scoring/baseline/submit', async (req, res) => {
     try {
-        // 1. 获取请求参数（根据你的实际需求调整）
-        const { baseline_id } = req.body;
+        // 1. 获取请求参数 - 现在接收criterion_ids数组
+        const { assignment_id, criterion_ids } = req.body;
 
         // 2. 参数验证
-        if (!baseline_id) {
+        if (!assignment_id || !criterion_ids || !Array.isArray(criterion_ids) || criterion_ids.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'baseline_id 是必需的参数'
+                message: 'assignment_id 和 criterion_ids 数组是必需的参数'
             });
         }
 
-        // 3. 更新数据库
-        const result = await pool.query(
-            'UPDATE baseline_score SET finalized = true WHERE id = $1 RETURNING *',
-            [baseline_id]
-        );
+        // 3. 构建IN查询的占位符 ($1, $2, $3...)
+        const placeholders = criterion_ids.map((_, index) => `$${index + 2}`).join(',');
 
-        // 4. 检查是否成功更新
-        if (result.rowCount === 0) {
-            return res.status(404).json({
-                success: false,
-                message: '未找到对应的 baseline_score 记录'
-            });
-        }
+        // 4. 批量更新数据库
+        const query = `
+            UPDATE baseline_score
+            SET finalized = true
+            WHERE assignment_id = $1
+            AND criterion_id IN (${placeholders})
+            RETURNING *
+        `;
+
+        const params = [assignment_id, ...criterion_ids];
+        const result = await db.query(query, params);
 
         // 5. 返回成功响应
         res.json({
             success: true,
-            message: 'Baseline 分数已确认',
-            data: result.rows[0]
+            message: `已成功确认 ${result.rowCount} 个baseline分数`,
+            data: {
+                updated_count: result.rowCount,
+                updated_records: result.rows
+            }
         });
 
     } catch (error) {
-        console.error('确认baseline分数时出错:', error);
+        console.error('批量确认baseline分数时出错:', error);
         res.status(500).json({
             success: false,
             message: '服务器内部错误',
@@ -2372,45 +2376,50 @@ router.post('/scoring/marker/batch', async (req, res) => {
 });
 
 /**
- * Marker专用 - 确认marker分数
+ * Marker专用 - 批量确认marker分数
  * POST /api/uploads/scoring/marker/submit
  */
 router.post('/scoring/marker/submit', async (req, res) => {
     try {
         // 1. 获取请求参数
-        const { marker_score_id } = req.body;
+        const { assignment_id, marker_id, criterion_ids } = req.body;
 
         // 2. 参数验证
-        if (!marker_score_id) {
+        if (!assignment_id || !marker_id || !criterion_ids || !Array.isArray(criterion_ids) || criterion_ids.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'marker_score_id 是必需的参数'
+                message: 'assignment_id, marker_id 和 criterion_ids 数组是必需的参数'
             });
         }
 
-        // 3. 更新数据库 - 将finalized字段改为true
-        const result = await pool.query(
-            'UPDATE marker_score SET finalized = true WHERE id = $1 RETURNING *',
-            [marker_score_id]
-        );
+        // 3. 构建IN查询的占位符
+        const placeholders = criterion_ids.map((_, index) => `$${index + 3}`).join(',');
 
-        // 4. 检查是否成功更新
-        if (result.rowCount === 0) {
-            return res.status(404).json({
-                success: false,
-                message: '未找到对应的 marker_score 记录'
-            });
-        }
+        // 4. 批量更新数据库
+        const query = `
+            UPDATE marker_score
+            SET finalized = true
+            WHERE assignment_id = $1
+            AND marker_id = $2
+            AND criterion_id IN (${placeholders})
+            RETURNING *
+        `;
+
+        const params = [assignment_id, marker_id, ...criterion_ids];
+        const result = await db.query(query, params);
 
         // 5. 返回成功响应
         res.json({
             success: true,
-            message: 'Marker 分数已确认',
-            data: result.rows[0]
+            message: `已成功确认 ${result.rowCount} 个marker分数`,
+            data: {
+                updated_count: result.rowCount,
+                updated_records: result.rows
+            }
         });
 
     } catch (error) {
-        console.error('确认marker分数时出错:', error);
+        console.error('批量确认marker分数时出错:', error);
         res.status(500).json({
             success: false,
             message: '服务器内部错误',

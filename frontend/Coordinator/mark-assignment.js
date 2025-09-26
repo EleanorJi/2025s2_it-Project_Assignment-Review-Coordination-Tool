@@ -3,6 +3,8 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
+
+  let originalData = null; // To store the original criterion data
   // Criterion data - will be loaded from backend
   let criterionData = {};
 
@@ -53,6 +55,9 @@
     } catch (err) {
       console.error("Failed to load username:", err);
     }
+
+    // 调试用，查看当前用户信息
+    // getCurrentUser();
 
     // ✅ 从URL获取project_id和assignment标识
     await resolveAssignmentId();
@@ -240,6 +245,7 @@
       }
 
       const data = await response.json();
+      originalData = data; // 保存原始数据
       criterionData = formatRubric(data);
       console.log('✅ original Criterion data:', data);
 
@@ -553,6 +559,8 @@
     }).join('');
   }
 
+  // =======================================pdf viewer=======================================
+
   // Document navigation
   function setupDocumentNavigation() {
       setupPdfViewer();
@@ -617,13 +625,12 @@
           showPdfLoading(true);
 
           const container = document.getElementById('pdf-viewer');
-          container.innerHTML = ''; // 清空容器
+          container.innerHTML = '';
 
           pageCanvases = [];
           pageHeights = [];
           totalHeight = 0;
 
-          // 创建主画布容器
           const canvasContainer = document.createElement('div');
           canvasContainer.className = 'pdf-canvas-container';
           canvasContainer.style.cssText = `
@@ -631,28 +638,32 @@
               position: relative;
           `;
 
-          // 渲染每一页
           for (let i = 1; i <= totalPdfPages; i++) {
               const page = await pdfDoc.getPage(i);
               const viewport = page.getViewport({ scale: currentScale });
 
-              // 创建canvas元素
+              // 创建页面包装器
+              const pageWrapper = document.createElement('div');
+              pageWrapper.className = 'pdf-page-wrapper';
+              pageWrapper.style.cssText = `
+                  position: relative;
+                  margin: 0 auto 20px auto;
+                  max-width: 100%;
+              `;
+
               const canvas = document.createElement('canvas');
               canvas.className = 'pdf-page-canvas';
               canvas.style.cssText = `
                   display: block;
-                  margin: 0 auto 20px auto;
+                  width: 100%;
+                  height: auto;
                   border: 1px solid #ddd;
                   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                  max-width: 100%;
-                  height: auto;
               `;
 
-              // 设置canvas尺寸
               canvas.height = viewport.height;
               canvas.width = viewport.width;
 
-              // 渲染页面
               const renderContext = {
                   canvasContext: canvas.getContext('2d'),
                   viewport: viewport
@@ -660,19 +671,17 @@
 
               await page.render(renderContext).promise;
 
-              // 添加到容器
-              canvasContainer.appendChild(canvas);
+              pageWrapper.appendChild(canvas);
+              canvasContainer.appendChild(pageWrapper);
 
-              // 存储canvas和高度信息
+              // 使用包装器的高度
+              const pageHeight = pageWrapper.offsetHeight;
               pageCanvases.push(canvas);
-              pageHeights.push(viewport.height + 20); // 高度 + 间距
-              totalHeight += viewport.height + 20;
+              pageHeights.push(pageHeight);
+              totalHeight += pageHeight;
           }
 
-          // 设置容器高度
-          canvasContainer.style.height = totalHeight + 'px';
           container.appendChild(canvasContainer);
-
           showPdfLoading(false);
 
       } catch (error) {
@@ -700,9 +709,13 @@
       let accumulatedHeight = 0;
       let newCurrentPage = 1;
 
-      // 计算当前显示的页面
-      for (let i = 0; i < pageHeights.length; i++) {
-          accumulatedHeight += pageHeights[i];
+      // 获取所有页面包装器
+      const pageWrappers = document.querySelectorAll('.pdf-page-wrapper');
+
+      for (let i = 0; i < pageWrappers.length; i++) {
+          const wrapper = pageWrappers[i];
+          const wrapperHeight = wrapper.offsetHeight;
+          accumulatedHeight += wrapperHeight;
 
           // 如果滚动位置超过当前页面累计高度的一半，则认为进入下一页
           if (scrollTop + (viewerHeight / 2) < accumulatedHeight) {
@@ -718,15 +731,20 @@
           updateActiveThumbnail();
       }
   }
+
   // 滚动到指定页面
   function scrollToPage(pageNum) {
       const pdfViewer = document.getElementById('pdf-viewer');
 
       if (pageNum < 1 || pageNum > totalPdfPages) return;
 
+      const pageWrappers = document.querySelectorAll('.pdf-page-wrapper');
       let scrollPosition = 0;
+
       for (let i = 0; i < pageNum - 1; i++) {
-          scrollPosition += pageHeights[i];
+          if (pageWrappers[i]) {
+              scrollPosition += pageWrappers[i].offsetHeight;
+          }
       }
 
       pdfViewer.scrollTo({
@@ -953,6 +971,9 @@
       showPdfLoading(false);
   }
 
+
+  //=====================================pdf end=====================================
+
   // Grade selection
   function setupGradeSelection() {
     const criteria = $$('.criterion');
@@ -1145,42 +1166,66 @@
   }
 
   // Action buttons functionality
-  function setupActionButtons() {
-    const saveBtn = $('#saveBtn');
-    const submitBtn = $('#submitBtn');
+    // Action buttons functionality
+    function setupActionButtons() {
+      const saveBtn = $('#saveBtn');
+      const submitBtn = $('#submitBtn');
 
-    saveBtn?.addEventListener('click', async () => {
-      try {
-        InteractionUtils.showLoading(saveBtn, 'Saving Draft...');
-        await saveMarks();
-        InteractionUtils.showToast('Draft saved successfully', 'success');
-      } catch (error) {
-        console.error('Error saving marks:', error);
-        InteractionUtils.showToast('Failed to save draft', 'error');
-      } finally {
-        InteractionUtils.hideLoading(saveBtn);
-      }
-    });
-
-    submitBtn?.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to submit these marks? This action cannot be undone.')) {
+      saveBtn?.addEventListener('click', async () => {
         try {
-          InteractionUtils.showLoading(submitBtn, 'Submitting Marks...');
-          await submitMarks();
-          InteractionUtils.showToast('Marks submitted successfully', 'success');
-          // Optionally redirect or disable editing
+          await saveMarks();
+          showNotification('Draft saved successfully', 'success');
         } catch (error) {
-          console.error('Error submitting marks:', error);
-          InteractionUtils.showToast('Failed to submit marks', 'error');
-        } finally {
-          InteractionUtils.hideLoading(submitBtn);
+          console.error('Error saving marks:', error);
+          showNotification('Failed to save draft', 'error');
         }
+      });
+
+      submitBtn?.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to submit these marks? This action cannot be undone.')) {
+          try {
+            await submitMarks();
+            showNotification('Marks submitted successfully', 'success');
+            // Optionally redirect or disable editing
+          } catch (error) {
+            console.error('Error submitting marks:', error);
+            showNotification('Failed to submit marks', 'error');
+          }
+        }
+      });
+    }
+
+
+  //===========================存分数到后端===========================
+
+  // 获取当前用户信息
+  function getCurrentUser() {
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+
+        // 先log检查一下用户数据的结构
+        console.log("User Info:", user);
+        console.log("Available fields:", Object.keys(user));
+
+        // 根据log结果调整字段名
+        // 常见的字段名可能是：id, userId, user_id, role, userRole, etc.
+        return {
+          userId: user.id,
+          role: user.role
+        };
       }
-    });
+      return null;
+    } catch (err) {
+      console.error("Failed to load user info:", err);
+      return null;
+    }
   }
 
-  // Save marks to backend
+  // Save marks to backend - 根据用户角色选择不同的接口
   async function saveMarks() {
+    const currentUser = getCurrentUser();
     const marksData = {
       assignmentId: ASSIGNMENT_ID,
       criteria: currentGrades,
@@ -1189,12 +1234,36 @@
       timestamp: new Date().toISOString()
     };
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${ASSIGNMENT_ID}/marks`, {
+    let url;
+    let requestBody;
+
+    if (currentUser.role === 'COORDINATOR') {
+      // COORDINATOR 使用 baseline 接口
+      url = `${API_BASE_URL}/uploads/scoring/baseline/batch`;
+      requestBody = {
+        assignment_id: ASSIGNMENT_ID,
+        scores: transformScoresForBackend(marksData.scores, marksData.feedback)
+      };
+    } else if (currentUser.role === 'MARKER') {
+      // MARKER 使用 marker 接口
+      url = `${API_BASE_URL}/uploads/scoring/marker/batch`;
+      requestBody = {
+        assignment_id: ASSIGNMENT_ID,
+        marker_id: currentUser.userId, // 添加 marker_id
+        scores: transformScoresForBackend(marksData.scores, marksData.feedback)
+      };
+    } else {
+      throw new Error('Unknown user role');
+    }
+
+    console.log('Saving marks with data:', requestBody);
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(marksData)
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -1204,30 +1273,71 @@
     return response.json();
   }
 
-  // Submit marks to backend
+  // Submit marks to backend - 先保存再确认
   async function submitMarks() {
-    const marksData = {
-      assignmentId: ASSIGNMENT_ID,
-      criteria: currentGrades,
-      scores: getCurrentScores(),
-      feedback: getCurrentFeedback(),
-      status: 'submitted',
-      timestamp: new Date().toISOString()
-    };
+    const currentUser = getCurrentUser();
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${ASSIGNMENT_ID}/marks/submit`, {
+    // 第一步：先批量保存分数
+    const saveResult = await saveMarks();
+
+    // 第二步：确认分数 - 现在使用批量确认
+    let submitUrl;
+    let submitBody;
+
+    // 获取所有需要确认的criterion_id（从originalData中获取）
+    const criterionIds = originalData.criteria.map(criterion => criterion.criterion_id);
+
+    if (currentUser.role === 'COORDINATOR') {
+      submitUrl = `${API_BASE_URL}/uploads/scoring/baseline/submit`;
+      submitBody = {
+        assignment_id: ASSIGNMENT_ID,
+        criterion_ids: criterionIds
+      };
+    } else if (currentUser.role === 'MARKER') {
+      submitUrl = `${API_BASE_URL}/uploads/scoring/marker/submit`;
+      submitBody = {
+        assignment_id: ASSIGNMENT_ID,
+        marker_id: currentUser.userId,
+        criterion_ids: criterionIds
+      };
+    } else {
+      throw new Error('Unknown user role');
+    }
+
+    console.log('Submitting marks with data:', submitBody);
+
+    const submitResponse = await fetch(submitUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(marksData)
+      body: JSON.stringify(submitBody)
     });
 
-    if (!response.ok) {
+    if (!submitResponse.ok) {
       throw new Error('Failed to submit marks');
     }
 
-    return response.json();
+    return submitResponse.json();
+  }
+
+  // 辅助函数：将前端分数格式转换为后端需要的格式
+  function transformScoresForBackend(scores, feedback) {
+    if (!originalData || !originalData.criteria) {
+      throw new Error('Rubric data not loaded yet');
+    }
+
+    return originalData.criteria.map(criterion => {
+      // 使用 criterion.seq_no 作为前端存储的键（因为前端可能是按顺序存储的）
+      // 或者如果你在前端使用了其他键，需要相应调整
+      const frontendKey = criterion.seq_no.toString(); // 或者 criterion.criterion_id.toString()
+
+      return {
+        criterion_id: criterion.criterion_id, // 使用后端返回的真实ID
+        score: scores[frontendKey] || 0,
+        comment: feedback[frontendKey] || null
+      };
+    });
   }
 
   // Get current scores from inputs
@@ -1254,6 +1364,8 @@
     });
     return feedback;
   }
+
+  // ==================结束存分数到后端=================
 
   // Show notification
   function showNotification(message, type = 'info') {
