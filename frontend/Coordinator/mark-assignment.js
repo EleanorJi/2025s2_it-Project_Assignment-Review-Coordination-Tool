@@ -71,6 +71,10 @@
 
     // Load rubric data from backend
     await loadRubricData();
+
+    // ✅ 新增：加载已保存的分数和反馈数据
+    await loadSavedScoresAndFeedback();
+
     generateCriteriaHTML();
 
     setupDocumentNavigation();
@@ -81,6 +85,110 @@
 
     updateAllCriterionDisplays();
     updateTotalScoreDisplay();
+  }
+
+  // 加载已保存到后端的的score和feedback数据
+  async function loadSavedScoresAndFeedback() {
+    try {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        console.warn('无法获取当前用户信息，跳过加载已保存数据');
+        return;
+      }
+
+      let response;
+      if (currentUser.role === 'COORDINATOR') {
+        response = await fetch(`${API_BASE_URL}/uploads/scoring/baseline/${ASSIGNMENT_ID}`);
+      } else if (currentUser.role === 'MARKER') {
+        response = await fetch(`${API_BASE_URL}/uploads/scoring/marker/${ASSIGNMENT_ID}/${currentUser.userId}`);
+      } else {
+        console.warn('未知用户角色，跳过加载已保存数据');
+        return;
+      }
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('未找到已保存的数据，使用默认值');
+          return;
+        }
+        throw new Error(`加载失败: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // 根据用户角色处理不同的数据结构
+      const scoresData = currentUser.role === 'COORDINATOR'
+        ? data.baseline_scores
+        : data.marker_scores;
+
+      if (!scoresData || scoresData.length === 0) {
+        console.log('没有已保存的分数数据');
+        return;
+      }
+
+      // 创建映射以便后续使用
+      window.savedScoresData = {
+        scores: {},
+        feedback: {},
+        finalized: currentUser.role === 'MARKER'
+          ? (data.marker_scores?.[0]?.finalized || false)
+          : (data.baseline_scores?.[0]?.finalized || false)
+      };
+      console.log('✅ 设置的 finalized 状态:', window.savedScoresData.finalized);
+
+      // 处理分数和反馈数据 - 直接使用seq_no作为前端ID
+      scoresData.forEach(scoreItem => {
+        // 根据后端criterion_id找到对应的前端criterion（使用seq_no）
+        const criterion = originalData.criteria.find(c => c.criterion_id === scoreItem.criterion_id);
+        if (criterion) {
+          const frontendCriterionId = criterion.seq_no; // seq_no就是前端ID
+
+          // 保存分数
+          window.savedScoresData.scores[frontendCriterionId] = scoreItem.score;
+
+          // 保存反馈
+          if (scoreItem.comment) {
+            window.savedScoresData.feedback[frontendCriterionId] = scoreItem.comment;
+          }
+
+          // 根据分数设置对应的等级
+          if (scoreItem.matched_level && gradeData[frontendCriterionId]) {
+            const matchedGrade = findMatchingGrade(frontendCriterionId, scoreItem.score);
+            if (matchedGrade !== null) {
+              currentGrades[frontendCriterionId] = matchedGrade;
+            }
+          }
+        }
+      });
+
+      console.log('✅ 已保存的数据加载成功:', window.savedScoresData);
+
+    } catch (error) {
+      console.error('❌ 加载已保存数据失败:', error);
+      // 不抛出错误，继续使用默认值
+    }
+  }
+
+  // 根据分数查找匹配的等级
+  function findMatchingGrade(criterionId, score) {
+    const grades = gradeData[criterionId];
+    if (!grades) return null;
+
+    // 按等级从高到低排序
+    const sortedGrades = Object.keys(grades)
+      .map(grade => parseInt(grade))
+      .sort((a, b) => b - a);
+
+    for (const grade of sortedGrades) {
+      const gradeInfo = grades[grade];
+      if (gradeInfo && gradeInfo.min_score !== undefined && gradeInfo.max_score !== undefined) {
+        if (score >= gradeInfo.min_score && score <= gradeInfo.max_score) {
+          return grade;
+        }
+      }
+    }
+
+    return null;
   }
 
   // 解析URL参数，获取真实的assignment_id
@@ -443,6 +551,11 @@
     criterionIds.forEach(criterionId => {
       const criterion = criterionData[criterionId];
       const currentGrade = currentGrades[criterionId] || 4;
+
+      // ✅ 使用已保存的分数或默认值
+      const savedScore = window.savedScoresData?.scores?.[criterionId];
+      const initialScore = savedScore !== undefined ? savedScore : criterion.maxScore;
+
       const isLastCriterion = criterionId === lastCriterionId;
 
       const criterionHTML = `
@@ -463,14 +576,14 @@
           <div class="score-input-section">
             <div class="score-input-container">
               <label for="score-input-${criterionId}">Manual Score:</label>
-              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${criterion.maxScore}" step="0.1"/>
+              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"/>
               <span class="max-score">/ ${criterion.maxScore}</span>
             </div>
           </div>
 
           <div class="grade-info">
             <div class="grade-level">${gradeData[criterionId]?.[currentGrade]?.name || 'High Distinction'}</div>
-            <div class="grade-score">${criterion.maxScore}/${criterion.maxScore}</div>
+            <div class="grade-score">${initialScore}/${criterion.maxScore}</div>
           </div>
 
           <div class="grade-description">
@@ -479,12 +592,12 @@
 
           <div class="feedback-section">
             <button class="show-feedback-btn">+ Add Feedback</button>
-            <div class="criterion-feedback hidden">
+            <div class="criterion-feedback ${window.savedScoresData?.feedback?.[criterionId] ? '' : 'hidden'}">
               <div class="feedback-header">
                 <span>Criterion Feedback</span>
                 <button class="close-feedback">×</button>
               </div>
-              <textarea placeholder="Please write your feedback on this criterion."></textarea>
+              <textarea placeholder="Please write your feedback on this criterion.">${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
             </div>
           </div>
 
@@ -492,8 +605,12 @@
             <!-- 只在最后一个标准添加操作按钮 -->
             <div class="action-buttons">
               <div class="total-score-display">/100</div>
-              <button class="btn btn-secondary" id="saveBtn">Save Draft</button>
-              <button class="btn btn-primary" id="submitBtn">Submit Marks</button>
+              ${!window.savedScoresData?.finalized ? `
+                <button class="btn btn-secondary" id="saveBtn">Save Draft</button>
+                <button class="btn btn-primary" id="submitBtn">Submit Marks</button>
+              ` : `
+                <div class="finalized-message">Marks have been submitted and cannot be modified</div>
+              `}
             </div>
           ` : ''}
         </div>
@@ -1162,8 +1279,20 @@
     const showFeedbackBtns = $$('.show-feedback-btn');
     const closeButtons = $$('.close-feedback');
 
-    // Show feedback buttons
+    // Show feedback buttons - 如果有保存的反馈，自动展开
     showFeedbackBtns.forEach(button => {
+      const criterion = button.closest('.criterion');
+      const criterionId = parseInt(criterion.dataset.criterion);
+
+      // 如果有保存的反馈，自动展开
+      if (window.savedScoresData?.feedback?.[criterionId]) {
+        const feedback = button.nextElementSibling;
+        if (feedback) {
+          feedback.classList.remove('hidden');
+          button.style.display = 'none';
+        }
+      }
+
       button.addEventListener('click', () => {
         const feedback = button.nextElementSibling;
         if (feedback) {
@@ -1200,6 +1329,11 @@
     const saveBtn = $('#saveBtn');
     const submitBtn = $('#submitBtn');
 
+    // 如果已提交，直接返回，不设置事件监听
+    if (window.savedScoresData?.finalized) {
+      return;
+    }
+
     saveBtn?.addEventListener('click', async () => {
       try {
         await saveMarks();
@@ -1209,18 +1343,38 @@
         showNotification('Failed to save draft', 'error');
       }
     });
-     submitBtn?.addEventListener('click', async () => {
+
+    submitBtn?.addEventListener('click', async () => {
       if (confirm('Are you sure you want to submit these marks? This action cannot be undone.')) {
         try {
           await submitMarks();
           showNotification('Marks submitted successfully', 'success');
-          // Optionally redirect or disable editing
+          // 提交后禁用按钮
+          disableActionButtons();
         } catch (error) {
           console.error('Error submitting marks:', error);
           showNotification('Failed to submit marks', 'error');
         }
       }
     });
+  }
+
+  // 禁用操作按钮
+  function disableActionButtons() {
+    const saveBtn = $('#saveBtn');
+    const submitBtn = $('#submitBtn');
+    const actionButtons = $('.action-buttons');
+
+    if (saveBtn) saveBtn.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
+
+    // 或者替换为已提交的消息
+    if (actionButtons) {
+      actionButtons.innerHTML = `
+        <div class="total-score-display">/100</div>
+        <div class="finalized-message">Marks have been submitted</div>
+      `;
+    }
   }
 
 
@@ -1253,6 +1407,10 @@
 
   // Save marks to backend - 根据用户角色选择不同的接口
   async function saveMarks() {
+    if (window.savedScoresData?.finalized) {
+      showNotification('此作业的评分已提交，无法再次提交', 'error');
+      return;
+    }
     const currentUser = getCurrentUser();
     const marksData = {
       assignmentId: ASSIGNMENT_ID,
@@ -1303,6 +1461,10 @@
 
   // Submit marks to backend - 先保存再确认
   async function submitMarks() {
+    if (window.savedScoresData?.finalized) {
+      showNotification('此作业的评分已提交，无法再次提交', 'error');
+      return;
+    }
     const currentUser = getCurrentUser();
 
     // 第一步：先批量保存分数
