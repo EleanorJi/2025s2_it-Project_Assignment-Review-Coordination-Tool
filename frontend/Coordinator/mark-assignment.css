@@ -808,3 +808,12 @@ body {
 .pdf-viewer::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+.finalized-message {
+  color: #666;
+  font-style: italic;
+  padding: 10px;
+  text-align: center;
+  background: #f5f5f5;
+  border-radius: 4px;
+}

@@ -1729,11 +1729,11 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
 
     const result = await db.query(
       `SELECT bs.*, rc.title as criterion_title, rc.max_score as criterion_max_score,
-              cgl.level_name, cgl.min_score as level_min_score, cgl.max_score as level_max_score, 
+              cgl.level_name, cgl.min_score as level_min_score, cgl.max_score as level_max_score,
               cgl.description as level_description
        FROM baseline_score bs
        JOIN rubric_criterion rc ON bs.criterion_id = rc.criterion_id
-       LEFT JOIN criterion_grade_level cgl ON rc.criterion_id = cgl.criterion_id 
+       LEFT JOIN criterion_grade_level cgl ON rc.criterion_id = cgl.criterion_id
          AND bs.score >= cgl.min_score AND bs.score <= cgl.max_score
        WHERE bs.assignment_id = $1
        ORDER BY rc.seq_no`,
@@ -1751,6 +1751,7 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
         criterion_max_score: parseFloat(row.criterion_max_score),
         score: parseFloat(row.score),
         comment: row.comment,
+        finalized: row.finalized || false, // 添加 finalized 字段
         matched_level: row.level_name ? {
           level_name: row.level_name,
           min_score: parseFloat(row.level_min_score),
