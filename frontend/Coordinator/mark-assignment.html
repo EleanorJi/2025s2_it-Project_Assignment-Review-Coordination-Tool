@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
   <link rel="stylesheet" href="/Coordinator/mark-assignment.css">
 </head>
 <body>
@@ -51,73 +52,30 @@
       </div>
 
       <!-- Middle: Document viewer -->
+      <!-- 在 document-viewer 部分替换原来的内容 -->
       <div class="document-viewer">
         <div class="document-controls">
-          <div class="pagination">1 of 2</div>
+          <div class="pagination">Page: <span id="current-page">1</span> of <span id="total-pages">0</span></div>
           <div class="view-controls">
-            <button class="view-btn">View as text</button>
+            <button class="zoom-btn" id="zoom-out">-</button>
+            <span class="zoom-level" id="zoom-level">100%</span>
+            <button class="zoom-btn" id="zoom-in">+</button>
             <button class="download-btn">Download</button>
           </div>
         </div>
 
-        <div class="document-content">
-          <div class="document-title">The Case for Friction: Why Good Design Isn't Always Seamless</div>
-          <div class="document-text">
-            <h2>Introduction</h2>
-            <p>In the world of design, there's an almost universal push toward seamlessness. We want our apps to be intuitive, our websites to be frictionless, and our user experiences to be as smooth as possible. But what if this relentless pursuit of seamlessness is actually counterproductive? This paper explores the concept of intentional friction in user interface design and argues that strategic friction can enhance user experience, learning outcomes, and ethical decision-making.</p>
-
-            <p>Friction—those moments of pause, confirmation, or even difficulty in an interface—is often seen as the enemy of good design. Yet, when applied thoughtfully, friction can be a powerful tool for creating better, more ethical, and more meaningful user experiences. This research examines various contexts where friction serves beneficial purposes, from educational technology to financial applications.</p>
-
-            <h3>Theoretical Framework</h3>
-            <p>Our analysis is grounded in cognitive load theory (Sweller, 1988) and the concept of deliberate practice (Ericsson et al., 1993). These frameworks suggest that certain types of difficulty can enhance learning and skill development. We also draw from behavioral economics, particularly the work of Thaler and Sunstein (2008) on choice architecture and nudging.</p>
-
-            <h2>Literature Review</h2>
-            <p>Previous research on user experience has largely focused on reducing cognitive load and streamlining interactions. Norman (2013) emphasized the importance of intuitive design, while Nielsen (1994) established principles for usability that prioritize efficiency. However, recent studies have begun to question this paradigm.</p>
-
-            <p>Research by O'Brien and Toms (2008) introduced the concept of "engagement" as a positive user experience factor that may require some level of challenge or friction. Similarly, Hassenzahl (2010) distinguished between pragmatic and hedonic quality, suggesting that users value both efficiency and meaningful experiences.</p>
-
-            <h2>Methodology</h2>
-            <p>This study employed a mixed-methods approach, combining quantitative usability testing with qualitative user interviews. We conducted experiments with 120 participants across three different application domains: educational software, financial planning tools, and social media platforms.</p>
-
-            <p>Participants were randomly assigned to either a "frictionless" or "friction-enhanced" version of each application. We measured task completion rates, time to completion, user satisfaction, and learning outcomes. Qualitative data was collected through semi-structured interviews exploring user perceptions and decision-making processes.</p>
-
-            <h2>Results</h2>
-            <p>Our findings reveal several key insights about the role of friction in user experience design. In educational contexts, participants using friction-enhanced interfaces showed 23% better retention rates and 18% higher confidence in their learning outcomes. The additional cognitive effort required by these interfaces appeared to enhance rather than hinder the learning process.</p>
-
-            <p>In financial applications, strategic friction significantly improved decision quality. Users of friction-enhanced interfaces made more thoughtful investment choices, with 31% fewer impulsive decisions and 27% better long-term outcomes. The additional time required for transactions was perceived as valuable rather than burdensome.</p>
-
-            <h3>Case Study: Confirmation Screens</h3>
-            <p>Consider the confirmation screen before deleting important data. While it might seem like an unnecessary step, this moment of friction serves a crucial purpose: it prevents costly mistakes and gives users a chance to reconsider their actions. This is friction in service of user protection.</p>
-
-            <p>Our analysis of 50,000 deletion events across various applications showed that confirmation screens reduced accidental deletions by 67% while only adding an average of 2.3 seconds to the user workflow. User satisfaction surveys indicated that 89% of participants appreciated these protective measures.</p>
-
-            <h2>Discussion</h2>
-            <p>In educational contexts, friction can enhance learning. When students must work through challenging problems or navigate complex interfaces, they develop deeper understanding and problem-solving skills. The struggle itself becomes part of the learning process, as suggested by the "desirable difficulties" framework (Bjork, 1994).</p>
-
-            <p>Ethical design often requires friction. Consent forms, privacy settings, and data sharing agreements need to be clear and deliberate, not hidden or rushed. This friction ensures users make informed decisions about their data and privacy. Our research shows that users who engage with more detailed privacy settings are 45% more likely to make privacy-conscious decisions.</p>
-
-            <p>Social interactions also benefit from intentional friction. The slight delay in messaging apps, the need to confirm friend requests, or the process of joining a group—these moments of friction create space for reflection and intentional connection. This aligns with research on "slow technology" (Hallnäs & Redström, 2001) that emphasizes the value of contemplative interaction.</p>
-
-            <h2>Implications for Design</h2>
-            <p>Even in physical design, friction serves important purposes. The gates at train stations, while seemingly inconvenient, help manage crowd flow and prevent accidents. The resistance in a good door handle provides tactile feedback about the door's state. These examples demonstrate that friction can be both functional and meaningful.</p>
-
-            <p>The key is not to eliminate friction entirely, but to use it strategically. Good friction serves a purpose: it protects, educates, creates space for reflection, or enhances the overall experience. Bad friction is simply an obstacle with no clear benefit. Our framework for evaluating friction includes three criteria: purpose, proportionality, and user agency.</p>
-
-            <h2>Conclusion</h2>
-            <p>As designers, we should ask ourselves: What is this friction protecting? What is it teaching? What is it enabling? When we can answer these questions clearly, friction becomes not just acceptable, but essential to good design. The future of user experience design lies not in the elimination of all obstacles, but in the thoughtful integration of meaningful challenges that serve user goals and values.</p>
-
-            <p>This research contributes to the growing body of work questioning the "frictionless" paradigm in user experience design. By providing empirical evidence for the benefits of strategic friction, we hope to inspire designers to consider when and how to introduce meaningful challenges into their interfaces.</p>
-
-            <h3>References</h3>
-            <p>Bjork, R. A. (1994). Memory and metamemory considerations in the training of human beings. In J. Metcalfe & A. Shimamura (Eds.), Metacognition: Knowing about knowing (pp. 185-205). MIT Press.</p>
-            <p>Ericsson, K. A., Krampe, R. T., & Tesch-Römer, C. (1993). The role of deliberate practice in the acquisition of expert performance. Psychological Review, 100(3), 363-406.</p>
-            <p>Hallnäs, L., & Redström, J. (2001). Slow technology – designing for reflection. Personal and Ubiquitous Computing, 5(3), 201-212.</p>
-            <p>Hassenzahl, M. (2010). Experience design: Technology for all the right reasons. Morgan & Claypool Publishers.</p>
-            <p>Norman, D. (2013). The design of everyday things: Revised and expanded edition. Basic Books.</p>
-            <p>O'Brien, H. L., & Toms, E. G. (2008). What is user engagement? A conceptual framework for defining user engagement with technology. Journal of the American Society for Information Science and Technology, 59(6), 938-955.</p>
-            <p>Sweller, J. (1988). Cognitive load during problem solving: Effects on learning. Cognitive Science, 12(2), 257-285.</p>
-            <p>Thaler, R. H., & Sunstein, C. R. (2008). Nudge: Improving decisions about health, wealth, and happiness. Yale University Press.</p>
+        <div class="pdf-container">
+          <div class="pdf-viewer" id="pdf-viewer">
+            <canvas id="pdf-canvas"></canvas>
           </div>
+          <div class="pdf-loading" id="pdf-loading">Loading PDF...</div>
+          <div class="pdf-error" id="pdf-error" style="display: none;">Failed to load PDF</div>
+        </div>
+
+        <div class="page-navigation">
+          <button class="page-btn" id="prev-page">Previous</button>
+          <input type="number" id="page-number" min="1" value="1" style="width: 60px; text-align: center;">
+          <button class="page-btn" id="next-page">Next</button>
         </div>
       </div>
 

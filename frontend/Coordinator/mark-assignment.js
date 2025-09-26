@@ -17,6 +17,19 @@
   let gradeData = {};
   let currentGrades = {}; // Default to High Distinction
 
+  // 在文件开头添加PDF.js配置
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+  // PDF查看器状态
+  let pdfDoc = null;
+  let currentPdfPage = 1;
+  let totalPdfPages = 0;
+  let currentScale = 1.0;
+  const SCALE_STEP = 0.25;
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 3.0;
+
   // Initialize the interface
   async function init() {
     // ✅ 显示用户名
@@ -537,83 +550,289 @@
 
   // Document navigation
   function setupDocumentNavigation() {
-    const thumbnails = $$('.thumbnail');
-    const pagination = $('.pagination');
-    const viewBtn = $('.view-btn');
-    const downloadBtn = $('.download-btn');
+//    const thumbnails = $$('.thumbnail');
+//    const pagination = $('.pagination');
+//    const viewBtn = $('.view-btn');
+//    const downloadBtn = $('.download-btn');
+//
+//    // Thumbnail navigation
+//    thumbnails.forEach(thumb => {
+//      thumb.addEventListener('click', () => {
+//        const page = parseInt(thumb.dataset.page);
+//        if (page !== currentPage) {
+//          currentPage = page;
+//          updateDocumentView();
+//        }
+//      });
+//    });
+//
+//    // View as text button
+//    viewBtn?.addEventListener('click', () => {
+//      alert('Switching to text view...');
+//    });
+//
+//    // Download button
+//    downloadBtn?.addEventListener('click', () => {
+//      alert('Downloading document...');
+//    });
+      setupPdfViewer();
+      setupPdfControls();
+  }
+  // 初始化PDF查看器
+  async function setupPdfViewer() {
+      try {
+          // 1. 获取assignment的文件信息
+          const filesResponse = await fetch(`${API_BASE_URL}/uploads/assignment/${ASSIGNMENT_ID}/files`);
+          if (!filesResponse.ok) {
+              throw new Error('Failed to fetch assignment files');
+          }
 
-    // Thumbnail navigation
-    thumbnails.forEach(thumb => {
-      thumb.addEventListener('click', () => {
-        const page = parseInt(thumb.dataset.page);
-        if (page !== currentPage) {
-          currentPage = page;
-          updateDocumentView();
-        }
-      });
-    });
+          const filesData = await filesResponse.json();
+          if (!filesData.files || filesData.files.length === 0) {
+              throw new Error('No files found for this assignment');
+          }
 
-    // View as text button
-    viewBtn?.addEventListener('click', () => {
-      alert('Switching to text view...');
-    });
+          // 取第一个文件（假设是PDF）
+          const fileInfo = filesData.files[0];
+          console.log('File info:', fileInfo);
 
-    // Download button
-    downloadBtn?.addEventListener('click', () => {
-      alert('Downloading document...');
-    });
+          // 2. 获取PDF文件
+          const pdfResponse = await fetch(`${API_BASE_URL}/uploads/${fileInfo.upload_id}/download`);
+          if (!pdfResponse.ok) {
+              throw new Error('Failed to download PDF file');
+          }
+
+          const pdfBlob = await pdfResponse.blob();
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+
+          // 3. 使用PDF.js加载PDF
+          const loadingTask = pdfjsLib.getDocument(pdfUrl);
+          pdfDoc = await loadingTask.promise;
+
+          totalPdfPages = pdfDoc.numPages;
+          currentPdfPage = 1;
+
+          // 更新页面信息
+          updatePagination();
+
+          // 渲染第一页
+          await renderPage(currentPdfPage);
+
+          // 更新缩略图
+          updateThumbnails();
+
+      } catch (error) {
+          console.error('Error loading PDF:', error);
+          showPdfError('Failed to load PDF: ' + error.message);
+      }
   }
 
-  function updateDocumentView() {
-    const thumbnails = $$('.thumbnail');
-    const pagination = $('.pagination');
+  // 渲染PDF页面
+  async function renderPage(pageNum) {
+      try {
+          showPdfLoading(true);
 
-    // Update active thumbnail
-    thumbnails.forEach(thumb => {
-      const page = parseInt(thumb.dataset.page);
-      thumb.classList.toggle('active', page === currentPage);
-    });
+          const page = await pdfDoc.getPage(pageNum);
+          const canvas = document.getElementById('pdf-canvas');
+          const ctx = canvas.getContext('2d');
 
-    // Update pagination
-    if (pagination) {
-      pagination.textContent = `${currentPage} of 2`;
-    }
+          const viewport = page.getViewport({ scale: currentScale });
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
 
-    // Update document content (simulate different pages)
-    const documentTitle = $('.document-title');
-    const documentText = $('.document-text');
+          const renderContext = {
+              canvasContext: ctx,
+              viewport: viewport
+          };
 
-    if (currentPage === 1) {
-      documentTitle.textContent = 'The Case for Friction: Why Good Design Isn\'t Always Seamless';
-      documentText.innerHTML = `
-        <p>In the world of design, there's an almost universal push toward seamlessness. We want our apps to be intuitive, our websites to be frictionless, and our user experiences to be as smooth as possible. But what if this relentless pursuit of seamlessness is actually counterproductive?</p>
+          await page.render(renderContext).promise;
+          showPdfLoading(false);
 
-        <p>Friction—those moments of pause, confirmation, or even difficulty in an interface—is often seen as the enemy of good design. Yet, when applied thoughtfully, friction can be a powerful tool for creating better, more ethical, and more meaningful user experiences.</p>
+      } catch (error) {
+          console.error('Error rendering page:', error);
+          showPdfError('Failed to render page');
+      }
+  }
 
-        <p>Consider the confirmation screen before deleting important data. While it might seem like an unnecessary step, this moment of friction serves a crucial purpose: it prevents costly mistakes and gives users a chance to reconsider their actions. This is friction in service of user protection.</p>
+  // 设置PDF控制功能
+  function setupPdfControls() {
+      // 翻页按钮
+      document.getElementById('prev-page').addEventListener('click', prevPage);
+      document.getElementById('next-page').addEventListener('click', nextPage);
 
-        <p>In educational contexts, friction can enhance learning. When students must work through challenging problems or navigate complex interfaces, they develop deeper understanding and problem-solving skills. The struggle itself becomes part of the learning process.</p>
+      // 页码输入
+      document.getElementById('page-number').addEventListener('change', (e) => {
+          const pageNum = parseInt(e.target.value);
+          if (pageNum >= 1 && pageNum <= totalPdfPages) {
+              goToPage(pageNum);
+          }
+      });
 
-        <p>Ethical design often requires friction. Consent forms, privacy settings, and data sharing agreements need to be clear and deliberate, not hidden or rushed. This friction ensures users make informed decisions about their data and privacy.</p>
+      // 缩放按钮
+      document.getElementById('zoom-in').addEventListener('click', zoomIn);
+      document.getElementById('zoom-out').addEventListener('click', zoomOut);
 
-        <p>Social interactions also benefit from intentional friction. The slight delay in messaging apps, the need to confirm friend requests, or the process of joining a group—these moments of friction create space for reflection and intentional connection.</p>
+      // 下载按钮
+      document.querySelector('.download-btn').addEventListener('click', downloadPdf);
 
-        <p>Even in physical design, friction serves important purposes. The gates at train stations, while seemingly inconvenient, help manage crowd flow and prevent accidents. The resistance in a good door handle provides tactile feedback about the door's state.</p>
+      // 键盘导航
+      document.addEventListener('keydown', handleKeyboardNavigation);
+  }
 
-        <p>The key is not to eliminate friction entirely, but to use it strategically. Good friction serves a purpose: it protects, educates, creates space for reflection, or enhances the overall experience. Bad friction is simply an obstacle with no clear benefit.</p>
+  // 翻页功能
+  async function prevPage() {
+      if (currentPdfPage > 1) {
+          currentPdfPage--;
+          await goToPage(currentPdfPage);
+      }
+  }
 
-        <p>As designers, we should ask ourselves: What is this friction protecting? What is it teaching? What is it enabling? When we can answer these questions clearly, friction becomes not just acceptable, but essential to good design.</p>
-      `;
-    } else {
-      documentTitle.textContent = 'Design Principles and User Experience';
-      documentText.innerHTML = `
-        <p>When designing user interfaces, it's crucial to balance usability with intentional friction. This balance creates experiences that are both efficient and thoughtful.</p>
+  async function nextPage() {
+      if (currentPdfPage < totalPdfPages) {
+          currentPdfPage++;
+          await goToPage(currentPdfPage);
+      }
+  }
 
-        <p>User research consistently shows that while users appreciate smooth interactions, they also value moments that make them pause and think. These moments can prevent errors, encourage learning, and create more meaningful interactions.</p>
+  async function goToPage(pageNum) {
+      currentPdfPage = pageNum;
+      await renderPage(currentPdfPage);
+      updatePagination();
+      updateActiveThumbnail();
+  }
 
-        <p>The challenge for designers is to identify where friction adds value and where it simply creates frustration. This requires deep understanding of user goals, context, and the broader impact of design decisions.</p>
-      `;
-    }
+  // 缩放功能
+  async function zoomIn() {
+      if (currentScale < MAX_SCALE) {
+          currentScale += SCALE_STEP;
+          await updateZoom();
+      }
+  }
+
+  async function zoomOut() {
+      if (currentScale > MIN_SCALE) {
+          currentScale -= SCALE_STEP;
+          await updateZoom();
+      }
+  }
+
+  async function updateZoom() {
+      document.getElementById('zoom-level').textContent = Math.round(currentScale * 100) + '%';
+      await renderPage(currentPdfPage);
+  }
+
+  // 下载功能
+  async function downloadPdf() {
+      try {
+          // 获取文件信息
+          const filesResponse = await fetch(`${API_BASE_URL}/uploads/assignment/${ASSIGNMENT_ID}/files`);
+          if (!filesResponse.ok) {
+              throw new Error('Failed to fetch file info');
+          }
+
+          const filesData = await filesResponse.json();
+          if (!filesData.files || filesData.files.length === 0) {
+              throw new Error('No files found');
+          }
+
+          const fileInfo = filesData.files[0];
+          const downloadUrl = `${API_BASE_URL}/uploads/${fileInfo.upload_id}/download`;
+
+          // 创建临时链接进行下载
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = fileInfo.file_name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+      } catch (error) {
+          console.error('Error downloading PDF:', error);
+          alert('Failed to download PDF: ' + error.message);
+      }
+  }
+
+  // 更新页面信息
+  function updatePagination() {
+      document.getElementById('current-page').textContent = currentPdfPage;
+      document.getElementById('total-pages').textContent = totalPdfPages;
+      document.getElementById('page-number').value = currentPdfPage;
+
+      // 更新按钮状态
+      document.getElementById('prev-page').disabled = currentPdfPage <= 1;
+      document.getElementById('next-page').disabled = currentPdfPage >= totalPdfPages;
+  }
+
+  // 更新缩略图
+  function updateThumbnails() {
+      const thumbnailsContainer = document.querySelector('.document-thumbnails');
+      thumbnailsContainer.innerHTML = '';
+
+      for (let i = 1; i <= totalPdfPages; i++) {
+          const thumbnail = document.createElement('div');
+          thumbnail.className = `thumbnail ${i === currentPdfPage ? 'active' : ''}`;
+          thumbnail.dataset.page = i;
+          thumbnail.textContent = i;
+          thumbnail.addEventListener('click', () => goToPage(i));
+          thumbnailsContainer.appendChild(thumbnail);
+      }
+  }
+
+  // 更新活动缩略图
+  function updateActiveThumbnail() {
+      const thumbnails = document.querySelectorAll('.thumbnail');
+      thumbnails.forEach(thumb => {
+          const pageNum = parseInt(thumb.dataset.page);
+          thumb.classList.toggle('active', pageNum === currentPdfPage);
+      });
+  }
+
+  // 键盘导航
+  function handleKeyboardNavigation(e) {
+      // 确保焦点不在输入框中
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      switch(e.key) {
+          case 'ArrowLeft':
+              e.preventDefault();
+              prevPage();
+              break;
+          case 'ArrowRight':
+              e.preventDefault();
+              nextPage();
+              break;
+          case '+':
+          case '=':
+              e.preventDefault();
+              zoomIn();
+              break;
+          case '-':
+              e.preventDefault();
+              zoomOut();
+              break;
+      }
+  }
+
+  // 显示/隐藏加载状态
+  function showPdfLoading(show) {
+      const loadingEl = document.getElementById('pdf-loading');
+      const canvasEl = document.getElementById('pdf-canvas');
+
+      if (show) {
+          loadingEl.style.display = 'block';
+          canvasEl.style.display = 'none';
+      } else {
+          loadingEl.style.display = 'none';
+          canvasEl.style.display = 'block';
+      }
+  }
+
+  // 显示错误信息
+  function showPdfError(message) {
+      const errorEl = document.getElementById('pdf-error');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      showPdfLoading(false);
   }
 
   // Grade selection
@@ -1085,7 +1304,6 @@
     getCurrentPage: () => currentPage,
     setPage: (page) => {
       currentPage = page;
-      updateDocumentView();
     }
   };
 
