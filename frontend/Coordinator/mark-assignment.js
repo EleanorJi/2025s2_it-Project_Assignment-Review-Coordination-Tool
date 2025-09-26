@@ -30,6 +30,11 @@
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 3.0;
 
+  // 存储所有页面的canvas和尺寸
+  let pageCanvases = [];
+  let pageHeights = [];
+  let totalHeight = 0;
+
   // Initialize the interface
   async function init() {
     // ✅ 显示用户名
@@ -550,34 +555,10 @@
 
   // Document navigation
   function setupDocumentNavigation() {
-//    const thumbnails = $$('.thumbnail');
-//    const pagination = $('.pagination');
-//    const viewBtn = $('.view-btn');
-//    const downloadBtn = $('.download-btn');
-//
-//    // Thumbnail navigation
-//    thumbnails.forEach(thumb => {
-//      thumb.addEventListener('click', () => {
-//        const page = parseInt(thumb.dataset.page);
-//        if (page !== currentPage) {
-//          currentPage = page;
-//          updateDocumentView();
-//        }
-//      });
-//    });
-//
-//    // View as text button
-//    viewBtn?.addEventListener('click', () => {
-//      alert('Switching to text view...');
-//    });
-//
-//    // Download button
-//    downloadBtn?.addEventListener('click', () => {
-//      alert('Downloading document...');
-//    });
       setupPdfViewer();
       setupPdfControls();
   }
+
   // 初始化PDF查看器
   async function setupPdfViewer() {
       try {
@@ -612,19 +593,146 @@
           totalPdfPages = pdfDoc.numPages;
           currentPdfPage = 1;
 
-          // 更新页面信息
+          // 4. 渲染所有页面到连续画布
+          await renderAllPages();
+
+          // 5. 更新页面信息
           updatePagination();
 
-          // 渲染第一页
-          await renderPage(currentPdfPage);
-
-          // 更新缩略图
+          // 6. 更新缩略图
           updateThumbnails();
+
+          // 7. 设置滚动监听
+          setupScrollListener();
 
       } catch (error) {
           console.error('Error loading PDF:', error);
           showPdfError('Failed to load PDF: ' + error.message);
       }
+  }
+
+  // 渲染所有页面到连续画布
+  async function renderAllPages() {
+      try {
+          showPdfLoading(true);
+
+          const container = document.getElementById('pdf-viewer');
+          container.innerHTML = ''; // 清空容器
+
+          pageCanvases = [];
+          pageHeights = [];
+          totalHeight = 0;
+
+          // 创建主画布容器
+          const canvasContainer = document.createElement('div');
+          canvasContainer.className = 'pdf-canvas-container';
+          canvasContainer.style.cssText = `
+              width: 100%;
+              position: relative;
+          `;
+
+          // 渲染每一页
+          for (let i = 1; i <= totalPdfPages; i++) {
+              const page = await pdfDoc.getPage(i);
+              const viewport = page.getViewport({ scale: currentScale });
+
+              // 创建canvas元素
+              const canvas = document.createElement('canvas');
+              canvas.className = 'pdf-page-canvas';
+              canvas.style.cssText = `
+                  display: block;
+                  margin: 0 auto 20px auto;
+                  border: 1px solid #ddd;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                  max-width: 100%;
+                  height: auto;
+              `;
+
+              // 设置canvas尺寸
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              // 渲染页面
+              const renderContext = {
+                  canvasContext: canvas.getContext('2d'),
+                  viewport: viewport
+              };
+
+              await page.render(renderContext).promise;
+
+              // 添加到容器
+              canvasContainer.appendChild(canvas);
+
+              // 存储canvas和高度信息
+              pageCanvases.push(canvas);
+              pageHeights.push(viewport.height + 20); // 高度 + 间距
+              totalHeight += viewport.height + 20;
+          }
+
+          // 设置容器高度
+          canvasContainer.style.height = totalHeight + 'px';
+          container.appendChild(canvasContainer);
+
+          showPdfLoading(false);
+
+      } catch (error) {
+          console.error('Error rendering all pages:', error);
+          showPdfError('Failed to render pages');
+          showPdfLoading(false);
+      }
+  }
+
+  // 设置滚动监听
+  function setupScrollListener() {
+      const pdfViewer = document.getElementById('pdf-viewer');
+
+      pdfViewer.addEventListener('scroll', () => {
+          updateCurrentPageFromScroll();
+      });
+  }
+
+  // 根据滚动位置更新当前页面
+  function updateCurrentPageFromScroll() {
+      const pdfViewer = document.getElementById('pdf-viewer');
+      const scrollTop = pdfViewer.scrollTop;
+      const viewerHeight = pdfViewer.clientHeight;
+
+      let accumulatedHeight = 0;
+      let newCurrentPage = 1;
+
+      // 计算当前显示的页面
+      for (let i = 0; i < pageHeights.length; i++) {
+          accumulatedHeight += pageHeights[i];
+
+          // 如果滚动位置超过当前页面累计高度的一半，则认为进入下一页
+          if (scrollTop + (viewerHeight / 2) < accumulatedHeight) {
+              newCurrentPage = i + 1;
+              break;
+          }
+      }
+
+      // 更新当前页面（如果发生变化）
+      if (newCurrentPage !== currentPdfPage) {
+          currentPdfPage = newCurrentPage;
+          updatePagination();
+          updateActiveThumbnail();
+      }
+  }
+  // 滚动到指定页面
+  function scrollToPage(pageNum) {
+      const pdfViewer = document.getElementById('pdf-viewer');
+
+      if (pageNum < 1 || pageNum > totalPdfPages) return;
+
+      let scrollPosition = 0;
+      for (let i = 0; i < pageNum - 1; i++) {
+          scrollPosition += pageHeights[i];
+      }
+
+      pdfViewer.scrollTo({
+          top: scrollPosition,
+          behavior: 'smooth'
+      });
   }
 
   // 渲染PDF页面
@@ -682,23 +790,29 @@
   // 翻页功能
   async function prevPage() {
       if (currentPdfPage > 1) {
-          currentPdfPage--;
-          await goToPage(currentPdfPage);
+          scrollToPage(currentPdfPage - 1);
       }
   }
 
   async function nextPage() {
       if (currentPdfPage < totalPdfPages) {
-          currentPdfPage++;
-          await goToPage(currentPdfPage);
+          scrollToPage(currentPdfPage + 1);
       }
   }
 
   async function goToPage(pageNum) {
-      currentPdfPage = pageNum;
-      await renderPage(currentPdfPage);
-      updatePagination();
-      updateActiveThumbnail();
+      scrollToPage(pageNum);
+  }
+
+  // 修改缩放功能 - 重新渲染所有页面
+  async function updateZoom() {
+      document.getElementById('zoom-level').textContent = Math.round(currentScale * 100) + '%';
+      await renderAllPages();
+
+      // 滚动回当前页面
+      setTimeout(() => {
+          scrollToPage(currentPdfPage);
+      }, 100);
   }
 
   // 缩放功能
@@ -714,11 +828,6 @@
           currentScale -= SCALE_STEP;
           await updateZoom();
       }
-  }
-
-  async function updateZoom() {
-      document.getElementById('zoom-level').textContent = Math.round(currentScale * 100) + '%';
-      await renderPage(currentPdfPage);
   }
 
   // 下载功能
@@ -794,10 +903,12 @@
 
       switch(e.key) {
           case 'ArrowLeft':
+          case 'PageUp':
               e.preventDefault();
               prevPage();
               break;
           case 'ArrowRight':
+          case 'PageDown':
               e.preventDefault();
               nextPage();
               break;
@@ -810,20 +921,27 @@
               e.preventDefault();
               zoomOut();
               break;
+          case 'Home':
+              e.preventDefault();
+              goToPage(1);
+              break;
+          case 'End':
+              e.preventDefault();
+              goToPage(totalPdfPages);
+              break;
       }
   }
-
   // 显示/隐藏加载状态
   function showPdfLoading(show) {
       const loadingEl = document.getElementById('pdf-loading');
-      const canvasEl = document.getElementById('pdf-canvas');
+      const pdfViewer = document.getElementById('pdf-viewer');
 
       if (show) {
           loadingEl.style.display = 'block';
-          canvasEl.style.display = 'none';
+          pdfViewer.style.display = 'none';
       } else {
           loadingEl.style.display = 'none';
-          canvasEl.style.display = 'block';
+          pdfViewer.style.display = 'block';
       }
   }
 
