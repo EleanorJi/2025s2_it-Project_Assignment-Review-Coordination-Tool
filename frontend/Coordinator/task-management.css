@@ -125,6 +125,7 @@
   .tm-assignment-status.published{background:#d1fae5;color:#065f46}
   .tm-assignment-chevron{color:#9ca3af;cursor:pointer;transition:transform 0.2s}
   .tm-assignment-chevron.expanded{transform:rotate(180deg)}
+
   /* Assignment actions (collapsible) */
   .tm-assignment-actions{display:none;gap:8px;flex-wrap:wrap}
   .tm-assignment-actions.expanded{display:flex}
@@ -150,6 +151,9 @@
   .tm-card h4{margin:0 0 6px 0;font-size:16px}
   .tm-label{font-size:12px;color:var(--muted);margin:10px 0 6px 2px}
   .tm-input{height:36px;width:100%;border:1px solid var(--border);border-radius:10px;padding:0 12px;background:#fff;color:var(--text);font-weight:600}
+  .tm-input[type="date"]{position:relative;cursor:pointer}
+  .tm-input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;opacity:0.7}
+  .tm-input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   .tm-drop{border:2px dashed #dbe3f0;border-radius:12px;min-height:140px;display:grid;place-items:center;text-align:center;color:#9aa3b2;background:#fafcff;cursor:pointer;transition:.15s}
   .tm-drop.drag{background:#f3f7ff;border-color:#c5d7ff}
   .tm-drop .tm-help{font-size:12px;color:#9aa3b2;margin-top:4px}

@@ -1733,11 +1733,11 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
 
     const result = await db.query(
       `SELECT bs.*, rc.title as criterion_title, rc.max_score as criterion_max_score,
-              cgl.level_name, cgl.min_score as level_min_score, cgl.max_score as level_max_score, 
+              cgl.level_name, cgl.min_score as level_min_score, cgl.max_score as level_max_score,
               cgl.description as level_description
        FROM baseline_score bs
        JOIN rubric_criterion rc ON bs.criterion_id = rc.criterion_id
-       LEFT JOIN criterion_grade_level cgl ON rc.criterion_id = cgl.criterion_id 
+       LEFT JOIN criterion_grade_level cgl ON rc.criterion_id = cgl.criterion_id
          AND bs.score >= cgl.min_score AND bs.score <= cgl.max_score
        WHERE bs.assignment_id = $1
        ORDER BY rc.seq_no`,
@@ -1755,6 +1755,7 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
         criterion_max_score: parseFloat(row.criterion_max_score),
         score: parseFloat(row.score),
         comment: row.comment,
+        finalized: row.finalized || false, // 添加 finalized 字段
         matched_level: row.level_name ? {
           level_name: row.level_name,
           min_score: parseFloat(row.level_min_score),
@@ -2143,6 +2144,59 @@ router.post('/scoring/baseline/batch', async (req, res) => {
 });
 
 /**
+ * Coordinator专用 - 批量确认baseline分数
+ * POST /api/uploads/scoring/baseline/submit
+ */
+router.post('/scoring/baseline/submit', async (req, res) => {
+    try {
+        // 1. 获取请求参数 - 现在接收criterion_ids数组
+        const { assignment_id, criterion_ids } = req.body;
+
+        // 2. 参数验证
+        if (!assignment_id || !criterion_ids || !Array.isArray(criterion_ids) || criterion_ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'assignment_id 和 criterion_ids 数组是必需的参数'
+            });
+        }
+
+        // 3. 构建IN查询的占位符 ($1, $2, $3...)
+        const placeholders = criterion_ids.map((_, index) => `$${index + 2}`).join(',');
+
+        // 4. 批量更新数据库
+        const query = `
+            UPDATE baseline_score
+            SET finalized = true
+            WHERE assignment_id = $1
+            AND criterion_id IN (${placeholders})
+            RETURNING *
+        `;
+
+        const params = [assignment_id, ...criterion_ids];
+        const result = await db.query(query, params);
+
+        // 5. 返回成功响应
+        res.json({
+            success: true,
+            message: `已成功确认 ${result.rowCount} 个baseline分数`,
+            data: {
+                updated_count: result.rowCount,
+                updated_records: result.rows
+            }
+        });
+
+    } catch (error) {
+        console.error('批量确认baseline分数时出错:', error);
+        res.status(500).json({
+            success: false,
+            message: '服务器内部错误',
+            error: error.message
+        });
+    }
+});
+
+
+/**
  * Marker专用 - 批量设置/更新marker分数
  * POST /api/uploads/scoring/marker/batch
  */
@@ -2325,6 +2379,60 @@ router.post('/scoring/marker/batch', async (req, res) => {
     });
   }
 });
+
+/**
+ * Marker专用 - 批量确认marker分数
+ * POST /api/uploads/scoring/marker/submit
+ */
+router.post('/scoring/marker/submit', async (req, res) => {
+    try {
+        // 1. 获取请求参数
+        const { assignment_id, marker_id, criterion_ids } = req.body;
+
+        // 2. 参数验证
+        if (!assignment_id || !marker_id || !criterion_ids || !Array.isArray(criterion_ids) || criterion_ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'assignment_id, marker_id 和 criterion_ids 数组是必需的参数'
+            });
+        }
+
+        // 3. 构建IN查询的占位符
+        const placeholders = criterion_ids.map((_, index) => `$${index + 3}`).join(',');
+
+        // 4. 批量更新数据库
+        const query = `
+            UPDATE marker_score
+            SET finalized = true
+            WHERE assignment_id = $1
+            AND marker_id = $2
+            AND criterion_id IN (${placeholders})
+            RETURNING *
+        `;
+
+        const params = [assignment_id, marker_id, ...criterion_ids];
+        const result = await db.query(query, params);
+
+        // 5. 返回成功响应
+        res.json({
+            success: true,
+            message: `已成功确认 ${result.rowCount} 个marker分数`,
+            data: {
+                updated_count: result.rowCount,
+                updated_records: result.rows
+            }
+        });
+
+    } catch (error) {
+        console.error('批量确认marker分数时出错:', error);
+        res.status(500).json({
+            success: false,
+            message: '服务器内部错误',
+            error: error.message
+        });
+    }
+});
+
 
 /**
  * 生成Assignment Moderation对比报告
@@ -2706,6 +2814,35 @@ router.get('/project/:project_id/latest-rubric', async (req, res) => {
       error: 'Failed to get latest rubric',
       details: error.message
     });
+  }
+});
+
+//获取 assignment 关联的文件信息 - GET /api/uploads/assignment/:assignment_id/files
+router.get('/assignment/:assignment_id/files', async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+
+    const result = await db.query(
+      `SELECT u.upload_id, u.file_name, u.storage_path, u.file_type, u.mime_type, u.created_at
+       FROM upload u
+       WHERE u.assignment_id = $1
+       ORDER BY u.created_at DESC`,
+      [assignment_id]
+    );
+
+    return res.json({
+      assignment_id: parseInt(assignment_id),
+      files: result.rows.map(row => ({
+        upload_id: row.upload_id,
+        file_name: row.file_name,
+        file_type: row.file_type,
+        mime_type: row.mime_type,
+        created_at: row.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('❌ 获取assignment文件失败:', error);
+    return res.status(500).json({ error: 'Failed to get assignment files' });
   }
 });
 
