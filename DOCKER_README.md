@@ -1,451 +1,451 @@
-# Docker 部署指南
+# Docker Deployment Guide
 
-本项目使用 Docker 和 Docker Compose 进行容器化部署，包含前端、后端和数据库三个服务。
+This project uses Docker and Docker Compose for containerized deployment, including frontend, backend, and database services.
 
-## 项目架构
+## Project Architecture
 
 ```
 Assignment Moderation System
-├── Frontend (Nginx) - 端口 80
-├── Backend (Node.js) - 端口 3000  
-└── Database (PostgreSQL) - 端口 5432
+├── Frontend (Nginx) - Port 80
+├── Backend (Node.js) - Port 3000  
+└── Database (PostgreSQL) - Port 5432
 ```
 
-## 前置要求
+## Prerequisites
 
-确保你的系统已安装以下软件：
+Ensure the following software is installed on your system:
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac)
 - [Docker Engine](https://docs.docker.com/engine/install/) (Linux)
-- [Docker Compose](https://docs.docker.com/compose/install/) (通常包含在 Docker Desktop 中)
+- [Docker Compose](https://docs.docker.com/compose/install/) (usually included in Docker Desktop)
 
-验证安装：
+Verify installation:
 ```bash
 docker --version
 docker-compose --version
 ```
 
-## 🚀 快速启动
+## 🚀 Quick Start
 
-### 1. 克隆项目并进入目录
+### 1. Clone the Project and Navigate to Directory
 ```bash
 git clone <your-repository>
 cd IT-Project-80
 ```
 
-### 2. 配置环境变量 (⭐ 重要)
+### 2. Configure Environment Variables (⭐ Important)
 ```bash
-# 复制环境变量模板
+# Copy environment variable template
 cp docker.env.example docker.env
 
-# 编辑 docker.env 文件，根据需要修改配置
-# 特别是数据库密码：DB_PASSWORD=your_preferred_password
+# Edit docker.env file and modify configuration as needed
+# Especially the database password: DB_PASSWORD=your_preferred_password
 ```
 
-### 3. 启动所有服务
+### 3. Start All Services
 ```bash
-# 构建并启动所有容器
+# Build and start all containers
 docker-compose up --build
 
-# 或者在后台运行
+# Or run in the background
 docker-compose up --build -d
 ```
 
-### 4. 访问应用
-- **前端**: http://localhost
-- **后端API**: http://localhost:3000/api
-- **健康检查**: http://localhost:3000/api/health
+### 4. Access the Application
+- **Frontend**: http://localhost
+- **Backend API**: http://localhost:3000/api
+- **Health Check**: http://localhost:3000/api/health
 
-### 5. 默认登录凭据
-如果是首次启动，可以使用以下默认凭据登录：
-- **邮箱**: admin@grading.com
-- **密码**: admin123
-- **角色**: Coordinator
+### 5. Default Login Credentials
+If this is your first startup, you can use the following default credentials:
+- **Email**: admin@grading.com
+- **Password**: admin123
+- **Role**: Coordinator
 
-## 👥 团队协作指南
+## 👥 Team Collaboration Guide
 
-### 新团队成员加入步骤
+### Steps for New Team Members
 
-1. **获取项目代码**
+1. **Get Project Code**
    ```bash
    git clone <repository-url>
    cd IT-Project-80
    ```
 
-2. **设置个人环境变量**
+2. **Set Personal Environment Variables**
    ```bash
-   # 复制环境变量模板
+   # Copy environment variable template
    cp docker.env.example docker.env
    
-   # 编辑 docker.env，修改以下内容：
+   # Edit docker.env and modify the following:
    # - DB_PASSWORD=your_personal_password
-   # - 其他个人偏好设置
+   # - Other personal preference settings
    ```
 
-3. **启动项目**
+3. **Start the Project**
    ```bash
    docker-compose up --build -d
    ```
 
-4. **验证安装**
+4. **Verify Installation**
    ```bash
-   # 检查所有服务状态
+   # Check all service status
    docker-compose ps
    
-   # 访问 http://localhost 确认前端正常
-   # 访问 http://localhost:3000/api/health 确认后端正常
+   # Visit http://localhost to confirm frontend is working
+   # Visit http://localhost:3000/api/health to confirm backend is working
    ```
 
-### 重要提醒
-- ❌ **不要提交 `docker.env` 文件到版本控制**
-- ✅ **只提交 `docker.env.example` 模板文件**
-- 💬 **遇到问题时，先检查你的 `docker.env` 配置**
+### Important Reminders
+- ❌ **Do NOT commit `docker.env` file to version control**
+- ✅ **Only commit `docker.env.example` template file**
+- 💬 **When encountering issues, first check your `docker.env` configuration**
 
-## 常用命令
+## Common Commands
 
-### 服务管理
+### Service Management
 ```bash
-# 启动服务
+# Start services
 docker-compose up
 
-# 后台启动
+# Start in background
 docker-compose up -d
 
-# 停止服务
+# Stop services
 docker-compose down
 
-# 停止并删除卷数据
+# Stop and remove volume data
 docker-compose down -v
 
-# 重启特定服务
+# Restart specific service
 docker-compose restart backend
 
-# 查看服务状态
+# View service status
 docker-compose ps
 
-# 查看服务日志
+# View service logs
 docker-compose logs
-docker-compose logs backend  # 查看特定服务日志
-docker-compose logs -f frontend  # 实时跟踪日志
+docker-compose logs backend  # View specific service logs
+docker-compose logs -f frontend  # Follow logs in real-time
 ```
 
-### 构建管理
+### Build Management
 ```bash
-# 重新构建所有镜像
+# Rebuild all images
 docker-compose build
 
-# 重新构建特定服务
+# Rebuild specific service
 docker-compose build backend
 
-# 强制重新构建（不使用缓存）
+# Force rebuild (no cache)
 docker-compose build --no-cache
 
-# 拉取最新基础镜像并构建
+# Pull latest base images and build
 docker-compose build --pull
 ```
 
-### 数据库管理
+### Database Management
 ```bash
-# 进入数据库容器
+# Enter database container
 docker-compose exec database psql -U postgres -d assignment_mod
 
-# 查看数据库中的用户
+# View users in database
 docker-compose exec database psql -U postgres -d assignment_mod -c "SELECT email, name, role FROM app_user;"
 
-# 备份数据库
+# Backup database
 docker-compose exec database pg_dump -U postgres assignment_mod > backup.sql
 
-# 恢复数据库
+# Restore database
 docker-compose exec -T database psql -U postgres assignment_mod < backup.sql
 
-# 查看数据库日志
+# View database logs
 docker-compose logs database
 ```
 
-### ⚠️ 数据库初始化机制（重要！）
+### ⚠️ Database Initialization Mechanism (Important!)
 
-Docker PostgreSQL 容器有特殊的初始化机制，理解这个机制对开发很重要：
+Docker PostgreSQL containers have a special initialization mechanism that's important to understand for development:
 
-#### 🔄 初始化流程
-1. **第一次启动**（全新数据卷）:
-   - PostgreSQL 检测到空的数据卷 `assignment_postgres_data`
-   - 自动执行 `/docker-entrypoint-initdb.d/` 目录中的初始化脚本：
+#### 🔄 Initialization Process
+1. **First Startup** (Fresh data volume):
+   - PostgreSQL detects empty data volume `assignment_postgres_data`
+   - Automatically executes initialization scripts in `/docker-entrypoint-initdb.d/` directory:
      ```
-     01-init.sql    (database/IT SQL.sql - 创建所有表结构)
-     02-seeds.sql   (database/seeds/initial_data.sql - 插入初始数据)
+     01-init.sql    (database/IT SQL.sql - Creates all table structures)
+     02-seeds.sql   (database/seeds/initial_data.sql - Inserts initial data)
      ```
-   - 创建完整的数据库结构和初始数据
+   - Creates complete database structure and initial data
 
-2. **后续启动**（已有数据卷）:
-   - PostgreSQL 发现数据卷已存在数据库文件
-   - **跳过所有初始化脚本**，直接启动现有数据库
-   - 即使修改了 `IT SQL.sql`，也不会重新执行
+2. **Subsequent Startups** (Existing data volume):
+   - PostgreSQL finds existing database files in data volume
+   - **Skips all initialization scripts**, directly starts existing database
+   - Even if you modify `IT SQL.sql`, it won't be re-executed
 
-#### 🚨 常见误区
-很多开发者会遇到这个问题：
-- ✅ 修改了 `database/IT SQL.sql` 文件
-- ❌ 重新运行 `docker-compose up --build`
-- ❌ 发现数据库结构没有更新
+#### 🚨 Common Misconceptions
+Many developers encounter this issue:
+- ✅ Modified `database/IT SQL.sql` file
+- ❌ Re-run `docker-compose up --build`
+- ❌ Find that database structure hasn't updated
 
-**原因**: Docker 跳过了初始化阶段，因为数据卷已经存在！
+**Reason**: Docker skipped the initialization phase because the data volume already exists!
 
-#### 🛠️ 如何应用数据库结构修改
+#### 🛠️ How to Apply Database Structure Changes
 
-**方法 1: 重新初始化（开发环境推荐）**
+**Method 1: Re-initialize (Recommended for Development)**
 ```bash
-# 1. 停止所有服务
+# 1. Stop all services
 docker-compose down
 
-# 2. 删除数据卷（⚠️ 这会清空所有数据！）
+# 2. Remove data volume (⚠️ This will clear all data!)
 docker volume rm assignment_postgres_data
 
-# 3. 重新启动，会重新执行初始化脚本
+# 3. Restart, will re-execute initialization scripts
 docker-compose up -d database
 ```
 
-**方法 2: 手动执行修改（保留现有数据）**
+**Method 2: Manual Execution (Preserve Existing Data)**
 ```bash
-# 直接在运行的数据库中执行SQL命令
+# Execute SQL commands directly in running database
 docker-compose exec database psql -U postgres -d assignment_mod -c "
 ALTER TABLE project ADD COLUMN new_field TEXT;
 "
 
-# 或者执行SQL文件
+# Or execute SQL file
 docker-compose exec -i database psql -U postgres -d assignment_mod < your_changes.sql
 ```
 
-**方法 3: 数据库迁移（生产环境推荐）**
-- 创建版本化的迁移脚本
-- 使用专门的数据库迁移工具
-- 不修改原始的初始化文件
+**Method 3: Database Migration (Recommended for Production)**
+- Create versioned migration scripts
+- Use specialized database migration tools
+- Don't modify original initialization files
 
-#### 📋 检查数据库状态
+#### 📋 Check Database Status
 ```bash
-# 查看所有表
+# View all tables
 docker-compose exec database psql -U postgres -d assignment_mod -c "\dt"
 
-# 查看特定表结构
+# View specific table structure
 docker-compose exec database psql -U postgres -d assignment_mod -c "\d project"
 
-# 检查数据卷是否存在
+# Check if data volume exists
 docker volume ls | grep assignment
 
-# 查看初始化日志（第一次启动时）
+# View initialization logs (first startup)
 docker-compose logs database
 ```
 
-### 调试和开发
+### Debugging and Development
 ```bash
-# 进入容器内部
+# Enter container
 docker-compose exec backend sh
 docker-compose exec frontend sh
 
-# 查看容器内文件
+# View files inside container
 docker-compose exec backend ls -la /app
 
-# 实时查看所有日志
+# Follow all logs in real-time
 docker-compose logs -f
 
-# 只启动数据库（用于本地开发）
+# Start only database (for local development)
 docker-compose up database
 ```
 
-## 🔧 环境变量配置
+## 🔧 Environment Variable Configuration
 
-项目使用环境变量进行配置管理，主要配置文件：
+The project uses environment variables for configuration management, main configuration files:
 
-### `docker.env` (个人配置，不提交到版本控制)
+### `docker.env` (Personal configuration, not committed to version control)
 ```env
-# 数据库配置
+# Database configuration
 DB_HOST=database
 DB_PORT=5432
 DB_NAME=assignment_mod
 DB_USER=postgres
-DB_PASSWORD=your_personal_password  # 修改为你的密码
+DB_PASSWORD=your_personal_password  # Change to your password
 
-# 后端配置
+# Backend configuration
 NODE_ENV=production
 PORT=3000
 
-# 前端配置
+# Frontend configuration
 FRONTEND_PORT=80
 ```
 
-### `docker.env.example` (模板文件，提交到版本控制)
-- 包含所有必需的环境变量示例
-- 新团队成员的配置参考
-- 包含详细的配置说明
+### `docker.env.example` (Template file, committed to version control)
+- Contains examples of all required environment variables
+- Configuration reference for new team members
+- Includes detailed configuration explanations
 
-### 环境变量说明
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| `DB_HOST` | 数据库主机 | database |
-| `DB_PORT` | 数据库端口 | 5432 |
-| `DB_NAME` | 数据库名称 | assignment_mod |
-| `DB_USER` | 数据库用户 | postgres |
-| `DB_PASSWORD` | 数据库密码 | assignment_db_2024 |
-| `NODE_ENV` | Node.js 环境 | production |
-| `PORT` | 后端端口 | 3000 |
+### Environment Variable Descriptions
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `DB_HOST` | Database host | database |
+| `DB_PORT` | Database port | 5432 |
+| `DB_NAME` | Database name | assignment_mod |
+| `DB_USER` | Database user | postgres |
+| `DB_PASSWORD` | Database password | assignment_db_2024 |
+| `NODE_ENV` | Node.js environment | production |
+| `PORT` | Backend port | 3000 |
 
-## 故障排除
+## Troubleshooting
 
-### 常见问题
+### Common Issues
 
-1. **端口占用**
+1. **Port Already in Use**
    ```bash
-   # 检查端口使用情况
+   # Check port usage
    netstat -tulpn | grep :80
    netstat -tulpn | grep :3000
    
-   # Windows 用户使用：
+   # Windows users:
    netstat -ano | findstr :80
    netstat -ano | findstr :3000
    ```
 
-2. **容器启动失败**
+2. **Container Startup Failure**
    ```bash
-   # 查看详细错误日志
+   # View detailed error logs
    docker-compose logs <service-name>
    
-   # 检查容器状态
+   # Check container status
    docker-compose ps
    ```
 
-3. **环境变量配置错误**
+3. **Environment Variable Configuration Error**
    ```bash
-   # 检查环境变量是否正确加载
+   # Check if environment variables are loaded correctly
    docker-compose config
    
-   # 确认 docker.env 文件存在
+   # Confirm docker.env file exists
    ls -la docker.env
    ```
 
-4. **数据库连接失败**
+4. **Database Connection Failure**
    ```bash
-   # 检查数据库是否健康
+   # Check if database is healthy
    docker-compose exec database pg_isready -U postgres
    
-   # 重启数据库服务
+   # Restart database service
    docker-compose restart database
    
-   # 检查数据库密码是否正确
+   # Check if database password is correct
    docker-compose exec database psql -U postgres -d assignment_mod
    ```
 
-5. **登录失败 - 用户不存在**
+5. **Login Failure - User Does Not Exist**
    ```bash
-   # 检查数据库中是否有用户数据
+   # Check if user data exists in database
    docker-compose exec database psql -U postgres -d assignment_mod -c "SELECT * FROM app_user;"
    
-   # 如果没有数据，手动插入默认用户
+   # If no data, manually insert default user
    docker-compose exec database psql -U postgres -d assignment_mod -c "
    INSERT INTO app_user (name, email, password_hash, role, is_active) 
    VALUES ('admin', 'admin@grading.com', 'admin123', 'COORDINATOR', true);"
    ```
 
-6. **磁盘空间不足**
+6. **Insufficient Disk Space**
    ```bash
-   # 清理未使用的镜像和容器
+   # Clean unused images and containers
    docker system prune
    
-   # 清理未使用的卷
+   # Clean unused volumes
    docker volume prune
    ```
 
-7. **修改数据库结构后没有生效**
+7. **Database Structure Changes Not Applied**
    ```bash
-   # 问题：修改了 database/IT SQL.sql 但数据库结构没有更新
-   # 原因：Docker 只在第一次启动时执行初始化脚本
+   # Issue: Modified database/IT SQL.sql but database structure not updated
+   # Reason: Docker only executes initialization scripts on first startup
    
-   # 解决方案 1: 重新初始化数据库（开发环境）
+   # Solution 1: Re-initialize database (development environment)
    docker-compose down
    docker volume rm assignment_postgres_data
    docker-compose up -d database
    
-   # 解决方案 2: 手动执行修改（保留数据）
+   # Solution 2: Manual execution (preserve data)
    docker-compose exec database psql -U postgres -d assignment_mod -c "YOUR_SQL_COMMAND;"
    
-   # 验证修改是否生效
+   # Verify changes took effect
    docker-compose exec database psql -U postgres -d assignment_mod -c "\dt"
    ```
 
-### 完全重置
-如果遇到严重问题，可以完全重置：
+### Complete Reset
+If you encounter serious issues, you can completely reset:
 ```bash
-# 停止所有服务并删除数据
+# Stop all services and delete data
 docker-compose down -v
 
-# 删除所有镜像
+# Remove all images
 docker-compose down --rmi all
 
-# 重新构建和启动
+# Rebuild and start
 docker-compose up --build
 ```
 
-### 日志分析
+### Log Analysis
 ```bash
-# 查看所有服务状态
+# View all service status
 docker-compose ps
 
-# 检查服务健康状态
+# Check service health status
 docker-compose exec backend wget -qO- http://localhost:3000/api/health || curl http://localhost:3000/api/health
 docker-compose exec frontend wget -qO- http://localhost:80 || curl http://localhost:80
 
-# 实时监控资源使用
+# Monitor resource usage in real-time
 docker stats
 ```
 
-## 开发模式
+## Development Mode
 
-如果你想在开发过程中使用 Docker：
+If you want to use Docker during development:
 
-1. **只启动数据库**:
+1. **Start only database**:
    ```bash
    docker-compose up database
    ```
 
-2. **本地运行后端**:
+2. **Run backend locally**:
    ```bash
    cd backend
    npm install
    npm start
    ```
 
-3. **本地提供前端**:
+3. **Serve frontend locally**:
    ```bash
    cd frontend
-   # 使用任何静态文件服务器，如 Live Server 或 http-server
+   # Use any static file server, like Live Server or http-server
    npx http-server . -p 8080
    ```
 
-## 生产部署注意事项
+## Production Deployment Considerations
 
-1. **安全配置**:
-   - ✅ 修改默认数据库密码
-   - ✅ 使用强密码
-   - ✅ 配置防火墙规则
-   - ✅ 使用 HTTPS
-   - ✅ 限制数据库访问权限
+1. **Security Configuration**:
+   - ✅ Change default database password
+   - ✅ Use strong passwords
+   - ✅ Configure firewall rules
+   - ✅ Use HTTPS
+   - ✅ Limit database access permissions
 
-2. **性能优化**:
-   - 使用生产模式的 Node.js
-   - 启用 Nginx 缓存
-   - 配置数据库连接池
-   - 设置适当的资源限制
+2. **Performance Optimization**:
+   - Use production mode Node.js
+   - Enable Nginx caching
+   - Configure database connection pooling
+   - Set appropriate resource limits
 
-3. **监控和日志**:
-   - 设置日志轮转
-   - 配置健康检查
-   - 使用监控工具（如 Prometheus + Grafana）
-   - 设置告警机制
+3. **Monitoring and Logging**:
+   - Set up log rotation
+   - Configure health checks
+   - Use monitoring tools (like Prometheus + Grafana)
+   - Set up alerting mechanisms
 
-4. **备份策略**:
+4. **Backup Strategy**:
    ```bash
-   # 定期备份数据库
+   # Regular database backup
    docker-compose exec database pg_dump -U postgres assignment_mod > backup_$(date +%Y%m%d_%H%M%S).sql
    ```
 
-## 架构图
+## Architecture Diagram
 
 ```mermaid
 graph TB
@@ -467,45 +467,45 @@ graph TB
     style E fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
-## 技术栈
+## Technology Stack
 
 - **Frontend**: HTML/CSS/JavaScript + Nginx
 - **Backend**: Node.js + Express
 - **Database**: PostgreSQL 15
 - **Container**: Docker + Docker Compose
-- **Reverse Proxy**: Nginx (API 代理)
+- **Reverse Proxy**: Nginx (API proxy)
 
-## 📞 获取帮助
+## 📞 Getting Help
 
-如果遇到问题，请按以下顺序检查：
+If you encounter issues, please check in the following order:
 
-1. ✅ 确认 `docker.env` 文件已正确配置
-2. ✅ 检查 Docker 和 Docker Compose 版本
-3. ✅ 确认端口是否被占用
-4. ✅ 检查系统资源是否充足
-5. ✅ 查看详细的错误日志
+1. ✅ Confirm `docker.env` file is correctly configured
+2. ✅ Check Docker and Docker Compose versions
+3. ✅ Confirm ports are not occupied
+4. ✅ Check if system resources are sufficient
+5. ✅ View detailed error logs
 
-### 常用检查命令
+### Common Check Commands
 ```bash
-# 检查环境
+# Check environment
 docker --version
 docker-compose --version
 
-# 检查配置
+# Check configuration
 docker-compose config
 
-# 检查服务状态
+# Check service status
 docker-compose ps
 
-# 查看日志
+# View logs
 docker-compose logs
 ```
 
-更多帮助请参考：
-- [Docker 官方文档](https://docs.docker.com/)
-- [Docker Compose 官方文档](https://docs.docker.com/compose/)
-- 项目 Issues 页面
+For more help, please refer to:
+- [Docker Official Documentation](https://docs.docker.com/)
+- [Docker Compose Official Documentation](https://docs.docker.com/compose/)
+- Project Issues page
 
 ---
 
-**💡 提示**: 第一次运行项目时，建议在前台模式启动 (`docker-compose up --build`) 以便观察启动过程和可能的错误信息。
+**💡 Tip**: When running the project for the first time, it's recommended to start in foreground mode (`docker-compose up --build`) to observe the startup process and any potential error messages.

@@ -175,13 +175,11 @@ Open the application at `http://localhost` and log in with the test admin accoun
 
 Upon successful login, you'll be redirected to the Coordinator Dashboard.
 
-![Successful Login](test/image_readme/image3.png)
-
 #### 2. Coordinator Dashboard Overview
 
 The dashboard provides an overview of the current system status. Note that some overview features are still in development and display placeholder content.
 
-![Coordinator Dashboard](test/image_readme/image4.png)
+![Coordinator Dashboard](test/image_readme/image3.png)
 
 #### 3. Marker Management
 
@@ -191,31 +189,31 @@ Navigate to **"Markers Management"** to manage marker accounts:
 - **Manage existing markers**: Use "Resend" and "Revoke" buttons to manage invitations
 - **Test functionality**: You can use your own email address for testing
 
-![Markers Management](test/image_readme/image5.png)
+![Markers Management](test/image_readme/image4.png)
 
 #### 4. Email Invitation System
 
 When a marker invitation is sent, the recipient receives an email invitation:
 
-![Email Invitation](test/image_readme/image6.png)
+![Email Invitation](test/image_readme/image5.png)
 
 Click the link in the email to complete marker registration:
 
-![Marker Registration](test/image_readme/image7.png)
+![Marker Registration](test/image_readme/image6.png)
 
 #### 5. Marker Dashboard
 
 After registration, markers can log in with their credentials to access the marker interface:
 
+![Marker Registration Successful](test/image_readme/image7.png)
 ![Marker Dashboard](test/image_readme/image8.png)
+
 
 *Note: The marker interface is currently in display mode with limited functionality.*
 
 #### 6. Task Management
 
 Return to the Coordinator Dashboard and click **"Task Management"**:
-
-![Task Management](test/image_readme/image9.png)
 
 **Creating a New Task:**
 
@@ -224,7 +222,7 @@ Return to the Coordinator Dashboard and click **"Task Management"**:
 3. Enter the project name
 4. The task is successfully created
 
-![New Task Creation](test/image_readme/image10.png)
+![Task Creation](test/image_readme/image10.png)
 
 #### 7. Rubric Upload
 
