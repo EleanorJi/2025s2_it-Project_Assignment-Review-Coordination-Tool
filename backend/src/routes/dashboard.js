@@ -5,7 +5,7 @@ const authenticate = require('../middleware/auth');
 const validateProjectId = require('../middleware/projectValidation');
 const dashboardController = require('../controllers/dashboardController');
 
-// 保护 Coordinator Dashboard
+// Protect Coordinator Dashboard
 router.get('/coordinator', authenticate, dashboardController.getCoordinatorDashboard);
 router.get('/coordinator/invite', authenticate, dashboardController.getCoordinatorInvitePage);
 router.get('/coordinator/feedback', authenticate, dashboardController.getCoordinatorFeedbackPage);
@@ -14,10 +14,10 @@ router.get('/coordinator/analysis', authenticate, dashboardController.getCoordin
 router.get('/coordinator/taskManagement', authenticate, dashboardController.getCoordinatorTaskManagementPage);
 router.get('/coordinator/rubric', authenticate, dashboardController.getCoordinatorViewRubricPage);
 router.get('/coordinator/past', authenticate, dashboardController.getCoordinatorPastPage);
-// 保护 Marker Dashboard
+// Protect Marker Dashboard
 router.get('/marker', authenticate, dashboardController.getMarkerDashboard);
 
-// 通用的dashboard入口，根据用户角色自动重定向
+// Universal dashboard entry, automatically redirect based on user role
 router.get('/', authenticate, dashboardController.redirectToRoleDashboard);
 
 module.exports = router;
