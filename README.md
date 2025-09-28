@@ -129,16 +129,11 @@ IT-Project-80/
 │   └── seeds/             # Initial data
 │       └── initial_data.sql
 │
-├── docs/                  # Documentation (empty)
-├── image_use/             # Image resources
-└── test_image_readme/     # README images
-    ├── img.png
-    ├── img_1.png
-    ├── img_2.png
-    ├── img_3.png
-    ├── img_4.png
-    ├── img_5.png
-    └── img_6.png
+├── test/                  # Test files and resources
+│   ├── doc/              # Test documents
+│   │   ├── assigment test.pdf    # Sample assignment file
+│   │   └── rubric test.xlsx      # Sample rubric file
+│   └── image_readme/     # README demonstration images
 ```
 
 ## Getting Started & Demo
