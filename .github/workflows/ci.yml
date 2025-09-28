@@ -1,0 +1,40 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ main, test]
+  pull_request:
+    branches: [ main, test]
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+
+    # 设置默认工作目录
+    defaults:
+      run:
+        working-directory: ./backend  # 指定backend目录
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: ./backend/package-lock.json  # 指定缓存路径
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./backend  # 在backend目录安装依赖
+
+      - name: Run the tests
+        run: npm test  # 现在会在backend目录下运行
+        working-directory: ./backend
