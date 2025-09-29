@@ -75,6 +75,11 @@
     // ✅ 新增：加载已保存的分数和反馈数据
     await loadSavedScoresAndFeedback();
 
+    if (window.savedScoresData?.finalized) {
+      console.log('✅ 检测到 finalized 状态，锁定所有输入');
+      lockAllInputs();
+    }
+
     generateCriteriaHTML();
 
     setupDocumentNavigation();
@@ -576,7 +581,9 @@
           <div class="score-input-section">
             <div class="score-input-container">
               <label for="score-input-${criterionId}">Manual Score:</label>
-              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"/>
+              <input type="number" id="score-input-${criterionId}" class="score-input"
+                     min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"
+                     ${window.savedScoresData?.finalized ? 'disabled' : ''}/>
               <span class="max-score">/ ${criterion.maxScore}</span>
             </div>
           </div>
@@ -591,13 +598,14 @@
           </div>
 
           <div class="feedback-section">
-            <button class="show-feedback-btn">+ Add Feedback</button>
+            <button class="show-feedback-btn" ${window.savedScoresData?.finalized ? 'style="display: none;"' : ''}>+ Add Feedback</button>
             <div class="criterion-feedback ${window.savedScoresData?.feedback?.[criterionId] ? '' : 'hidden'}">
               <div class="feedback-header">
                 <span>Criterion Feedback</span>
-                <button class="close-feedback">×</button>
+                ${!window.savedScoresData?.finalized ? '<button class="close-feedback">×</button>' : ''}
               </div>
-              <textarea placeholder="Please write your feedback on this criterion.">${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
+              <textarea placeholder="Please write your feedback on this criterion."
+                        ${window.savedScoresData?.finalized ? 'disabled' : ''}>${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
             </div>
           </div>
 
@@ -1148,6 +1156,10 @@
 
   // Grade selection
   function setupGradeSelection() {
+    // 如果是 finalized 状态，不设置等级选择事件
+    if (window.savedScoresData?.finalized) {
+      return;
+    }
     const criteria = $$('.criterion');
 
     criteria.forEach(criterion => {
@@ -1252,6 +1264,10 @@
 
   // 当手动输入分数时，自动选择对应的等级
   function setupScoreInputs() {
+     // 如果是 finalized 状态，不设置分数输入事件
+     if (window.savedScoresData?.finalized) {
+       return;
+     }
     const scoreInputs = $$('.score-input');
 
     scoreInputs.forEach(input => {
@@ -1331,6 +1347,10 @@
 
   // Feedback functionality
   function setupFeedback() {
+    // 如果是 finalized 状态，不设置反馈事件
+    if (window.savedScoresData?.finalized) {
+        return;
+    }
     const showFeedbackBtns = $$('.show-feedback-btn');
     const closeButtons = $$('.close-feedback');
 
