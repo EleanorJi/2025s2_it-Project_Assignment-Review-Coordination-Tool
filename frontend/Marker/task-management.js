@@ -250,7 +250,7 @@
     // 只显示View Rubric按钮（如果有rubric文件）
     if (task.rubric_id) {
       const viewBtn = createButton('View Rubric', () => {
-        location.href = `/dashboard/marker/rubric?rubric_id=${task.rubric_id}`;
+        location.href = `/dashboard/marker/rubric?project=${task.project_id}`;
       });
       viewBtn.className = 'btn';
       actions.appendChild(viewBtn);
