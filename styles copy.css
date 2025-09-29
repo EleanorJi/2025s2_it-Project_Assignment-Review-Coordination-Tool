@@ -1,0 +1,64 @@
+:root{
+  --bg:#F5F7FB; --panel:#FFFFFF; --panel-border:#E6EAF2;
+  --muted:#6B7280; --text:#0F172A; --brand:#0033A0; --btn:#0F172A;
+  --shadow:0 6px 24px rgba(2,6,23,0.06);
+  --success:#16A34A; --info:#2563EB; --warn:#F59E0B; --error:#DC2626;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;}
+.container{max-width:1100px;margin:48px auto;padding:0 24px}
+.panel{background:var(--panel);border:1px solid var(--panel-border);border-radius:24px;
+  box-shadow:var(--shadow);padding:40px 56px 56px;position:relative}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.logo{width:28px;height:28px;border:1px solid #0F172A;border-radius:50%;
+  display:grid;place-items:center;font-size:10px;font-weight:700}
+.logo-img{width:28px;height:28px;border-radius:50%;border:1px solid #0F172A;object-fit:contain;background:#fff}
+.header h1{font-size:16px;margin:0}
+.footer-left{position:absolute;left:24px;bottom:18px;color:var(--muted);font-size:13px}
+.footer-right{position:absolute;right:24px;bottom:18px;color:var(--muted);font-size:13px}
+
+.form{max-width:720px;margin:14px auto 0}
+.form h2{font-size:44px;font-style:italic;font-weight:700;margin:12px 0 22px}
+.row{margin-bottom:18px}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+.input,.toggle{height:52px;border-radius:12px;border:1px solid #E5E7EB;background:#fff;padding:0 16px;font-size:15px;width:100%}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.toggle{display:flex;align-items:center;justify-content:space-between}
+.toggle .text{color:#111827}
+.toggle .dot{width:20px;height:20px;border-radius:50%;border:3px solid #E5E7EB}
+.toggle.active{outline:3px solid #E6EDFF;border-color:#D6E2FF}
+.toggle.active .dot{border-color:#0F172A}
+.help{color:var(--muted);font-size:12px;margin-top:8px}
+.inline{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.inline-left{display:flex;align-items:center;gap:8px}
+.link{color:var(--brand);text-decoration:underline;background:none;border:none;cursor:pointer;font:inherit}
+.btn{margin-top:22px;width:100%;height:54px;border:none;border-radius:12px;background:var(--btn);color:#fff;font-size:16px;font-weight:600;cursor:pointer}
+.btn[disabled]{opacity:.6;cursor:not-allowed}
+.msg{height:20px;margin-top:8px;font-size:13px}
+.msg.ok{color:var(--success)}.msg.err{color:var(--error)}
+@media (max-width:900px){.panel{padding:28px}.form h2{font-size:36px}}
+
+/* Toast / Notification */
+.toast-wrap{position:fixed;top:20px;right:20px;z-index:9999}
+.toast{width:420px;max-width:92vw;background:#fff;border:1px solid #E5E7EB;border-radius:14px;box-shadow:var(--shadow);display:flex;gap:12px;padding:14px 16px;align-items:flex-start;transform:translateY(-12px);opacity:0;animation:toastIn .5s ease forwards}
+.toast .brand{width:28px;height:28px;border-radius:50%;border:1px solid #0F172A;background:#fff;display:grid;place-items:center;overflow:hidden}
+.toast .brand img{width:100%;height:100%;object-fit:contain;border-radius:50%}
+.toast .content{flex:1}
+.toast .title{font-weight:700;margin:2px 0 4px 0;font-size:15px}
+.toast .desc{color:var(--muted);font-size:13px}
+.toast .actions{margin-top:10px;display:flex;gap:10px}
+.btn-small{height:36px;padding:0 12px;border-radius:10px;border:none;background:var(--btn);color:#fff;font-weight:600;cursor:pointer}
+.btn-ghost{height:36px;padding:0 12px;border-radius:10px;border:1px solid #E5E7EB;background:#fff;color:#111827;cursor:pointer}
+.toast .close{background:none;border:none;color:#6B7280;font-size:18px;cursor:pointer;align-self:flex-start}
+.toast.info{border-left:6px solid var(--info)} .toast.success{border-left:6px solid var(--success)}
+.toast.warn{border-left:6px solid var(--warn)} .toast.error{border-left:6px solid var(--error)}
+@keyframes toastIn{to{transform:translateY(0);opacity:1}}
+.hidden{display:none}
+/* --- Sign-up banner --- */
+.banner{margin-top:8px;margin-bottom:18px;background:#EFF6FF;border:1px solid #BFDBFE;
+  border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.banner .dot{width:10px;height:10px;border-radius:50%;background:#0033A0;margin-top:6px}
+.banner .text{font-size:13px;color:#1F2937}
+.small{font-size:12px;color:#6B7280}

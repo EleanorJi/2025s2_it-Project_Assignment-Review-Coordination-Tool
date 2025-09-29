@@ -310,10 +310,10 @@ exports.listInvitations = async (req, res) => {
   try {
     const result = await db.query(
       `WITH latest_invitations AS (
-         SELECT DISTINCT ON (email)
+         SELECT DISTINCT ON (email) 
            id, email, expires_at, created_at,
            ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at DESC) as rn
-         FROM invitations
+         FROM invitations 
          WHERE created_by = $1
        )
        SELECT
@@ -473,3 +473,4 @@ exports.closeUser = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+
