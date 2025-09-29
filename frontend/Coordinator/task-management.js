@@ -767,12 +767,33 @@
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('project_id', projectId);
-        formData.append('type', 'rubric');
+        formData.append('slot', 'rubric');
 
-        const response = await fetch('/api/uploads/upload', {
+        // 第一步：上传到草稿
+        const draftResponse = await fetch('/api/uploads/drafts', {
           method: 'POST',
           body: formData
+        });
+
+        if (!draftResponse.ok) {
+          throw new Error('Draft upload failed');
+        }
+
+        const draftData = await draftResponse.json();
+
+        // 第二步：提交草稿
+        const commitData = {
+          temp_name: draftData.temp_name,
+          project_id: projectId,
+          file_type: 'rubric'
+        };
+
+        const response = await fetch('/api/uploads/commit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(commitData)
         });
 
         if (!response.ok) {
@@ -893,13 +914,35 @@
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('project_id', projectId);
-        formData.append('due_date', formatDateForDisplay(due)); // 转换为 dd/mm/yyyy 格式
-        formData.append('assignment_type', 'assignment1');
+        formData.append('slot', 'assignment1');
 
-        const response = await fetch('/api/uploads/upload', {
+        // 第一步：上传到草稿
+        const draftResponse = await fetch('/api/uploads/drafts', {
           method: 'POST',
           body: formData
+        });
+
+        if (!draftResponse.ok) {
+          throw new Error('Draft upload failed');
+        }
+
+        const draftData = await draftResponse.json();
+
+        // 第二步：提交草稿
+        const commitData = {
+          temp_name: draftData.temp_name,
+          project_id: projectId,
+          file_type: 'assignment',
+          round: 1,
+          due_date: due // 使用原始日期格式
+        };
+
+        const response = await fetch('/api/uploads/commit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(commitData)
         });
 
         if (!response.ok) {
@@ -1020,13 +1063,35 @@
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('project_id', projectId);
-        formData.append('due_date', formatDateForDisplay(due)); // 转换为 dd/mm/yyyy 格式
-        formData.append('assignment_type', 'assignment2');
+        formData.append('slot', 'assignment2');
 
-        const response = await fetch('/api/uploads/upload', {
+        // 第一步：上传到草稿
+        const draftResponse = await fetch('/api/uploads/drafts', {
           method: 'POST',
           body: formData
+        });
+
+        if (!draftResponse.ok) {
+          throw new Error('Draft upload failed');
+        }
+
+        const draftData = await draftResponse.json();
+
+        // 第二步：提交草稿
+        const commitData = {
+          temp_name: draftData.temp_name,
+          project_id: projectId,
+          file_type: 'assignment',
+          round: 2,
+          due_date: due // 使用原始日期格式
+        };
+
+        const response = await fetch('/api/uploads/commit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(commitData)
         });
 
         if (!response.ok) {

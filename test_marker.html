@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marker Task Management Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Marker Task Management Test</h1>
+    
+    <div class="test-section">
+        <h2>API Tests</h2>
+        <button onclick="testProjectsAPI()">Test Projects API</button>
+        <button onclick="testLatestIdsAPI()">Test Latest IDs API</button>
+        <button onclick="testAssignmentStatusAPI()">Test Assignment Status API</button>
+        <div id="apiResults" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Marker Task Management</h2>
+        <button onclick="loadMarkerTasks()">Load Marker Tasks</button>
+        <div id="markerResults" class="result"></div>
+    </div>
+
+    <script>
+        function log(message, isError = false) {
+            const results = document.getElementById('apiResults');
+            const div = document.createElement('div');
+            div.className = isError ? 'error' : 'success';
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            results.appendChild(div);
+        }
+
+        async function testProjectsAPI() {
+            try {
+                const response = await fetch('/api/uploads/projects');
+                const data = await response.json();
+                log(`Projects API: ${data.projects?.length || 0} projects found`);
+                console.log('Projects data:', data);
+            } catch (error) {
+                log(`Projects API Error: ${error.message}`, true);
+            }
+        }
+
+        async function testLatestIdsAPI() {
+            try {
+                const response = await fetch('/api/uploads/project/1/latest-ids');
+                const data = await response.json();
+                log(`Latest IDs API: ${JSON.stringify(data)}`);
+                console.log('Latest IDs data:', data);
+            } catch (error) {
+                log(`Latest IDs API Error: ${error.message}`, true);
+            }
+        }
+
+        async function testAssignmentStatusAPI() {
+            try {
+                const response1 = await fetch('/api/uploads/assignment/1/status');
+                const data1 = await response1.json();
+                log(`Assignment 1 Status: ${data1.assignment.is_published ? 'Published' : 'Unpublished'}`);
+                
+                const response2 = await fetch('/api/uploads/assignment/2/status');
+                const data2 = await response2.json();
+                log(`Assignment 2 Status: ${data2.assignment.is_published ? 'Published' : 'Unpublished'}`);
+            } catch (error) {
+                log(`Assignment Status API Error: ${error.message}`, true);
+            }
+        }
+
+        async function loadMarkerTasks() {
+            try {
+                // 模拟marker task management的逻辑
+                const response = await fetch('/api/uploads/projects');
+                const data = await response.json();
+                
+                let activeProjects = 0;
+                let publishedAssignments = 0;
+                
+                for (const project of data.projects) {
+                    const latestIdsResponse = await fetch(`/api/uploads/project/${project.project_id}/latest-ids`);
+                    if (latestIdsResponse.ok) {
+                        const latestIds = await latestIdsResponse.json();
+                        
+                        let hasPublishedAssignment = false;
+                        
+                        if (latestIds.assignment1) {
+                            const statusResponse1 = await fetch(`/api/uploads/assignment/${latestIds.assignment1.assignment_id}/status`);
+                            if (statusResponse1.ok) {
+                                const statusData1 = await statusResponse1.json();
+                                if (statusData1.assignment.is_published) {
+                                    hasPublishedAssignment = true;
+                                    publishedAssignments++;
+                                }
+                            }
+                        }
+                        
+                        if (latestIds.assignment2) {
+                            const statusResponse2 = await fetch(`/api/uploads/assignment/${latestIds.assignment2.assignment_id}/status`);
+                            if (statusResponse2.ok) {
+                                const statusData2 = await statusResponse2.json();
+                                if (statusData2.assignment.is_published) {
+                                    hasPublishedAssignment = true;
+                                    publishedAssignments++;
+                                }
+                            }
+                        }
+                        
+                        if (hasPublishedAssignment) {
+                            activeProjects++;
+                        }
+                    }
+                }
+                
+                const results = document.getElementById('markerResults');
+                results.innerHTML = `
+                    <div class="success">Active Projects: ${activeProjects}</div>
+                    <div class="success">Published Assignments: ${publishedAssignments}</div>
+                `;
+                
+                log(`Marker Tasks: ${activeProjects} active projects, ${publishedAssignments} published assignments`);
+            } catch (error) {
+                log(`Marker Tasks Error: ${error.message}`, true);
+            }
+        }
+
+        // 页面加载时自动运行测试
+        window.onload = function() {
+            testProjectsAPI();
+        };
+    </script>
+</body>
+</html>

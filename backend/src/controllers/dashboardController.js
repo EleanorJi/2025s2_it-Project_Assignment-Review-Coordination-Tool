@@ -99,6 +99,20 @@ exports.getMarkerDashboard = (req, res) => {
   res.sendFile(path.join(__dirname, '../../frontend/Marker/marker-dashboard.html'));
 };
 
+exports.getMarkerTaskManagementPage = (req, res) => {
+  if (req.user.role !== 'MARKER') {
+    return res.redirect('/login?error=access_denied');
+  }
+  res.sendFile(path.join(__dirname, '../../frontend/Marker/task-management.html'));
+};
+
+exports.getMarkerPastTaskPage = (req, res) => {
+  if (req.user.role !== 'MARKER') {
+    return res.redirect('/login?error=access_denied');
+  }
+  res.sendFile(path.join(__dirname, '../../frontend/Marker/past-task.html'));
+};
+
 exports.redirectToRoleDashboard = (req, res) => {
   switch (req.user.role) {
     case 'COORDINATOR':
@@ -110,4 +124,13 @@ exports.redirectToRoleDashboard = (req, res) => {
     default:
       res.redirect('/login');
   }
+};
+
+exports.getMarkerConnectPage = (req, res) => {
+  if (!req.user || req.user.role !== 'MARKER') {
+    return res.redirect('/login?error=access_denied');
+  }
+  res.sendFile(
+    require('path').join(__dirname, '../../frontend/Marker/connect-marker.html')
+  );
 };

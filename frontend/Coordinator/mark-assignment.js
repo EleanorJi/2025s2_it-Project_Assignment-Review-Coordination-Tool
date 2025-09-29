@@ -3,31 +3,46 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  // Grade data structure (reordered from high to low)
-  const gradeData = {
-    3: { name: 'High Distinction', color: 'var(--grade-high-distinction)', score: '9-10' },
-    2: { name: 'Distinction', color: 'var(--grade-distinction)', score: '7-8' },
-    1: { name: 'Credit', color: 'var(--grade-credit)', score: '5-6' },
-    0: { name: 'Pass', color: 'var(--grade-pass)', score: '0-4' }
-  };
 
+  let originalData = null; // To store the original criterion data
   // Criterion data - will be loaded from backend
   let criterionData = {};
 
   // API Configuration
-  const API_BASE_URL = 'http://localhost:3000/api'; // Adjust based on your backend
+  const API_BASE_URL = '/api'; // Adjust based on your backend
   let ASSIGNMENT_ID = null; // 改为变量，动态获取
   let PROJECT_ID = null; // 存储project_id
 
   // Current state
   let currentPage = 1;
-  let currentGrades = { 1: 3, 2: 3, 3: 3 }; // Default to High Distinction
+  // Grade data structure (reordered from high to low)
+  let gradeData = {};
+  let currentGrades = {}; // Default to High Distinction
+
+  // 在文件开头添加PDF.js配置
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+  // PDF查看器状态
+  let pdfDoc = null;
+  let currentPdfPage = 1;
+  let totalPdfPages = 0;
+  let currentScale = 1.0;
+  const SCALE_STEP = 0.25;
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 3.0;
+
+  // 存储所有页面的canvas和尺寸
+  let pageCanvases = [];
+  let pageHeights = [];
+  let totalHeight = 0;
 
   // Initialize the interface
   async function init() {
     // ✅ 显示用户名
     try {
       const rawUser = localStorage.getItem("user");
+      // console.log("User Info:", rawUser);
       if (rawUser) {
         const user = JSON.parse(rawUser);
         if (user && user.name) {
@@ -41,6 +56,9 @@
       console.error("Failed to load username:", err);
     }
 
+    // 调试用，查看当前用户信息
+    // getCurrentUser();
+
     // ✅ 从URL获取project_id和assignment标识
     await resolveAssignmentId();
 
@@ -48,15 +66,129 @@
       throw new Error('无法确定assignment ID');
     }
 
+    // 显示Assignment和project的信息（名称、截止日期等）
+    setupAssignmentDetails();
+
+    // Load rubric data from backend
+    await loadRubricData();
+
+    // ✅ 新增：加载已保存的分数和反馈数据
+    await loadSavedScoresAndFeedback();
+
+    generateCriteriaHTML();
+
     setupDocumentNavigation();
     setupGradeSelection();
     setupScoreInputs();
     setupFeedback();
     setupActionButtons();
     
-    // Load rubric data from backend
-    await loadRubricData();
     updateAllCriterionDisplays();
+    updateTotalScoreDisplay();
+  }
+
+  // 加载已保存到后端的的score和feedback数据
+  async function loadSavedScoresAndFeedback() {
+    try {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        console.warn('无法获取当前用户信息，跳过加载已保存数据');
+        return;
+      }
+
+      let response;
+      if (currentUser.role === 'COORDINATOR') {
+        response = await fetch(`${API_BASE_URL}/uploads/scoring/baseline/${ASSIGNMENT_ID}`);
+      } else if (currentUser.role === 'MARKER') {
+        response = await fetch(`${API_BASE_URL}/uploads/scoring/marker/${ASSIGNMENT_ID}/${currentUser.userId}`);
+      } else {
+        console.warn('未知用户角色，跳过加载已保存数据');
+        return;
+      }
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('未找到已保存的数据，使用默认值');
+          return;
+        }
+        throw new Error(`加载失败: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // 根据用户角色处理不同的数据结构
+      const scoresData = currentUser.role === 'COORDINATOR'
+        ? data.baseline_scores
+        : data.marker_scores;
+
+      if (!scoresData || scoresData.length === 0) {
+        console.log('没有已保存的分数数据');
+        return;
+      }
+
+      // 创建映射以便后续使用
+      window.savedScoresData = {
+        scores: {},
+        feedback: {},
+        finalized: currentUser.role === 'MARKER'
+          ? (data.marker_scores?.[0]?.finalized || false)
+          : (data.baseline_scores?.[0]?.finalized || false)
+      };
+      console.log('✅ 设置的 finalized 状态:', window.savedScoresData.finalized);
+
+      // 处理分数和反馈数据 - 直接使用seq_no作为前端ID
+      scoresData.forEach(scoreItem => {
+        // 根据后端criterion_id找到对应的前端criterion（使用seq_no）
+        const criterion = originalData.criteria.find(c => c.criterion_id === scoreItem.criterion_id);
+        if (criterion) {
+          const frontendCriterionId = criterion.seq_no; // seq_no就是前端ID
+
+          // 保存分数
+          window.savedScoresData.scores[frontendCriterionId] = scoreItem.score;
+
+          // 保存反馈
+          if (scoreItem.comment) {
+            window.savedScoresData.feedback[frontendCriterionId] = scoreItem.comment;
+          }
+
+          // 根据分数设置对应的等级
+          if (scoreItem.matched_level && gradeData[frontendCriterionId]) {
+            const matchedGrade = findMatchingGrade(frontendCriterionId, scoreItem.score);
+            if (matchedGrade !== null) {
+              currentGrades[frontendCriterionId] = matchedGrade;
+            }
+          }
+        }
+      });
+
+      console.log('✅ 已保存的数据加载成功:', window.savedScoresData);
+
+    } catch (error) {
+      console.error('❌ 加载已保存数据失败:', error);
+      // 不抛出错误，继续使用默认值
+    }
+  }
+
+  // 根据分数查找匹配的等级
+  function findMatchingGrade(criterionId, score) {
+    const grades = gradeData[criterionId];
+    if (!grades) return null;
+
+    // 按等级从高到低排序
+    const sortedGrades = Object.keys(grades)
+      .map(grade => parseInt(grade))
+      .sort((a, b) => b - a);
+
+    for (const grade of sortedGrades) {
+      const gradeInfo = grades[grade];
+      if (gradeInfo && gradeInfo.min_score !== undefined && gradeInfo.max_score !== undefined) {
+        if (score >= gradeInfo.min_score && score <= gradeInfo.max_score) {
+          return grade;
+        }
+      }
+    }
+
+    return null;
   }
 
   // 解析URL参数，获取真实的assignment_id
@@ -93,7 +225,7 @@
       } else {
         throw new Error(`找不到对应的assignment: ${assignmentParam}`);
       }
-
+      console.log(`✅ 解析成功: project_id=${PROJECT_ID}`);
       console.log(`✅ 解析成功: ${assignmentParam} -> assignment_id=${ASSIGNMENT_ID}`);
 
     } catch (error) {
@@ -101,6 +233,99 @@
       throw new Error(`无法解析assignment ID: ${error.message}`);
     }
   }
+
+  // 显示Assignment和project的信息（名称、截止日期等）
+  async function setupAssignmentDetails() {
+    try {
+      if (!ASSIGNMENT_ID) {
+        console.error('Assignment ID is not available');
+        return;
+      }
+
+      // 1. 获取assignment详细信息
+      const assignmentResponse = await fetch(`/api/uploads/assignment/${ASSIGNMENT_ID}/status`);
+      if (!assignmentResponse.ok) {
+        throw new Error(`Failed to fetch assignment details: ${assignmentResponse.status}`);
+      }
+
+      const assignmentData = await assignmentResponse.json();
+      const assignment = assignmentData.assignment;
+
+      // 设置PROJECT_ID（如果尚未设置）
+      if (!PROJECT_ID && assignment.project_id) {
+        PROJECT_ID = assignment.project_id;
+      }
+
+      // 2. 获取project详细信息
+      let projectName = 'Unnamed Project';
+      if (PROJECT_ID) {
+        try {
+          const projectResponse = await fetch(`/api/uploads/project/${PROJECT_ID}/status`);
+          if (projectResponse.ok) {
+            const projectData = await projectResponse.json();
+            projectName = projectData.project.name || projectName;
+            console.log('✅ Project name fetched:', projectName);
+          }
+        } catch (projectError) {
+          console.warn('Failed to fetch project details, using default name:', projectError);
+        }
+      }
+
+      // 3. 格式化日期
+      let dueDateText = 'Due date not set';
+      if (assignment.due_at) {
+        const dueDate = new Date(assignment.due_at);
+        dueDateText = `Due: ${formatDueDate(dueDate)}`;
+      }
+
+      // 4. 更新页面元素
+      const assignmentTitleEl = document.querySelector('.assignment-title');
+      const dueDateEl = document.querySelector('.due-date');
+
+      if (assignmentTitleEl) {
+        assignmentTitleEl.textContent = `${projectName} - ${assignment.name}`;
+      }
+
+      if (dueDateEl) {
+        dueDateEl.textContent = dueDateText;
+      }
+
+      console.log('✅ Assignment details loaded:', {
+        projectName,
+        assignmentName: assignment.name,
+        dueDate: assignment.due_at
+      });
+
+    } catch (error) {
+      console.error('❌ Failed to setup assignment details:', error);
+
+      // 设置默认值作为fallback
+      const assignmentTitleEl = document.querySelector('.assignment-title');
+      const dueDateEl = document.querySelector('.due-date');
+
+      if (assignmentTitleEl) {
+        assignmentTitleEl.textContent = 'Unnamed Project - Unnamed Assignment';
+      }
+
+      if (dueDateEl) {
+        dueDateEl.textContent = 'Due: Date not available';
+      }
+    }
+  }
+
+  // 日期格式化辅助函数（匹配你提供的格式：Tue Sep 16, 2025 10:00）
+  function formatDueDate(date) {
+    const options = {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return date.toLocaleDateString('en-US', options);
+  }
+
 
   // Load rubric data from backend
   async function loadRubricData() {
@@ -128,12 +353,16 @@
       }
 
       const data = await response.json();
-      window.currentRubricData = data;
+      originalData = data; // 保存原始数据
+      criterionData = formatRubric(data);
+      console.log('✅ original Criterion data:', data);
 
-      console.log('✅ Rubric data loaded successfully:', data);
+      // 根据rubric数据初始化currentGrades和gradeData
+      initializeGradeData(data);
 
-      // 动态生成评分标准UI
-      createDynamicRubricUI(data.criteria);
+      console.log('✅ Criterion data stored:', criterionData);
+      console.log('✅ Grade data initialized:', gradeData);
+      console.log('✅ Current grades initialized:', currentGrades);
 
     } catch (error) {
       console.error('Error loading rubric:', error);
@@ -142,264 +371,129 @@
     }
   }
 
-  // 动态生成评分标准UI
-  function createDynamicRubricUI(criteria) {
-    const markingCriteriaContainer = $('.marking-criteria');
+  // Format rubric data into desired structure
+  function formatRubric(data) {
+    const formattedData = {};
 
-    // 清空现有内容
-    markingCriteriaContainer.innerHTML = '';
+    // 遍历所有评分标准
+    data.criteria.forEach((criterion, index) => {
+      const criterionId = index + 1; // 使用1-based索引作为键
+      const descriptions = {};
 
-    // 按seq_no排序
-    const sortedCriteria = criteria.sort((a, b) => a.seq_no - b.seq_no);
+      // 遍历该标准的所有等级水平
+      criterion.grade_levels.forEach((level, levelIndex) => {
+        // 将描述文本按换行符分割成数组，并过滤空行
+        const criteriaList = level.description
+          .split('\n')
+          .map(item => item.trim())
+          .filter(item => item.length > 0);
 
-    // 为每个评分标准生成HTML
-    sortedCriteria.forEach((criterion, index) => {
-      const criterionNumber = index + 1;
-      const maxScore = criterion.max_score;
+        // 构建points字符串，格式如："0-4 points"
+        const points = `${level.min_score}-${level.max_score} points`;
 
-      // 生成等级选项（按分数从高到低排序）
-      const sortedLevels = criterion.grade_levels.sort((a, b) => b.max_score - a.max_score);
-      const gradeOptionsHTML = sortedLevels.map((level, levelIndex) => `
-        <div class="grade-option ${levelIndex === 0 ? 'active' : ''}"
-             data-grade-level-id="${level.grade_level_id}"
-             data-min-score="${level.min_score}"
-             data-max-score="${level.max_score}">
-          ${level.level_name}
-        </div>
-      `).join('');
+        descriptions[4 - levelIndex] = {
+          points: points,
+          criteria: criteriaList
+        };
+      });
 
-      // 生成等级描述
-      const gradeDescriptionsHTML = sortedLevels.map(level => `
-        <div class="grade-level-description" data-level-id="${level.grade_level_id}">
-          <strong>${level.min_score}-${level.max_score} points:</strong>
-          <p>${level.description}</p>
-        </div>
-      `).join('');
-
-      const criterionHTML = `
-        <div class="criterion" data-criterion-id="${criterion.criterion_id}" data-criterion-number="${criterionNumber}">
-          <div class="criterion-header">
-            <div class="criterion-number">${criterionNumber}.</div>
-            <div class="criterion-title">${criterion.title}</div>
-          </div>
-
-          ${criterion.description ? `
-            <div class="criterion-description">
-              <p>${criterion.description}</p>
-            </div>
-          ` : ''}
-
-          <div class="grade-selector">
-            <button class="grade-arrow left">‹</button>
-            <div class="grade-options">
-              ${gradeOptionsHTML}
-            </div>
-            <button class="grade-arrow right">›</button>
-          </div>
-
-          <div class="score-input-section">
-            <div class="score-input-container">
-              <label for="score-input-${criterionNumber}">Manual Score:</label>
-              <input type="number" id="score-input-${criterionNumber}"
-                     class="score-input"
-                     min="0"
-                     max="${maxScore}"
-                     step="0.1"
-                     value="0"
-                     data-criterion-id="${criterion.criterion_id}" />
-              <span class="max-score">/ ${maxScore}</span>
-            </div>
-          </div>
-
-          <div class="grade-info">
-            <div class="grade-level">Not Graded</div>
-            <div class="grade-score">0/${maxScore}</div>
-          </div>
-
-          <div class="grade-description">
-            ${gradeDescriptionsHTML}
-          </div>
-
-          <div class="feedback-section">
-            <button class="show-feedback-btn">+ Add Feedback</button>
-            <div class="criterion-feedback hidden">
-              <div class="feedback-header">
-                <span>Criterion Feedback</span>
-                <button class="close-feedback">×</button>
-              </div>
-              <textarea placeholder="will be included in the overall feedback and visible to students"
-                        data-criterion-id="${criterion.criterion_id}"></textarea>
-            </div>
-          </div>
-        </div>
-      `;
-
-      markingCriteriaContainer.append(criterionHTML);
-    });
-
-    // 添加总分显示区域
-    const totalScoreHTML = `
-      <div class="total-score-section">
-        <div class="total-score-container">
-          <div class="total-score-label">Total Score:</div>
-          <div class="total-score-display">
-            <span id="current-total">0</span> / <span id="max-total">${sortedCriteria.reduce((sum, criterion) => sum + criterion.max_score, 0)}</span>
-          </div>
-        </div>
-        <div class="total-percentage">
-          <span id="total-percentage">0%</span>
-        </div>
-      </div>
-    `;
-
-    markingCriteriaContainer.append(totalScoreHTML);
-
-    // 重新绑定事件
-    bindCriterionEvents();
-
-    // 初始化总分显示
-    updateTotalScore();
-
-    console.log(`✅ Generated ${sortedCriteria.length} criteria dynamically`);
-  }
-
-  // 绑定评分标准事件
-  function bindCriterionEvents() {
-    // 等级选择箭头事件
-    $('.grade-arrow').off('click').on('click', function() {
-      const $gradeOptions = $(this).siblings('.grade-options');
-      const $activeOption = $gradeOptions.find('.grade-option.active');
-      const $allOptions = $gradeOptions.find('.grade-option');
-      const currentIndex = $allOptions.index($activeOption);
-
-      if ($(this).hasClass('left')) {
-        // 向左选择（选择更低的等级）
-        const prevIndex = (currentIndex + 1) % $allOptions.length;
-        $allOptions.removeClass('active').eq(prevIndex).addClass('active');
-      } else {
-        // 向右选择（选择更高的等级）
-        const nextIndex = (currentIndex - 1 + $allOptions.length) % $allOptions.length;
-        $allOptions.removeClass('active').eq(nextIndex).addClass('active');
-      }
-
-      updateScoreFromGradeSelection($(this).closest('.criterion'));
-    });
-
-    // 分数输入变化事件
-    $('.score-input').off('input').on('input', function() {
-      updateGradeSelectionFromScore($(this).closest('.criterion'));
-      updateTotalScore(); // 自动更新总分
-    });
-
-    // 反馈按钮事件
-    $('.show-feedback-btn').off('click').on('click', function() {
-      $(this).siblings('.criterion-feedback').removeClass('hidden');
-      $(this).hide();
-    });
-
-    $('.close-feedback').off('click').on('click', function() {
-      $(this).closest('.criterion-feedback').addClass('hidden');
-      $(this).closest('.criterion').find('.show-feedback-btn').show();
-    });
-  }
-
-  // 根据等级选择更新分数
-  function updateScoreFromGradeSelection($criterion) {
-    const $activeGrade = $criterion.find('.grade-option.active');
-    const minScore = parseFloat($activeGrade.data('min-score'));
-    const maxScore = parseFloat($activeGrade.data('max-score'));
-    const levelName = $activeGrade.text();
-
-    // 设置分数为最高分（或平均值，根据你的需求调整）
-    const score = maxScore;
-    $criterion.find('.score-input').val(score);
-
-    // 更新显示信息
-    $criterion.find('.grade-level').text(levelName);
-    $criterion.find('.grade-score').text(`${score}/${$criterion.find('.score-input').attr('max')}`);
-    
-    // 更新总分
-    updateTotalScore();
-  }
-
-  // 根据分数输入更新等级选择
-  function updateGradeSelectionFromScore($criterion) {
-    const score = parseFloat($criterion.find('.score-input').val()) || 0;
-    const maxScore = parseFloat($criterion.find('.score-input').attr('max'));
-    const $gradeOptions = $criterion.find('.grade-option');
-
-    // 找到匹配的等级
-    let matchedLevel = null;
-    $gradeOptions.each(function() {
-      const minScore = parseFloat($(this).data('min-score'));
-      const maxScore = parseFloat($(this).data('max-score'));
-
-      if (score >= minScore && score <= maxScore) {
-        matchedLevel = $(this);
-        return false; // 退出循环
-      }
-    });
-
-    if (matchedLevel) {
-      $gradeOptions.removeClass('active');
-      matchedLevel.addClass('active');
-      $criterion.find('.grade-level').text(matchedLevel.text());
-    } else {
-      $criterion.find('.grade-level').text('Custom Score');
-    }
-
-    // 格式化显示分数，保留一位小数
-    const formattedScore = score % 1 === 0 ? score.toString() : score.toFixed(1);
-    $criterion.find('.grade-score').text(`${formattedScore}/${maxScore}`);
-  }
-
-  // 更新总分显示
-  function updateTotalScore() {
-    let currentTotal = 0;
-    let maxTotal = 0;
-    
-    $('.criterion').each(function() {
-      const score = parseFloat($(this).find('.score-input').val()) || 0;
-      const maxScore = parseFloat($(this).find('.score-input').attr('max')) || 0;
-      
-      currentTotal += score;
-      maxTotal += maxScore;
-    });
-    
-    // 格式化显示
-    const formattedCurrentTotal = currentTotal % 1 === 0 ? currentTotal.toString() : currentTotal.toFixed(1);
-    const percentage = maxTotal > 0 ? Math.round((currentTotal / maxTotal) * 100) : 0;
-    
-    // 更新显示
-    const $currentTotal = $('#current-total');
-    const $totalPercentage = $('#total-percentage');
-    
-    if ($currentTotal.length) {
-      $currentTotal.text(formattedCurrentTotal);
-    }
-    
-    if ($totalPercentage.length) {
-      $totalPercentage.text(`${percentage}%`);
-    }
-    
-    console.log(`📊 总分更新: ${formattedCurrentTotal}/${maxTotal} (${percentage}%)`);
-  }
-
-  // 获取所有评分数据
-  function getAllScores() {
-    const scores = {};
-    $('.criterion').each(function() {
-      const criterionId = $(this).data('criterion-id');
-      const score = parseFloat($(this).find('.score-input').val()) || 0;
-      const feedback = $(this).find('.criterion-feedback textarea').val() || '';
-
-      scores[criterionId] = {
-        score: score,
-        feedback: feedback,
-        gradeLevelId: $(this).find('.grade-option.active').data('grade-level-id')
+      // 构建每个评分标准的数据结构
+      formattedData[criterionId] = {
+        title: criterion.title,
+        maxScore: criterion.max_score,
+        descriptions: descriptions
       };
     });
-    return scores;
+
+    return formattedData;
+  }
+
+  // 根据rubric数据初始化gradeData和currentGrades
+  function initializeGradeData(rubricData) {
+    // 重置gradeData和currentGrades
+    gradeData = {};
+    currentGrades = {};
+
+    // 遍历每个评分标准
+    rubricData.criteria.forEach((criterion, index) => {
+      const criterionId = index + 1;
+
+      // 为每个评分标准初始化默认等级（选择最高等级）
+      if (criterion.grade_levels && criterion.grade_levels.length > 0) {
+        // 按seq_no降序排序，选择最高的等级作为默认值
+        const sortedLevels = [...criterion.grade_levels].sort((a, b) => b.seq_no - a.seq_no);
+        currentGrades[criterionId] = sortedLevels[0].seq_no - 1;
+
+        // 构建gradeData数据结构
+        gradeData[criterionId] = {};
+
+        // 为每个评分标准创建独立的等级映射
+        criterion.grade_levels.forEach(level => {
+          gradeData[criterionId][5 - level.seq_no] = {
+            name: level.level_name,
+            color: getGradeColor(5 - level.seq_no, criterion.grade_levels.length),
+            score: `${level.min_score}-${level.max_score}`,
+            min_score: level.min_score,
+            max_score: level.max_score,
+            description: level.description
+          };
+        });
+      }
+    });
+  }
+
+  // 根据等级序号和总等级数量获取对应的颜色（支持5个级别）
+  function getGradeColor(seqNo, totalLevels) {
+    // 5个级别的颜色映射（从高到低）
+    const colorMappings = {
+      5: [ // 5个级别的情况
+        'var(--grade-high-distinction)', // 最高等级 - 级别4
+        'var(--grade-distinction)',      // 级别3
+        'var(--grade-credit)',           // 级别2
+        'var(--grade-pass)',             // 级别1
+        'var(--grade-fail)'              // 最低等级 - 级别0
+      ],
+      4: [ // 4个级别的情况（保持原有逻辑）
+        'var(--grade-high-distinction)', // 最高等级
+        'var(--grade-distinction)',
+        'var(--grade-credit)',
+        'var(--grade-pass)'
+      ],
+      3: [ // 3个级别的情况
+        'var(--grade-high-distinction)',
+        'var(--grade-distinction)',
+        'var(--grade-pass)'
+      ],
+      2: [ // 2个级别的情况
+        'var(--grade-pass)',
+        'var(--grade-fail)'
+      ]
+    };
+
+    // 根据总等级数量选择合适的颜色映射
+    const colors = colorMappings[totalLevels] || colorMappings[4]; // 默认使用4级映射
+
+    // 计算颜色索引（seqNo从高到低，需要映射到颜色数组）
+    const colorIndex = totalLevels - 1 - seqNo;
+
+    // 确保颜色索引在有效范围内
+    const safeIndex = Math.max(0, Math.min(colorIndex, colors.length - 1));
+    return colors[safeIndex] || 'var(--grade-pass)';
+  }
+
+  // 备用默认数据加载函数（更新为支持5个级别）
+  function loadDefaultRubricData() {
+    // 使用默认的5个级别数据
+    currentGrades = { 1: 4, 2: 4, 3: 4 }; // 默认选择最高等级（级别4）
+    gradeData = {
+      4: { name: 'High Distinction', color: 'var(--grade-high-distinction)', score: '9-10' },
+      3: { name: 'Distinction', color: 'var(--grade-distinction)', score: '7-8' },
+      2: { name: 'Credit', color: 'var(--grade-credit)', score: '5-6' },
+      1: { name: 'Pass', color: 'var(--grade-pass)', score: '0-4' },
+      0: { name: 'Fail', color: 'var(--grade-fail)', score: '0-0' }
+    };
+
+    console.log('⚠️ Using default rubric data with 5 levels');
   }
 
   // Fallback default rubric data
@@ -438,86 +532,608 @@
     };
   }
 
+  // 动态生成评分标准HTML
+  function generateCriteriaHTML() {
+    const container = $('.marking-criteria');
+    if (!container) {
+      console.error('Marking criteria container not found');
+      return;
+    }
+
+    // 清空容器
+    container.innerHTML = '';
+
+    // 获取标准数量
+    const criterionIds = Object.keys(criterionData);
+    const lastCriterionId = criterionIds[criterionIds.length - 1];
+
+    // 动态生成每个评分标准
+    criterionIds.forEach(criterionId => {
+      const criterion = criterionData[criterionId];
+      const currentGrade = currentGrades[criterionId] || 4;
+
+      // ✅ 使用已保存的分数或默认值
+      const savedScore = window.savedScoresData?.scores?.[criterionId];
+      const initialScore = savedScore !== undefined ? savedScore : criterion.maxScore;
+
+      const isLastCriterion = criterionId === lastCriterionId;
+
+      const criterionHTML = `
+        <div class="criterion" data-criterion="${criterionId}">
+          <div class="criterion-header">
+            <div class="criterion-number">${criterionId}.</div>
+            <div class="criterion-title">${criterion.title}</div>
+          </div>
+
+          <div class="grade-selector">
+            <button class="grade-arrow left">‹</button>
+            <div class="grade-options">
+              ${generateGradeOptions(criterionId, currentGrade)}
+            </div>
+            <button class="grade-arrow right">›</button>
+          </div>
+
+          <div class="score-input-section">
+            <div class="score-input-container">
+              <label for="score-input-${criterionId}">Manual Score:</label>
+              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"/>
+              <span class="max-score">/ ${criterion.maxScore}</span>
+            </div>
+          </div>
+
+          <div class="grade-info">
+            <div class="grade-level">${gradeData[criterionId]?.[currentGrade]?.name || 'High Distinction'}</div>
+            <div class="grade-score">${initialScore}/${criterion.maxScore}</div>
+          </div>
+
+          <div class="grade-description">
+            <!-- 描述内容将由updateCriterionDisplay动态更新 -->
+          </div>
+
+          <div class="feedback-section">
+            <button class="show-feedback-btn">+ Add Feedback</button>
+            <div class="criterion-feedback ${window.savedScoresData?.feedback?.[criterionId] ? '' : 'hidden'}">
+              <div class="feedback-header">
+                <span>Criterion Feedback</span>
+                <button class="close-feedback">×</button>
+              </div>
+              <textarea placeholder="Please write your feedback on this criterion.">${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
+            </div>
+          </div>
+
+          ${isLastCriterion ? `
+            <!-- 只在最后一个标准添加操作按钮 -->
+            <div class="action-buttons">
+              <div class="total-score-display">/100</div>
+              ${!window.savedScoresData?.finalized ? `
+                <button class="btn btn-secondary" id="saveBtn">Save Draft</button>
+                <button class="btn btn-primary" id="submitBtn">Submit Marks</button>
+              ` : `
+                <div class="finalized-message">Marks have been submitted.</div>
+              `}
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      container.innerHTML += criterionHTML;
+    });
+
+    console.log('✅ Criteria HTML generated for', criterionIds.length, 'criteria');
+    console.log('✅ Action buttons added to last criterion:', lastCriterionId);
+  }
+
+  // 更新总分显示
+  function updateTotalScoreDisplay() {
+    const totalScoreElement = document.querySelector('.total-score-display');
+    if (totalScoreElement) {
+      const totalScore = calculateWeightedTotalScore();
+      totalScoreElement.textContent = totalScore === 0 ? '/100' : `${totalScore}/100`;
+    }
+  }
+  // 计算加权总分（基于100分制）
+  function calculateWeightedTotalScore() {
+    const scores = getCurrentScores();
+    let totalWeightedScore = 0;
+    let totalMaxScore = 0;
+
+    // 计算每个criterion的权重分数
+    Object.keys(scores).forEach(criterionId => {
+      const score = scores[criterionId];
+      const criterion = criterionData[criterionId];
+
+      if (criterion) {
+        const maxScore = criterion.maxScore;
+        // 计算该criterion在100分中的权重分数
+        const weightedScore = (score / maxScore) * (maxScore / 100) * 100;
+        totalWeightedScore += weightedScore;
+        totalMaxScore += maxScore;
+      }
+    });
+
+    // 如果总分不是100，需要按比例调整
+    const scalingFactor = totalMaxScore > 0 ? 100 / totalMaxScore : 0;
+    const finalScore = totalWeightedScore * scalingFactor;
+
+    return Math.round(finalScore * 10) / 10; // 保留一位小数
+  }
+
+  // 生成单个评分标准的等级选项HTML
+  function generateGradeOptions(criterionId, currentGrade) {
+    const grades = gradeData[criterionId];
+    if (!grades) {
+      console.warn('No grade data for criterion:', criterionId);
+      return '';
+    }
+
+    // 按等级从高到低排序（4, 3, 2, 1, 0）- 确保HTML显示顺序正确
+    const sortedGrades = Object.keys(grades).sort((a, b) => b - a);
+
+    return sortedGrades.map(grade => {
+      const gradeInfo = grades[grade];
+      const isActive = parseInt(grade) === parseInt(currentGrade);
+      return `<div class="grade-option ${isActive ? 'active' : ''}" data-grade="${grade}">${gradeInfo.name}</div>`;
+    }).join('');
+  }
+
+  // =======================================pdf viewer=======================================
+
   // Document navigation
   function setupDocumentNavigation() {
-    const thumbnails = $$('.thumbnail');
-    const pagination = $('.pagination');
-    const viewBtn = $('.view-btn');
-    const downloadBtn = $('.download-btn');
+      setupPdfViewer();
+      setupPdfControls();
+  }
 
-    // Thumbnail navigation
-    thumbnails.forEach(thumb => {
-      thumb.addEventListener('click', () => {
-        const page = parseInt(thumb.dataset.page);
-        if (page !== currentPage) {
-          currentPage = page;
-          updateDocumentView();
-        }
+  // 初始化PDF查看器
+  async function setupPdfViewer() {
+      try {
+          // 1. 获取assignment的文件信息
+          const filesResponse = await fetch(`${API_BASE_URL}/uploads/assignment/${ASSIGNMENT_ID}/files`);
+          if (!filesResponse.ok) {
+              throw new Error('Failed to fetch assignment files');
+          }
+
+          const filesData = await filesResponse.json();
+          if (!filesData.files || filesData.files.length === 0) {
+              throw new Error('No files found for this assignment');
+          }
+
+          // 取第一个文件（假设是PDF）
+          const fileInfo = filesData.files[0];
+          console.log('File info:', fileInfo);
+
+          // 2. 获取PDF文件
+          const pdfResponse = await fetch(`${API_BASE_URL}/uploads/${fileInfo.upload_id}/download`);
+          if (!pdfResponse.ok) {
+              throw new Error('Failed to download PDF file');
+          }
+
+          const pdfBlob = await pdfResponse.blob();
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+
+          // 3. 使用PDF.js加载PDF
+          const loadingTask = pdfjsLib.getDocument(pdfUrl);
+          pdfDoc = await loadingTask.promise;
+
+          totalPdfPages = pdfDoc.numPages;
+          currentPdfPage = 1;
+
+          // 4. 渲染所有页面到连续画布
+          await renderAllPages();
+
+          // 5. 更新页面信息
+          updatePagination();
+
+          // 6. 更新缩略图
+          updateThumbnails();
+
+          // 7. 设置滚动监听
+          setupScrollListener();
+
+      } catch (error) {
+          console.error('Error loading PDF:', error);
+          showPdfError('Failed to load PDF: ' + error.message);
+      }
+  }
+
+  // 渲染所有页面到连续画布
+  async function renderAllPages() {
+      try {
+          showPdfLoading(true);
+
+          const container = document.getElementById('pdf-viewer');
+          container.innerHTML = '';
+
+          pageCanvases = [];
+          pageHeights = [];
+          totalHeight = 0;
+
+          const canvasContainer = document.createElement('div');
+          canvasContainer.className = 'pdf-canvas-container';
+          canvasContainer.style.cssText = `
+              width: 100%;
+              position: relative;
+          `;
+
+          for (let i = 1; i <= totalPdfPages; i++) {
+              const page = await pdfDoc.getPage(i);
+              const viewport = page.getViewport({ scale: currentScale });
+
+              // 创建页面包装器
+              const pageWrapper = document.createElement('div');
+              pageWrapper.className = 'pdf-page-wrapper';
+              pageWrapper.style.cssText = `
+                  position: relative;
+                  margin: 0 auto 20px auto;
+                  max-width: 100%;
+              `;
+
+              const canvas = document.createElement('canvas');
+              canvas.className = 'pdf-page-canvas';
+              canvas.style.cssText = `
+                  display: block;
+                  width: 100%;
+                  height: auto;
+                  border: 1px solid #ddd;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+              `;
+
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              const renderContext = {
+                  canvasContext: canvas.getContext('2d'),
+                  viewport: viewport
+              };
+
+              await page.render(renderContext).promise;
+
+              pageWrapper.appendChild(canvas);
+              canvasContainer.appendChild(pageWrapper);
+
+              // 使用包装器的高度
+              const pageHeight = pageWrapper.offsetHeight;
+              pageCanvases.push(canvas);
+              pageHeights.push(pageHeight);
+              totalHeight += pageHeight;
+          }
+
+          container.appendChild(canvasContainer);
+          showPdfLoading(false);
+
+      } catch (error) {
+          console.error('Error rendering all pages:', error);
+          showPdfError('Failed to render pages');
+          showPdfLoading(false);
+      }
+  }
+
+  // 设置滚动监听
+  function setupScrollListener() {
+      const pdfViewer = document.getElementById('pdf-viewer');
+
+      pdfViewer.addEventListener('scroll', () => {
+          updateCurrentPageFromScroll();
       });
-    });
-
-    // View as text button
-    viewBtn?.addEventListener('click', () => {
-      alert('Switching to text view...');
-    });
-
-    // Download button
-    downloadBtn?.addEventListener('click', () => {
-      alert('Downloading document...');
-    });
   }
 
-  function updateDocumentView() {
-    const thumbnails = $$('.thumbnail');
-    const pagination = $('.pagination');
+  // 根据滚动位置更新当前页面
+  function updateCurrentPageFromScroll() {
+      const pdfViewer = document.getElementById('pdf-viewer');
+      const scrollTop = pdfViewer.scrollTop;
+      const viewerHeight = pdfViewer.clientHeight;
 
-    // Update active thumbnail
-    thumbnails.forEach(thumb => {
-      const page = parseInt(thumb.dataset.page);
-      thumb.classList.toggle('active', page === currentPage);
-    });
+      let accumulatedHeight = 0;
+      let newCurrentPage = 1;
 
-    // Update pagination
-    if (pagination) {
-      pagination.textContent = `${currentPage} of 2`;
-    }
+      // 获取所有页面包装器
+      const pageWrappers = document.querySelectorAll('.pdf-page-wrapper');
 
-    // Update document content (simulate different pages)
-    const documentTitle = $('.document-title');
-    const documentText = $('.document-text');
-    
-    if (currentPage === 1) {
-      documentTitle.textContent = 'The Case for Friction: Why Good Design Isn\'t Always Seamless';
-      documentText.innerHTML = `
-        <p>In the world of design, there's an almost universal push toward seamlessness. We want our apps to be intuitive, our websites to be frictionless, and our user experiences to be as smooth as possible. But what if this relentless pursuit of seamlessness is actually counterproductive?</p>
-        
-        <p>Friction—those moments of pause, confirmation, or even difficulty in an interface—is often seen as the enemy of good design. Yet, when applied thoughtfully, friction can be a powerful tool for creating better, more ethical, and more meaningful user experiences.</p>
-        
-        <p>Consider the confirmation screen before deleting important data. While it might seem like an unnecessary step, this moment of friction serves a crucial purpose: it prevents costly mistakes and gives users a chance to reconsider their actions. This is friction in service of user protection.</p>
-        
-        <p>In educational contexts, friction can enhance learning. When students must work through challenging problems or navigate complex interfaces, they develop deeper understanding and problem-solving skills. The struggle itself becomes part of the learning process.</p>
-        
-        <p>Ethical design often requires friction. Consent forms, privacy settings, and data sharing agreements need to be clear and deliberate, not hidden or rushed. This friction ensures users make informed decisions about their data and privacy.</p>
-        
-        <p>Social interactions also benefit from intentional friction. The slight delay in messaging apps, the need to confirm friend requests, or the process of joining a group—these moments of friction create space for reflection and intentional connection.</p>
-        
-        <p>Even in physical design, friction serves important purposes. The gates at train stations, while seemingly inconvenient, help manage crowd flow and prevent accidents. The resistance in a good door handle provides tactile feedback about the door's state.</p>
-        
-        <p>The key is not to eliminate friction entirely, but to use it strategically. Good friction serves a purpose: it protects, educates, creates space for reflection, or enhances the overall experience. Bad friction is simply an obstacle with no clear benefit.</p>
-        
-        <p>As designers, we should ask ourselves: What is this friction protecting? What is it teaching? What is it enabling? When we can answer these questions clearly, friction becomes not just acceptable, but essential to good design.</p>
-      `;
-    } else {
-      documentTitle.textContent = 'Design Principles and User Experience';
-      documentText.innerHTML = `
-        <p>When designing user interfaces, it's crucial to balance usability with intentional friction. This balance creates experiences that are both efficient and thoughtful.</p>
-        
-        <p>User research consistently shows that while users appreciate smooth interactions, they also value moments that make them pause and think. These moments can prevent errors, encourage learning, and create more meaningful interactions.</p>
-        
-        <p>The challenge for designers is to identify where friction adds value and where it simply creates frustration. This requires deep understanding of user goals, context, and the broader impact of design decisions.</p>
-      `;
-    }
+      for (let i = 0; i < pageWrappers.length; i++) {
+          const wrapper = pageWrappers[i];
+          const wrapperHeight = wrapper.offsetHeight;
+          accumulatedHeight += wrapperHeight;
+
+          // 如果滚动位置超过当前页面累计高度的一半，则认为进入下一页
+          if (scrollTop + (viewerHeight / 2) < accumulatedHeight) {
+              newCurrentPage = i + 1;
+              break;
+          }
+      }
+
+      // 更新当前页面（如果发生变化）
+      if (newCurrentPage !== currentPdfPage) {
+          currentPdfPage = newCurrentPage;
+          updatePagination();
+          updateActiveThumbnail();
+      }
   }
+
+  // 滚动到指定页面
+  function scrollToPage(pageNum) {
+      const pdfViewer = document.getElementById('pdf-viewer');
+
+      if (pageNum < 1 || pageNum > totalPdfPages) return;
+
+      const pageWrappers = document.querySelectorAll('.pdf-page-wrapper');
+      let scrollPosition = 0;
+
+      for (let i = 0; i < pageNum - 1; i++) {
+          if (pageWrappers[i]) {
+              scrollPosition += pageWrappers[i].offsetHeight;
+          }
+      }
+
+      pdfViewer.scrollTo({
+          top: scrollPosition,
+          behavior: 'smooth'
+      });
+  }
+
+  // 渲染PDF页面
+  async function renderPage(pageNum) {
+      try {
+          showPdfLoading(true);
+
+          const page = await pdfDoc.getPage(pageNum);
+          const canvas = document.getElementById('pdf-canvas');
+          const ctx = canvas.getContext('2d');
+
+          const viewport = page.getViewport({ scale: currentScale });
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          const renderContext = {
+              canvasContext: ctx,
+              viewport: viewport
+          };
+
+          await page.render(renderContext).promise;
+          showPdfLoading(false);
+
+      } catch (error) {
+          console.error('Error rendering page:', error);
+          showPdfError('Failed to render page');
+      }
+  }
+
+  // 设置PDF控制功能
+  function setupPdfControls() {
+      // 翻页按钮
+      document.getElementById('prev-page').addEventListener('click', prevPage);
+      document.getElementById('next-page').addEventListener('click', nextPage);
+
+      // 页码输入
+      document.getElementById('page-number').addEventListener('change', (e) => {
+          const pageNum = parseInt(e.target.value);
+          if (pageNum >= 1 && pageNum <= totalPdfPages) {
+              goToPage(pageNum);
+          }
+      });
+
+      // 缩放按钮
+      document.getElementById('zoom-in').addEventListener('click', zoomIn);
+      document.getElementById('zoom-out').addEventListener('click', zoomOut);
+
+      // 下载按钮
+      document.querySelector('.download-btn').addEventListener('click', downloadPdf);
+
+      // 键盘导航
+      document.addEventListener('keydown', handleKeyboardNavigation);
+  }
+
+  // 翻页功能
+  async function prevPage() {
+      if (currentPdfPage > 1) {
+          scrollToPage(currentPdfPage - 1);
+      }
+  }
+
+  async function nextPage() {
+      if (currentPdfPage < totalPdfPages) {
+          scrollToPage(currentPdfPage + 1);
+      }
+  }
+
+  async function goToPage(pageNum) {
+      scrollToPage(pageNum);
+  }
+
+  // 修改缩放功能 - 重新渲染所有页面
+  async function updateZoom() {
+      document.getElementById('zoom-level').textContent = Math.round(currentScale * 100) + '%';
+      await renderAllPages();
+
+      // 滚动回当前页面
+      setTimeout(() => {
+          scrollToPage(currentPdfPage);
+      }, 100);
+  }
+
+  // 缩放功能
+  async function zoomIn() {
+      if (currentScale < MAX_SCALE) {
+          currentScale += SCALE_STEP;
+          await updateZoom();
+      }
+  }
+
+  async function zoomOut() {
+      if (currentScale > MIN_SCALE) {
+          currentScale -= SCALE_STEP;
+          await updateZoom();
+      }
+  }
+
+  // 下载功能
+  async function downloadPdf() {
+      try {
+          // 获取文件信息
+          const filesResponse = await fetch(`${API_BASE_URL}/uploads/assignment/${ASSIGNMENT_ID}/files`);
+          if (!filesResponse.ok) {
+              throw new Error('Failed to fetch file info');
+          }
+
+          const filesData = await filesResponse.json();
+          if (!filesData.files || filesData.files.length === 0) {
+              throw new Error('No files found');
+          }
+
+          const fileInfo = filesData.files[0];
+          const downloadUrl = `${API_BASE_URL}/uploads/${fileInfo.upload_id}/download`;
+
+          // 创建临时链接进行下载
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = fileInfo.file_name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+      } catch (error) {
+          console.error('Error downloading PDF:', error);
+          alert('Failed to download PDF: ' + error.message);
+      }
+  }
+
+  // 更新页面信息
+  function updatePagination() {
+      document.getElementById('current-page').textContent = currentPdfPage;
+      document.getElementById('total-pages').textContent = totalPdfPages;
+      document.getElementById('page-number').value = currentPdfPage;
+
+      // 更新按钮状态
+      document.getElementById('prev-page').disabled = currentPdfPage <= 1;
+      document.getElementById('next-page').disabled = currentPdfPage >= totalPdfPages;
+  }
+
+  // 更新缩略图
+  function updateThumbnails() {
+      const thumbnailsContainer = document.querySelector('.document-thumbnails');
+      thumbnailsContainer.innerHTML = '';
+
+      // 如果总页数超过10页，只显示当前页附近的10页
+      const maxVisiblePages = 10;
+      let startPage = 1;
+      let endPage = Math.min(totalPdfPages, maxVisiblePages);
+
+      if (totalPdfPages > maxVisiblePages) {
+          // 计算显示范围，确保当前页在中间
+          const halfVisible = Math.floor(maxVisiblePages / 2);
+          startPage = Math.max(1, currentPdfPage - halfVisible);
+          endPage = Math.min(totalPdfPages, startPage + maxVisiblePages - 1);
+          
+          // 如果到达末尾，调整起始页
+          if (endPage === totalPdfPages) {
+              startPage = Math.max(1, endPage - maxVisiblePages + 1);
+          }
+      }
+
+      // 添加上翻页按钮（如果不在第一页）
+      if (startPage > 1) {
+          const prevBtn = document.createElement('div');
+          prevBtn.className = 'thumbnail-nav-btn';
+          prevBtn.innerHTML = '↑';
+          prevBtn.title = `Go to page ${Math.max(1, startPage - maxVisiblePages)}`;
+          prevBtn.addEventListener('click', () => {
+              const newStartPage = Math.max(1, startPage - maxVisiblePages);
+              goToPage(newStartPage);
+          });
+          thumbnailsContainer.appendChild(prevBtn);
+      }
+
+      // 添加页面缩略图
+      for (let i = startPage; i <= endPage; i++) {
+          const thumbnail = document.createElement('div');
+          thumbnail.className = `thumbnail ${i === currentPdfPage ? 'active' : ''}`;
+          thumbnail.dataset.page = i;
+          thumbnail.textContent = i;
+          thumbnail.addEventListener('click', () => goToPage(i));
+          thumbnailsContainer.appendChild(thumbnail);
+      }
+
+      // 添加下翻页按钮（如果不在最后一页）
+      if (endPage < totalPdfPages) {
+          const nextBtn = document.createElement('div');
+          nextBtn.className = 'thumbnail-nav-btn';
+          nextBtn.innerHTML = '↓';
+          nextBtn.title = `Go to page ${Math.min(totalPdfPages, endPage + 1)}`;
+          nextBtn.addEventListener('click', () => {
+              const newStartPage = Math.min(totalPdfPages - maxVisiblePages + 1, endPage + 1);
+              goToPage(newStartPage);
+          });
+          thumbnailsContainer.appendChild(nextBtn);
+      }
+  }
+
+  // 更新活动缩略图
+  function updateActiveThumbnail() {
+      const thumbnails = document.querySelectorAll('.thumbnail');
+      thumbnails.forEach(thumb => {
+          const pageNum = parseInt(thumb.dataset.page);
+          thumb.classList.toggle('active', pageNum === currentPdfPage);
+      });
+  }
+
+  // 键盘导航
+  function handleKeyboardNavigation(e) {
+      // 确保焦点不在输入框中
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      switch(e.key) {
+          case 'ArrowLeft':
+          case 'PageUp':
+              e.preventDefault();
+              prevPage();
+              break;
+          case 'ArrowRight':
+          case 'PageDown':
+              e.preventDefault();
+              nextPage();
+              break;
+          case '+':
+          case '=':
+              e.preventDefault();
+              zoomIn();
+              break;
+          case '-':
+              e.preventDefault();
+              zoomOut();
+              break;
+          case 'Home':
+              e.preventDefault();
+              goToPage(1);
+              break;
+          case 'End':
+              e.preventDefault();
+              goToPage(totalPdfPages);
+              break;
+      }
+  }
+  // 显示/隐藏加载状态
+  function showPdfLoading(show) {
+      const loadingEl = document.getElementById('pdf-loading');
+      const pdfViewer = document.getElementById('pdf-viewer');
+
+      if (show) {
+          loadingEl.style.display = 'block';
+          pdfViewer.style.display = 'none';
+      } else {
+          loadingEl.style.display = 'none';
+          pdfViewer.style.display = 'block';
+      }
+  }
+
+  // 显示错误信息
+  function showPdfError(message) {
+      const errorEl = document.getElementById('pdf-error');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      showPdfLoading(false);
+  }
+
+
+  //=====================================pdf end=====================================
 
   // Grade selection
   function setupGradeSelection() {
@@ -540,7 +1156,7 @@
       // Arrow navigation (adjusted for high-to-low order)
       leftArrow?.addEventListener('click', () => {
         const currentGrade = currentGrades[criterionId];
-        const newGrade = Math.min(3, currentGrade + 1); // Move to higher grade
+        const newGrade = Math.min(4, currentGrade + 1); // Move to higher grade
         selectGrade(criterionId, newGrade);
       });
 
@@ -555,25 +1171,44 @@
   function selectGrade(criterionId, grade) {
     currentGrades[criterionId] = grade;
     updateCriterionDisplay(criterionId);
+    updateTotalScoreDisplay();
   }
 
+  // 更新单个评分标准的显示
   function updateCriterionDisplay(criterionId) {
     const criterion = $(`.criterion[data-criterion="${criterionId}"]`);
     if (!criterion) return;
 
     const grade = currentGrades[criterionId];
-    const gradeInfo = gradeData[grade];
+    const gradeInfo = gradeData[criterionId][grade];
+    // console.log('gradeData:', gradeData);
+    // console.log('criterionId:', criterionId);
+    // console.log('grade:', grade);
+    // console.log('gradeInfo:', gradeInfo);
+
+    // ✅ 添加安全检查
     const criterionInfo = criterionData[criterionId];
+    if (!criterionInfo) {
+      console.warn(`Criterion data not found for ID: ${criterionId}`);
+      return;
+    }
+
     const description = criterionInfo.descriptions[grade];
 
-    // Update grade options
+    // ✅ 添加对description的安全检查
+    if (!description) {
+      console.warn(`Description not found for criterion ${criterionId}, grade ${grade}`);
+      return;
+    }
+
+    // 更新grade options
     const gradeOptions = criterion.querySelectorAll('.grade-option');
     gradeOptions.forEach(option => {
       const optionGrade = parseInt(option.dataset.grade);
       option.classList.toggle('active', optionGrade === grade);
     });
 
-    // Update grade info
+    // 更新grade info
     const gradeLevel = criterion.querySelector('.grade-level');
     const gradeScore = criterion.querySelector('.grade-score');
     const scoreInput = criterion.querySelector('.score-input');
@@ -581,11 +1216,11 @@
     if (gradeLevel) gradeLevel.textContent = gradeInfo.name;
     if (gradeScore && scoreInput) {
       const maxScore = criterionInfo.maxScore;
-      const currentScore = parseInt(scoreInput.value) || 0;
-      gradeScore.textContent = `${currentScore}/${maxScore}`;
+      const currentScore = parseFloat(scoreInput.value) || 0;
+      gradeScore.textContent = `${currentScore.toFixed(1)}/${maxScore}`;
     }
 
-    // Update description
+    // 更新description
     const gradeDescription = criterion.querySelector('.grade-description');
     if (gradeDescription && description) {
       gradeDescription.innerHTML = `
@@ -597,36 +1232,89 @@
     }
   }
 
+  // 更新所有评分标准的显示
   function updateAllCriterionDisplays() {
     Object.keys(currentGrades).forEach(criterionId => {
       updateCriterionDisplay(parseInt(criterionId));
     });
   }
 
-  // Score input functionality
+  // 当手动输入分数时，自动选择对应的等级
   function setupScoreInputs() {
     const scoreInputs = $$('.score-input');
     
     scoreInputs.forEach(input => {
       input.addEventListener('input', () => {
         const criterionId = parseInt(input.id.split('-')[2]);
-        const score = parseInt(input.value) || 0;
-        const maxScore = parseInt(input.max);
-        
-        // Calculate grade based on score
-        const grade = calculateGradeFromScore(score, maxScore);
+        const maxScore = parseFloat(input.max);
+        let score = parseFloat(input.value) || 0;
+
+        // 添加分数验证
+        let scoreAdjusted = false;
+        if (score > maxScore) {
+          score = maxScore;
+          input.value = maxScore;
+          scoreAdjusted = true;
+
+          // 显示提示信息
+          showNotification(`Score cannot exceed maximum ${maxScore} points`, 'warning');
+        }
+
+        // 传递 criterionId 参数
+        const grade = calculateGradeFromScore(score, maxScore, criterionId);
         selectGrade(criterionId, grade);
+        updateTotalScoreDisplay();
+
+        // 如果分数被调整，强制更新当前criterion的显示
+        if (scoreAdjusted) {
+          updateCriterionDisplay(criterionId);
+        }
+      });
+
+      // 添加 blur 事件进行最终验证
+      input.addEventListener('blur', () => {
+        const criterionId = parseInt(input.id.split('-')[2]);
+        const maxScore = parseFloat(input.max);
+        let score = parseFloat(input.value) || 0;
+
+        if (score > maxScore) {
+          score = maxScore;
+          input.value = maxScore;
+          showNotification(`Score adjusted to maximum ${maxScore} points`, 'info');
+          updateCriterionDisplay(criterionId); // 强制更新显示
+        }
       });
     });
   }
 
-  function calculateGradeFromScore(score, maxScore) {
-    const percentage = (score / maxScore) * 100;
-    
-    if (percentage >= 80) return 3; // High Distinction
-    if (percentage >= 70) return 2; // Distinction
-    if (percentage >= 60) return 1; // Credit
-    return 0; // Pass
+  // 根据分数计算对应的等级（假设5个等级）
+  function calculateGradeFromScore(score, maxScore, criterionId) {
+    const grades = gradeData[criterionId];
+    if (!grades) {
+      console.warn('Grade data not found for criterion:', criterionId);
+      return 4; // 默认返回最高等级
+    }
+
+    // 按等级从高到低排序
+    const sortedGrades = Object.keys(grades)
+      .map(grade => parseInt(grade))
+      .sort((a, b) => b - a);
+
+    // 遍历等级，找到分数对应的等级
+    for (const grade of sortedGrades) {
+      const gradeInfo = grades[grade];
+      if (gradeInfo && gradeInfo.min_score !== undefined && gradeInfo.max_score !== undefined) {
+        if (score >= gradeInfo.min_score && score <= gradeInfo.max_score) {
+          return grade;
+        }
+      }
+    }
+
+    // 如果分数超出范围，返回最接近的等级
+    if (score < (grades[sortedGrades[sortedGrades.length - 1]]?.min_score || 0)) {
+      return sortedGrades[sortedGrades.length - 1]; // 返回最低等级
+    }
+    return sortedGrades[0]; // 返回最高等级
   }
 
 
@@ -635,8 +1323,20 @@
     const showFeedbackBtns = $$('.show-feedback-btn');
     const closeButtons = $$('.close-feedback');
     
-    // Show feedback buttons
+    // Show feedback buttons - 如果有保存的反馈，自动展开
     showFeedbackBtns.forEach(button => {
+      const criterion = button.closest('.criterion');
+      const criterionId = parseInt(criterion.dataset.criterion);
+
+      // 如果有保存的反馈，自动展开
+      if (window.savedScoresData?.feedback?.[criterionId]) {
+        const feedback = button.nextElementSibling;
+        if (feedback) {
+          feedback.classList.remove('hidden');
+          button.style.display = 'none';
+        }
+      }
+
       button.addEventListener('click', () => {
         const feedback = button.nextElementSibling;
         if (feedback) {
@@ -673,10 +1373,17 @@
     const saveBtn = $('#saveBtn');
     const submitBtn = $('#submitBtn');
 
+    // 如果已提交，直接返回，不设置事件监听
+    if (window.savedScoresData?.finalized) {
+      return;
+    }
+
     saveBtn?.addEventListener('click', async () => {
       try {
         await saveMarks();
         showNotification('Draft saved successfully', 'success');
+        // Save后锁定所有输入框
+        lockAllInputs();
       } catch (error) {
         console.error('Error saving marks:', error);
         showNotification('Failed to save draft', 'error');
@@ -688,7 +1395,8 @@
         try {
           await submitMarks();
           showNotification('Marks submitted successfully', 'success');
-          // Optionally redirect or disable editing
+          // 提交后禁用按钮
+          disableActionButtons();
         } catch (error) {
           console.error('Error submitting marks:', error);
           showNotification('Failed to submit marks', 'error');
@@ -697,8 +1405,94 @@
     });
   }
 
-  // Save marks to backend
+  // 禁用操作按钮
+  function disableActionButtons() {
+    const saveBtn = $('#saveBtn');
+    const submitBtn = $('#submitBtn');
+    const actionButtons = $('.action-buttons');
+
+    if (saveBtn) saveBtn.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
+
+    // 或者替换为已提交的消息
+    if (actionButtons) {
+      actionButtons.innerHTML = `
+        <div class="total-score-display">/100</div>
+        <div class="finalized-message">Marks have been submitted.</div>
+      `;
+      updateTotalScoreDisplay();
+    }
+  }
+
+  // 锁定所有输入框（save后调用）
+  function lockAllInputs() {
+    // 锁定所有分数输入框
+    const scoreInputs = $$('.score-input');
+    scoreInputs.forEach(input => {
+      input.disabled = true;
+      input.style.backgroundColor = '#f5f5f5';
+      input.style.color = '#999';
+    });
+
+    // 锁定所有反馈文本框
+    const feedbackTextareas = $$('.criterion-feedback textarea');
+    feedbackTextareas.forEach(textarea => {
+      textarea.disabled = true;
+      textarea.style.backgroundColor = '#f5f5f5';
+      textarea.style.color = '#999';
+    });
+
+    // 锁定所有等级选择按钮
+    const gradeButtons = $$('.grade-btn');
+    gradeButtons.forEach(button => {
+      button.disabled = true;
+      button.style.backgroundColor = '#f5f5f5';
+      button.style.color = '#999';
+      button.style.cursor = 'not-allowed';
+    });
+
+    // 添加锁定状态的视觉指示
+    const markingCriteria = $('.marking-criteria');
+    if (markingCriteria) {
+      markingCriteria.classList.add('locked');
+    }
+  }
+
+
+  //===========================存分数到后端===========================
+
+  // 获取当前用户信息
+  function getCurrentUser() {
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+
+        // 先log检查一下用户数据的结构
+        console.log("User Info:", user);
+        console.log("Available fields:", Object.keys(user));
+
+        // 根据log结果调整字段名
+        // 常见的字段名可能是：id, userId, user_id, role, userRole, etc.
+        return {
+          userId: user.id,
+          role: user.role
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to load user info:", err);
+      return null;
+    }
+  }
+
+  // Save marks to backend - 根据用户角色选择不同的接口
   async function saveMarks() {
+    if (window.savedScoresData?.finalized) {
+      showNotification('此作业的评分已提交，无法再次提交', 'error');
+      return;
+    }
+    const currentUser = getCurrentUser();
     const marksData = {
       assignmentId: ASSIGNMENT_ID,
       criteria: currentGrades,
@@ -707,12 +1501,36 @@
       timestamp: new Date().toISOString()
     };
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${ASSIGNMENT_ID}/marks`, {
+    let url;
+    let requestBody;
+
+    if (currentUser.role === 'COORDINATOR') {
+      // COORDINATOR 使用 baseline 接口
+      url = `${API_BASE_URL}/uploads/scoring/baseline/batch`;
+      requestBody = {
+        assignment_id: ASSIGNMENT_ID,
+        scores: transformScoresForBackend(marksData.scores, marksData.feedback)
+      };
+    } else if (currentUser.role === 'MARKER') {
+      // MARKER 使用 marker 接口
+      url = `${API_BASE_URL}/uploads/scoring/marker/batch`;
+      requestBody = {
+        assignment_id: ASSIGNMENT_ID,
+        marker_id: currentUser.userId, // 添加 marker_id
+        scores: transformScoresForBackend(marksData.scores, marksData.feedback)
+      };
+    } else {
+      throw new Error('Unknown user role');
+    }
+
+    console.log('Saving marks with data:', requestBody);
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(marksData)
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -722,30 +1540,75 @@
     return response.json();
   }
 
-  // Submit marks to backend
+  // Submit marks to backend - 先保存再确认
   async function submitMarks() {
-    const marksData = {
-      assignmentId: ASSIGNMENT_ID,
-      criteria: currentGrades,
-      scores: getCurrentScores(),
-      feedback: getCurrentFeedback(),
-      status: 'submitted',
-      timestamp: new Date().toISOString()
-    };
+    if (window.savedScoresData?.finalized) {
+      showNotification('此作业的评分已提交，无法再次提交', 'error');
+      return;
+    }
+    const currentUser = getCurrentUser();
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${ASSIGNMENT_ID}/marks/submit`, {
+    // 第一步：先批量保存分数
+    const saveResult = await saveMarks();
+
+    // 第二步：确认分数 - 现在使用批量确认
+    let submitUrl;
+    let submitBody;
+
+    // 获取所有需要确认的criterion_id（从originalData中获取）
+    const criterionIds = originalData.criteria.map(criterion => criterion.criterion_id);
+
+    if (currentUser.role === 'COORDINATOR') {
+      submitUrl = `${API_BASE_URL}/uploads/scoring/baseline/submit`;
+      submitBody = {
+        assignment_id: ASSIGNMENT_ID,
+        criterion_ids: criterionIds
+      };
+    } else if (currentUser.role === 'MARKER') {
+      submitUrl = `${API_BASE_URL}/uploads/scoring/marker/submit`;
+      submitBody = {
+        assignment_id: ASSIGNMENT_ID,
+        marker_id: currentUser.userId,
+        criterion_ids: criterionIds
+      };
+    } else {
+      throw new Error('Unknown user role');
+    }
+
+    console.log('Submitting marks with data:', submitBody);
+
+    const submitResponse = await fetch(submitUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(marksData)
+      body: JSON.stringify(submitBody)
     });
 
-    if (!response.ok) {
+    if (!submitResponse.ok) {
       throw new Error('Failed to submit marks');
     }
 
-    return response.json();
+    return submitResponse.json();
+  }
+
+  // 辅助函数：将前端分数格式转换为后端需要的格式
+  function transformScoresForBackend(scores, feedback) {
+    if (!originalData || !originalData.criteria) {
+      throw new Error('Rubric data not loaded yet');
+    }
+
+    return originalData.criteria.map(criterion => {
+      // 使用 criterion.seq_no 作为前端存储的键（因为前端可能是按顺序存储的）
+      // 或者如果你在前端使用了其他键，需要相应调整
+      const frontendKey = criterion.seq_no.toString(); // 或者 criterion.criterion_id.toString()
+
+      return {
+        criterion_id: criterion.criterion_id, // 使用后端返回的真实ID
+        score: scores[frontendKey] || 0,
+        comment: feedback[frontendKey] || null
+      };
+    });
   }
 
   // Get current scores from inputs
@@ -753,7 +1616,7 @@
     const scores = {};
     const scoreInputs = $$('.score-input');
     scoreInputs.forEach(input => {
-      const criterionId = input.dataset.criterionId;
+      const criterionId = parseInt(input.id.split('-')[2]);
       scores[criterionId] = parseFloat(input.value) || 0;
     });
     return scores;
@@ -764,13 +1627,16 @@
     const feedback = {};
     const feedbackTextareas = $$('.criterion-feedback textarea');
     feedbackTextareas.forEach(textarea => {
-      const criterionId = textarea.dataset.criterionId;
-      if (criterionId) {
+      const criterion = textarea.closest('.criterion');
+      if (criterion) {
+        const criterionId = parseInt(criterion.dataset.criterion);
         feedback[criterionId] = textarea.value;
       }
     });
     return feedback;
   }
+
+  // ==================结束存分数到后端=================
 
   // Show notification
   function showNotification(message, type = 'info') {
@@ -801,12 +1667,129 @@
   // Back button functionality
   function setupBackButton() {
     const backBtn = $('.back-btn');
-    backBtn?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to go back? Your progress will be saved.')) {
-        // Navigate back or save and navigate
+    backBtn?.addEventListener('click', showBackConfirmation);
+  }
+
+  /* ===== Back Confirmation Dialog ===== */
+  function showBackConfirmation(){
+    // 创建模态背景
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    `;
+
+    // 创建对话框
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: #2d3748;
+      border-radius: 12px;
+      padding: 0;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      overflow: hidden;
+    `;
+
+    // 创建标题栏
+    const titleBar = document.createElement('div');
+    titleBar.style.cssText = `
+      background: #1a202c;
+      padding: 16px 20px;
+      border-bottom: 1px solid #4a5568;
+    `;
+    titleBar.innerHTML = '<span style="color: white; font-weight: bold; font-size: 16px;">127.0.0.1:5501 says</span>';
+
+    // 创建内容区域
+    const content = document.createElement('div');
+    content.style.cssText = `
+      padding: 20px;
+      color: white;
+      font-size: 14px;
+      line-height: 1.5;
+    `;
+    content.innerHTML = 'Are you sure you want to go back?<br>Your progress will be saved.';
+
+    // 创建按钮区域
+    const buttonArea = document.createElement('div');
+    buttonArea.style.cssText = `
+      padding: 16px 20px;
+      background: #1a202c;
+      border-top: 1px solid #4a5568;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    `;
+
+    // 创建Cancel按钮
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+      background: #4a5568;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    `;
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+
+    // 创建OK按钮
+    const okBtn = document.createElement('button');
+    okBtn.textContent = 'OK';
+    okBtn.style.cssText = `
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    `;
+    okBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
         window.history.back();
+    });
+
+    // 组装对话框
+    buttonArea.appendChild(cancelBtn);
+    buttonArea.appendChild(okBtn);
+    dialog.appendChild(titleBar);
+    dialog.appendChild(content);
+    dialog.appendChild(buttonArea);
+    modal.appendChild(dialog);
+
+    // 添加到页面
+    document.body.appendChild(modal);
+
+    // 点击背景关闭
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
       }
     });
+
+    // ESC键关闭
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        document.body.removeChild(modal);
+        document.removeEventListener('keydown', handleEsc);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
   }
 
   // Initialize everything when DOM is loaded
@@ -822,7 +1805,6 @@
     getCurrentPage: () => currentPage,
     setPage: (page) => {
       currentPage = page;
-      updateDocumentView();
     }
   };
 
