@@ -1,0 +1,49 @@
+# Development files
+node_modules/
+src/
+package*.json
+
+# Build artifacts
+dist/
+build/
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Environment files
+.env*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Logs
+*.log
+
+# Testing
+coverage/
+test/
+tests/
+__tests__/
+
+# Temporary files
+tmp/
+temp/

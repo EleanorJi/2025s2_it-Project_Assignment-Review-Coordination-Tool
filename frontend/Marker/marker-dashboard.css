@@ -1,0 +1,98 @@
+:root{
+  --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#667085;
+  --primary:#0F172A; --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+
+/* Top bar */
+.topbar{
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;background:#fff;border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
+.brand-title{font-weight:800}
+.account{font-weight:600}
+.caret{color:#98A2B3;margin-left:6px}
+
+/* Layout */
+.app{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
+.sidebar{
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;
+  height:calc(100vh - 96px);
+}
+.nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.nav-item{
+  width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
+  background:#fff;color:var(--text);font-weight:600;cursor:pointer;
+}
+.nav-item.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.main{padding-right:16px}
+.panel{
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px 18px 22px;
+}
+.panel.inner{margin-top:14px}
+
+/* Typography & cards */
+h1{font-size:32px;margin:0 0 14px 0}
+.group-title{font-weight:800;margin:0 0 10px 6px}
+.card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px}
+.muted{color:var(--muted)}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+.kpi .kpi-num{font-size:28px;font-weight:900;margin-top:4px}
+
+/* Grid: Tasks + Profile */
+.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.row{display:flex;align-items:center;justify-content:space-between}
+.row-actions{display:flex;align-items:center;gap:14px}
+
+.task-title{font-weight:800}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;margin:2px 0 10px 4px}
+.tab{
+  padding:6px 12px;border-radius:999px;border:1px solid var(--border);
+  background:#fff;color:var(--text);cursor:pointer;font-weight:600;
+}
+.tab.active{background:#0F172A;color:#fff;border-color:#0F172A}
+
+/* Buttons / links */
+.btn{
+  height:34px;padding:0 14px;border-radius:10px;border:1px solid var(--border);
+  background:#fff;color:var(--text);font-weight:600;cursor:pointer;
+}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.sm{height:32px;padding:0 12px}
+.link{color:#2563EB;font-weight:600;text-decoration:none}
+.link:hover{text-decoration:underline}
+.right-link{position:absolute;right:14px;top:14px}
+
+/* Controls */
+.profile-name{font-weight:800}
+.control-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;border:1px solid var(--border);border-radius:12px;margin-top:10px;
+}
+.control{
+  border:1px solid var(--border);background:#fff;border-radius:999px;
+  height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;cursor:pointer;
+}
+.control.active{background:#0F172A;color:#fff;border-color:#0F172A}
+.chev{opacity:.65}
+
+/* Utils */
+.hidden{display:none}
+
+/* Responsive */
+@media (max-width: 1100px){
+  .app{grid-template-columns:1fr}
+  .sidebar{height:auto}
+  .kpi-row{grid-template-columns:1fr}
+  .grid-2-1{grid-template-columns:1fr}
+}
