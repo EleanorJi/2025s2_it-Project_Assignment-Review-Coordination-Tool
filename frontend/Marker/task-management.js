@@ -299,7 +299,7 @@
     const chevron = document.createElement('div');
     chevron.className = 'tm-assignment-chevron';
     chevron.innerHTML = '▾';
-    
+
     // 让整个header可点击
     header.addEventListener('click', () => toggleAssignmentSection(section));
 
@@ -320,31 +320,92 @@
     dueDateDiv.style.fontSize = '12px';
     dueDateDiv.textContent = dueDateText;
 
-    // 检查是否已经mark过这个assignment
-    // TODO: 这里需要调用API检查marker是否已经完成marking
-    const hasMarked = false; // 暂时设为false，后续需要实现检查逻辑
-
-    if (hasMarked) {
-      // 如果已经mark过，显示Check Feedback按钮
-      const feedbackBtn = createButton('Check Feedback', () => {
-        location.href = `/dashboard/marker/feedback?assignment_id=${assignment.assignment_id}`;
-      });
-      feedbackBtn.className = 'btn primary';
-      actions.appendChild(feedbackBtn);
-    } else {
-      // 如果还没有mark过，显示Mark Assignment按钮
-      const markBtn = createButton('Mark Assignment', () => {
-        location.href = `/dashboard/marker/mark?project=${task.project_id}&assignment=${assignment.id}`;
-      });
-      markBtn.className = 'btn primary';
-      actions.appendChild(markBtn);
-    }
+    // 创建按钮容器（先显示加载状态）
+    const buttonContainer = document.createElement('div');
+    buttonContainer.innerHTML = '<span class="tm-muted">Checking status...</span>';
+    actions.appendChild(buttonContainer);
     actions.appendChild(dueDateDiv);
 
     section.appendChild(header);
     section.appendChild(actions);
 
+    // 异步检查marking状态
+    checkMarkingStatus(assignment.assignment_id, buttonContainer, assignment, task.project_id);
+
     return section;
+  }
+  // 检查marker是否已经完成marking
+  async function checkMarkingStatus(assignmentId, buttonContainer, assignment, projectId) {
+    try {
+      // 获取当前用户ID
+      const rawUser = localStorage.getItem("user");
+      if (!rawUser) {
+        throw new Error('User not found in localStorage');
+      }
+
+      const user = JSON.parse(rawUser);
+      console.log('👤 当前用户:', user);
+      const markerId = user.id;
+
+      if (!markerId) {
+        throw new Error('User ID not found');
+      }
+
+      console.log(`🔍 检查marking状态: assignment_id=${assignmentId}, marker_id=${markerId}`);
+
+      const response = await fetch(`/api/uploads/scoring/marker/${assignmentId}/${markerId}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`📊 Marking状态数据:`, data);
+
+      // 检查是否有提交的记录且finalized=true
+      const hasMarked = data.marker_scores && data.marker_scores.length > 0 &&
+                       data.marker_scores.some(score => score.finalized === true);
+
+      console.log(`✅ Marking状态: ${hasMarked ? '已提交' : '未提交'}`);
+
+      // 更新按钮
+      updateAssignmentButton(buttonContainer, hasMarked, assignment, projectId);
+
+    } catch (error) {
+      console.error('❌ 检查marking状态失败:', error);
+
+      // 出错时显示默认的Mark Assignment按钮
+      updateAssignmentButton(buttonContainer, false, assignment, projectId);
+
+      // 可选：显示错误提示
+      const errorText = buttonContainer.querySelector('.tm-muted');
+      if (errorText) {
+        errorText.textContent = 'Failed to check status';
+        errorText.style.color = '#ef4444';
+      }
+    }
+  }
+  // 更新assignment按钮状态
+  function updateAssignmentButton(buttonContainer, hasMarked, assignment, projectId) {
+    buttonContainer.innerHTML = ''; // 清空加载状态
+
+    if (hasMarked) {
+      // 如果已经mark过且finalized=true，显示Check Feedback按钮
+      const feedbackBtn = createButton('Check Feedback', () => {
+        location.href = `/dashboard/marker/feedback?project=${projectId}&assignment_id=${assignment.assignment_id}`;
+        console.log('assignment.id:', assignment.id, 'projectId:', projectId,'assignment_id:', assignment.assignment_id);
+      });
+      feedbackBtn.className = 'btn primary';
+      buttonContainer.appendChild(feedbackBtn);
+    } else {
+      // 如果还没有mark过或未finalized，显示Mark Assignment按钮
+      const markBtn = createButton('Mark Assignment', () => {
+        location.href = `/dashboard/marker/mark?project=${projectId}&assignment=${assignment.id}`;
+        console.log('assignment.id:', assignment.id, 'projectId:', projectId,'assignment_id:', assignment.assignment_id);
+      });
+      markBtn.className = 'btn primary';
+      buttonContainer.appendChild(markBtn);
+    }
   }
 
   function createButton(text, onClick) {
