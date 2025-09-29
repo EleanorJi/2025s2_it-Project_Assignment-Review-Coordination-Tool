@@ -351,9 +351,10 @@ router.post('/batch-commit', async (req, res) => {
         );
         console.log(`✅ 数据库记录插入成功: upload_id=${rows[0].upload_id}`);
 
-        // 移动文件
+        // 移动文件 - 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
         console.log('📂 移动文件...');
-        await fsp.rename(tempAbs, permAbs);
+        await fsp.copyFile(tempAbs, permAbs);
+        await fsp.unlink(tempAbs);
         console.log(`✅ 文件移动成功: ${tempAbs} -> ${permAbs}`);
 
         uploadResults.push({

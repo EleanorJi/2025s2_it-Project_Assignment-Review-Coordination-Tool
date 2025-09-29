@@ -17,7 +17,7 @@ services:
       - ./database/IT SQL.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./database/seeds/initial_data.sql:/docker-entrypoint-initdb.d/02-seeds.sql:ro
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - app-network
     healthcheck:
@@ -47,6 +47,7 @@ services:
       - 8.8.4.4
     volumes:
       - ./backend/src:/app/src:ro
+      - ./uploads:/app/uploads
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]

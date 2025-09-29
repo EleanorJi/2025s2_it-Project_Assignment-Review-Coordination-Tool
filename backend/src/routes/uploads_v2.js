@@ -262,7 +262,9 @@ router.post('/commit', async (req, res) => {
     const permanentPath = path.join(permDir, newFileName);
     const storagePath = `${year}/${month}/${newFileName}`;
 
-    await fsp.rename(tempPath, permanentPath);
+    // 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
+    await fsp.copyFile(tempPath, permanentPath);
+    await fsp.unlink(tempPath);
     console.log(`📂 文件移动: ${tempPath} → ${permanentPath}`);
 
     // 创建upload记录
