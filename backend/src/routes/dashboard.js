@@ -17,6 +17,8 @@ router.get('/coordinator/past', authenticate, dashboardController.getCoordinator
 // 保护 Marker Dashboard
 router.get('/marker', authenticate, dashboardController.getMarkerDashboard);
 router.get('/marker/taskManagement', authenticate, dashboardController.getMarkerTaskManagementPage);
+router.get('/marker/mark', authenticate, dashboardController.getMarkerMarkPage);
+router.get('/marker/rubric', authenticate, dashboardController.getMarkerViewRubricPage);
 router.get('/marker/past-task', authenticate, dashboardController.getMarkerPastTaskPage);
 
 // 通用的dashboard入口，根据用户角色自动重定向

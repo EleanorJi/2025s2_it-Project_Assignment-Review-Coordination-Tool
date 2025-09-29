@@ -175,44 +175,46 @@
     // Task header
     const header = document.createElement('div');
     header.className = 'tm-task-header';
-    
+
     const titleContainer = document.createElement('div');
     titleContainer.style.display = 'flex';
     titleContainer.style.alignItems = 'center';
-    
+
     const title = document.createElement('div');
     title.className = 'tm-task-title';
     title.textContent = task.title;
-    
+
     const status = document.createElement('span');
     status.className = `tm-task-status ${task.status}`;
     status.textContent = task.status === 'draft' ? 'Draft' : 'Active';
-    
+
     titleContainer.appendChild(title);
     titleContainer.appendChild(status);
-    
+
     const chevron = document.createElement('div');
     chevron.className = 'tm-task-chevron';
     chevron.innerHTML = '▾';
-    
-    // 让整个header可点击
+
     header.addEventListener('click', () => toggleTaskSection(section));
-    
+
     header.appendChild(titleContainer);
     header.appendChild(chevron);
 
     // Task content
     const content = document.createElement('div');
     content.className = 'tm-task-content';
-    
+
     // Rubric section
     const rubricSection = createRubricSection(task);
     content.appendChild(rubricSection);
-    
-    // Assignment sections
+
+    // Assignment sections - 修复这里
     task.assignments.forEach(assignment => {
       const assignmentSection = createAssignmentSection(task, assignment);
-      content.appendChild(assignmentSection);
+      // 添加 null 检查
+      if (assignmentSection) {
+        content.appendChild(assignmentSection);
+      }
     });
 
     section.appendChild(header);
@@ -332,7 +334,7 @@
     } else {
       // 如果还没有mark过，显示Mark Assignment按钮
       const markBtn = createButton('Mark Assignment', () => {
-        location.href = `/dashboard/marker/mark-assignment?assignment_id=${assignment.assignment_id}`;
+        location.href = `/dashboard/marker/mark?project=${task.project_id}&assignment=${assignment.id}`;
       });
       markBtn.className = 'btn primary';
       actions.appendChild(markBtn);
