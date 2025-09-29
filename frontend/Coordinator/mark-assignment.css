@@ -92,9 +92,9 @@ body {
 }
 
 .back-btn {
-  background: var(--primary);
-  color: #fff;
-  border: none;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
   font-weight: 600;
   cursor: pointer;
   padding: 10px 20px;
@@ -105,7 +105,9 @@ body {
 }
 
 .back-btn:hover {
-  background: #1a202c;
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
 }
 
 .main-content {

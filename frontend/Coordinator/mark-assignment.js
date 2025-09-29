@@ -82,7 +82,7 @@
     setupScoreInputs();
     setupFeedback();
     setupActionButtons();
-
+    
     updateAllCriterionDisplays();
     updateTotalScoreDisplay();
   }
@@ -1338,6 +1338,8 @@
       try {
         await saveMarks();
         showNotification('Draft saved successfully', 'success');
+        // Save后锁定所有输入框
+        lockAllInputs();
       } catch (error) {
         console.error('Error saving marks:', error);
         showNotification('Failed to save draft', 'error');
@@ -1377,7 +1379,6 @@
       updateTotalScoreDisplay();
     }
   }
-
 
   //===========================存分数到后端===========================
 

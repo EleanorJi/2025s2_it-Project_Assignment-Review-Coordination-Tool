@@ -3,11 +3,8 @@ const multer = require('multer');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
-const { randomUUID } = require('crypto');
-const uuidv4 = randomUUID; // 兼容原调用名
-
-// 之后继续用 uuidv4() 就行
-const tmp = uuidv4();
+const crypto = require('crypto');
+const uuidv4 = () => crypto.randomUUID();
 const mime = require('mime-types');
 const db = require('../config/database');
 const { parseRubricFile } = require('../utils/fileParser');
