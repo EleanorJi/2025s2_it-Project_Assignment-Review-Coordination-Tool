@@ -5,6 +5,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadFeedback(){
+  // ✅ 显示用户名
+  try {
+    const rawUser = localStorage.getItem("user");
+    // console.log("User Info:", rawUser);
+    if (rawUser) {
+      const user = JSON.parse(rawUser);
+      if (user && user.name) {
+        const usernameEl = document.getElementById("username");
+        if (usernameEl) {
+          usernameEl.textContent = user.name;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load username:", err);
+  }
+
   const url = new URL(location.href);
   const taskId = url.searchParams.get('task') || 'assignment-1';
   const assignmentId = url.searchParams.get('assignment') || 'assignment-1';
@@ -143,6 +160,31 @@ function getDifferenceClass(diff) {
 /* ===== Helpers ===== */
 function td(){ const e = document.createElement('td'); return e; }
 function esc(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+  // 调试用，可删。获取当前用户信息
+  function getCurrentUser() {
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+
+        // 先log检查一下用户数据的结构
+        console.log("User Info:", user);
+        console.log("Available fields:", Object.keys(user));
+
+        // 根据log结果调整字段名
+        // 常见的字段名可能是：id, userId, user_id, role, userRole, etc.
+        return {
+          userId: user.id,
+          role: user.role
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to load user info:", err);
+      return null;
+    }
+  }
 
 /* ===== Demo data (接口未通时使用) ===== */
 function demoFeedback(){
