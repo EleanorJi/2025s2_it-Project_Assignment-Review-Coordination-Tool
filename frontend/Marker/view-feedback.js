@@ -190,7 +190,6 @@ async function loadFeedback(data){
   const coordinatorScoreEl = document.getElementById('coordinator-score');
   const scoreDifferenceEl = document.getElementById('score-difference');
   const coordinatorFeedbackEl = document.getElementById('coordinator-feedback');
-  const markerCommentsEl = document.getElementById('marker-comments');
 
   // 顶部 meta
   metaEl.innerHTML = `
