@@ -1,27 +1,185 @@
 // view-feedback.js — 显示Marker的分数对比和反馈
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('backBtn')?.addEventListener('click', () => history.back());
-    loadFeedback();
+    init();
 });
 
-async function loadFeedback(){
-  // ✅ 显示用户名
-  try {
-    const rawUser = localStorage.getItem("user");
-    // console.log("User Info:", rawUser);
-    if (rawUser) {
-      const user = JSON.parse(rawUser);
-      if (user && user.name) {
-        const usernameEl = document.getElementById("username");
-        if (usernameEl) {
-          usernameEl.textContent = user.name;
+  // Initialize the interface
+  async function init() {
+    // ✅ 显示用户名
+    try {
+      const rawUser = localStorage.getItem("user");
+      // console.log("User Info:", rawUser);
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          const usernameEl = document.getElementById("username");
+          if (usernameEl) {
+            usernameEl.textContent = user.name;
+          }
         }
       }
+    } catch (err) {
+      console.error("Failed to load username:", err);
     }
-  } catch (err) {
-    console.error("Failed to load username:", err);
+
+    // 获取并显示反馈数据
+    const feedbackData = await fetchFeedbackData();
+//    const feedbackData = demoFeedback(); // 使用demo数据测试
+    console.log('Feedback Data:', feedbackData);
+
+    loadFeedback(feedbackData);
   }
 
+// 主函数：获取反馈数据
+async function fetchFeedbackData() {
+    try {
+        // 获取URL参数和用户信息
+        const queryParams = getQueryParams();
+        const currentUser = getCurrentUser();
+
+        // 检查必要的参数是否存在
+        if (!queryParams.assignmentId) {
+            throw new Error('Assignment ID not found in URL parameters');
+        }
+
+        if (!currentUser || !currentUser.userId) {
+            throw new Error('User information not available');
+        }
+
+        const assignmentId = queryParams.assignmentId;
+        const markerId = currentUser.userId;
+
+        console.log('Fetching feedback for:', { assignmentId, markerId });
+
+        // 并行获取所有需要的数据
+        const [assignmentData, baselineData, markerData, feedbackData] = await Promise.all([
+            fetchAssignmentData(assignmentId),
+            fetchBaselineData(assignmentId),
+            fetchMarkerData(assignmentId, markerId),
+            fetchFeedbackContent(assignmentId, markerId)
+        ]);
+
+        // 获取项目信息
+        const projectData = await fetchProjectData(assignmentData.project_id);
+
+        // 转换数据格式为前端需要的格式
+        const transformedData = transformData(
+            assignmentData,
+            projectData,
+            baselineData,
+            markerData,
+            feedbackData
+        );
+
+        console.log('Transformed feedback data:', transformedData);
+        return transformedData;
+
+    } catch (error) {
+        console.error('Error loading feedback:', error);
+        // 接口出错时使用demo数据兜底
+        return demoFeedback();
+    }
+}
+
+// 获取assignment信息
+async function fetchAssignmentData(assignmentId) {
+    const res = await fetch(`/api/uploads/assignment/${assignmentId}/status`);
+    if (!res.ok) throw new Error('Failed to fetch assignment data');
+    const data = await res.json();
+    return data.assignment;
+}
+
+// 获取项目信息
+async function fetchProjectData(projectId) {
+    const res = await fetch(`/api/uploads/project/${projectId}/status`);
+    if (!res.ok) throw new Error('Failed to fetch project data');
+    const data = await res.json();
+    return data.project;
+}
+
+// 获取baseline分数
+async function fetchBaselineData(assignmentId) {
+    const res = await fetch(`/api/uploads/scoring/baseline/${assignmentId}`);
+    if (!res.ok) throw new Error('Failed to fetch baseline data');
+    const data = await res.json();
+    return data.baseline_scores || [];
+}
+
+// 获取marker分数
+async function fetchMarkerData(assignmentId, markerId) {
+    const res = await fetch(`/api/uploads/scoring/marker/${assignmentId}/${markerId}`);
+    if (!res.ok) throw new Error('Failed to fetch marker data');
+    const data = await res.json();
+    return data.marker_scores || [];
+}
+
+
+// 获取feedback内容
+async function fetchFeedbackContent(assignmentId, markerId) {
+    try {
+        const res = await fetch(`/api/feedback/${assignmentId}/${markerId}`);
+        if (!res.ok) {
+            // 如果接口返回404或其他错误，返回空数组
+            if (res.status === 404) {
+                return [];
+            }
+            throw new Error('Failed to fetch feedback content');
+        }
+        const data = await res.json();
+        return data.data || [];
+    } catch (error) {
+        console.warn('Failed to fetch feedback content, using empty array:', error);
+        return [];
+    }
+}
+
+// 数据转换函数
+function transformData(assignmentData, projectData, baselineData, markerData, feedbackData) {
+    // 构建assignment显示名称
+    const projectName = projectData?.name || 'Unknown Project';
+    const assignmentDisplayName = `${projectName} - Moderation ${assignmentData.round || 0}`;
+
+    // 转换criteria数据
+    const criteria = baselineData.map((baseline, index) => {
+        const markerScore = markerData.find(m => m.criterion_id === baseline.criterion_id);
+
+        return {
+            title: baseline.criterion_title || `Criterion ${index + 1}`,
+            subtitle: baseline.matched_level?.description || '',
+            max: baseline.criterion_max_score || 0,
+            markerScore: markerScore?.score || 0,
+            coordinatorScore: baseline.score || 0,
+            coordinatorFeedback: baseline.comment || 'No feedback provided',
+            markerComments: markerScore?.comment || 'No comments provided'
+        };
+    });
+
+    // 获取最新的feedback内容
+    const latestFeedback = feedbackData.length > 0 ? feedbackData[0] : null;
+
+    return {
+        assignment: assignmentDisplayName,
+        due: formatDate(assignmentData.due_at) || 'Not set',
+        feedbackDate: formatDate(new Date()),
+        criteria,
+        coordinatorFeedback: latestFeedback?.content || 'No detailed feedback provided.',
+        markerComments: 'nnnnnnnnnnn' // 这个可以从marker数据中汇总或单独存储
+    };
+}
+
+
+
+// 从URL中获取查询参数 (assignment_id, project)
+function getQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    assignmentId: params.get('assignment_id'),
+    project: params.get('project')
+  };
+}
+
+async function loadFeedback(data){
   const url = new URL(location.href);
   const taskId = url.searchParams.get('task') || 'assignment-1';
   const assignmentId = url.searchParams.get('assignment') || 'assignment-1';
@@ -34,21 +192,10 @@ async function loadFeedback(){
   const coordinatorFeedbackEl = document.getElementById('coordinator-feedback');
   const markerCommentsEl = document.getElementById('marker-comments');
 
-  let data;
-  try {
-    // 后端API：GET /api/feedback/:taskId 返回反馈数据结构
-    const res = await fetch(`/api/feedback/${encodeURIComponent(taskId)}`);
-    if (!res.ok) throw new Error('Failed to fetch feedback data');
-    data = await res.json();
-  } catch (error) {
-    console.error('Error loading feedback:', error);
-    data = demoFeedback(); // 接口未通时兜底
-  }
-
   // 顶部 meta
   metaEl.innerHTML = `
     <div style="font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 2px;">
-      ${data.year} · Semester ${data.semester} · ${data.assignment}
+      ${data.assignment}
     </div>
     <div style="font-size: 14px; color: var(--muted); font-weight: 400;">
       Due: ${data.due} • Feedback Date: ${data.feedbackDate}
@@ -160,8 +307,26 @@ function getDifferenceClass(diff) {
 /* ===== Helpers ===== */
 function td(){ const e = document.createElement('td'); return e; }
 function esc(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+// 日期格式化辅助函数
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown date';
 
-  // 调试用，可删。获取当前用户信息
+    const date = new Date(dateString);
+    const options = {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+
+    return date.toLocaleDateString('en-US', options);
+}
+
+
+
+  // 获取当前用户信息
   function getCurrentUser() {
     try {
       const rawUser = localStorage.getItem("user");
