@@ -72,11 +72,11 @@ exports.login = async (req, res) => {
       last_login: user.last_login
     };
 
-    // 登录成功后设置 Cookie
+    // Set Cookie after successful login
     res.cookie('userId', user.id, {
-    httpOnly: true,    // 防止 XSS
-    secure: process.env.NODE_ENV === 'production', // TODO：后期要把NODE_ENV改成 'production' 变成HTTPS
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7天
+    httpOnly: true,    // Prevent XSS
+    secure: process.env.NODE_ENV === 'production', // TODO: Change NODE_ENV to 'production' for HTTPS later
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     sameSite: 'strict'
     });
 

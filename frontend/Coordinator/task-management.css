@@ -72,7 +72,7 @@
   .valid{margin-top:16px;border:1px solid var(--border);border-radius:12px;padding:12px}
   .valid .line{padding:6px 2px}
 
-  /* Toast & modal (upload/other pages通用) */
+  /* Toast & modal (common for upload/other pages) */
   .toast{
     position:fixed;right:16px;bottom:16px;background:#0F172A;color:#fff;
     padding:10px 12px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.2);

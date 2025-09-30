@@ -46,7 +46,7 @@
   
   /* Headings */
   h1{font-size:22px;margin:0 0 14px 0;font-weight:800;font-style:italic}
-  .tm-panel h1,.pa-panel h1{font-size:28px;font-style:normal} /* 任务/历史页面更大标题 */
+  .tm-panel h1,.pa-panel h1{font-size:28px;font-style:normal} /* Task/history pages larger title */
   
   /* ===================== Buttons ===================== */
   .btn{
@@ -85,7 +85,7 @@
   .valid{margin-top:14px}
   .valid .line{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
   
-  /* Toast（通用） */
+  /* Toast (common) */
   .toast{
     position:fixed;right:16px;bottom:16px;background:#0F172A;color:#fff;
     padding:10px 12px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.2);
@@ -94,7 +94,7 @@
   .toast.show{opacity:1;transform:none}
   .toast.error{background:#b91c1c}
   
-  /* 轻量 Modal（通用，若页面用 class 版本） */
+  /* Lightweight Modal (common, if page uses class version) */
   .ui-modal{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;place-items:center;padding:16px;z-index:9999}
   .ui-modal.show{display:grid}
   .ui-modal .modal-card{

@@ -155,7 +155,7 @@ const rows = [
     
     markerSummary.classList.remove('hidden');
     
-    // 计算该marker的统计数据
+    // Calculate marker statistics
     const markerData = rows.map(r => ({
       criterion: r.criterion,
       chair: r.chair,
@@ -168,21 +168,21 @@ const rows = [
       return;
     }
     
-    // 计算平均分和与chair的差异
+    // Calculate average score and difference from chair
     const totalScore = markerData.reduce((sum, d) => sum + d.marker, 0);
     const avgScore = totalScore / markerData.length;
     const chairAvg = markerData.reduce((sum, d) => sum + d.chair, 0) / markerData.length;
     const diffFromChair = avgScore - chairAvg;
     
-    // 计算一致性（与chair评分的差异程度）
+    // Calculate consistency (degree of difference with chair scores)
     const differences = markerData.map(d => Math.abs(d.marker - d.chair));
     const avgDifference = differences.reduce((sum, d) => sum + d, 0) / differences.length;
     
-    // 计算最高和最低分
+    // Calculate highest and lowest scores
     const maxScore = Math.max(...markerData.map(d => d.marker));
     const minScore = Math.min(...markerData.map(d => d.marker));
     
-    // 生成总结文本
+    // Generate summary text
     let summary = `Marker ${marker} shows `;
     
     if(diffFromChair > 1){
@@ -208,7 +208,7 @@ const rows = [
   
   /* ===== all markers summary ===== */
   function generateAllMarkersSummary(){
-    // 计算所有marker的统计数据
+    // Calculate statistics for all markers
     const markerStats = markerKeys.map(marker => {
       const markerData = rows.map(r => ({
         criterion: r.criterion,
@@ -241,7 +241,7 @@ const rows = [
       return;
     }
     
-    // 找出表现最好和最差的marker
+    // Find best and worst performing markers
     const bestMarker = markerStats.reduce((best, current) => 
       Math.abs(current.diffFromChair) < Math.abs(best.diffFromChair) ? current : best
     );
@@ -250,12 +250,12 @@ const rows = [
       Math.abs(current.diffFromChair) > Math.abs(worst.diffFromChair) ? current : worst
     );
     
-    // 计算整体统计
+    // Calculate overall statistics
     const avgDeviation = markerStats.reduce((sum, m) => sum + Math.abs(m.diffFromChair), 0) / markerStats.length;
     const consistentMarkers = markerStats.filter(m => m.avgDifference < 1.5).length;
     const totalMarkers = markerStats.length;
     
-    // 生成总结文本
+    // Generate summary text
     let summary = `Analysis of ${totalMarkers} markers shows `;
     
     if(avgDeviation < 1){
@@ -302,13 +302,13 @@ const rows = [
     URL.revokeObjectURL(url);
   });
   
-  // Send feedback (All view) — 这里先用 localStorage 模拟，接上后端时把注释替换为真实 API
+  // Send feedback (All view) — Using localStorage for simulation, replace with real API when connecting to backend
   document.getElementById('allFbSend').addEventListener('click', ()=>{
     const marker = allFbSelect.value;
     const text   = allFbTextarea.value.trim();
     if(!text){ setHint(allFbHint,'Please enter a comment before sending.'); return; }
   
-    // 示例：接后端时改为
+    // Example: Replace with backend when connecting
     // fetch('/api/feedback', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ marker, text }) })
   
     localStorage.setItem(`coord_feedback_${marker}`, text);
@@ -333,15 +333,15 @@ const rows = [
       return; 
     }
     
-    // 模拟发送反馈到后端
-    // 实际实现时替换为真实的API调用
+    // Simulate sending feedback to backend
+    // Replace with actual API call in real implementation
     // fetch('/api/feedback', { 
     //   method:'POST', 
     //   headers:{'Content-Type':'application/json'}, 
     //   body: JSON.stringify({ marker: m, text }) 
     // })
     
-    // 使用localStorage模拟发送
+    // Use localStorage to simulate sending
     localStorage.setItem(`coord_feedback_${m}`, text);
     setHint(fbHint, `Feedback sent to Marker ${m} ✓`);
     fbTextarea.value = '';
@@ -364,7 +364,7 @@ const rows = [
   });
   
   // init
-  // ✅ 显示用户名
+  // ✅ Display username
   try {
     const rawUser = localStorage.getItem("user");
     if (rawUser) {
