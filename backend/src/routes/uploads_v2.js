@@ -3,11 +3,8 @@ const multer = require('multer');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
-const { randomUUID } = require('crypto');
-const uuidv4 = randomUUID; // Compatible with original calling name
-
-// Continue using uuidv4() afterwards
-const tmp = uuidv4();
+const crypto = require('crypto');
+const uuidv4 = () => crypto.randomUUID();
 const mime = require('mime-types');
 const db = require('../config/database');
 const { parseRubricFile } = require('../utils/fileParser');
@@ -265,8 +262,10 @@ router.post('/commit', async (req, res) => {
     const permanentPath = path.join(permDir, newFileName);
     const storagePath = `${year}/${month}/${newFileName}`;
 
-    await fsp.rename(tempPath, permanentPath);
-    console.log(`📂 File moved: ${tempPath} → ${permanentPath}`);
+    // 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
+    await fsp.copyFile(tempPath, permanentPath);
+    await fsp.unlink(tempPath);
+    console.log(`📂 文件移动: ${tempPath} → ${permanentPath}`);
 
     // Create upload record
     const uploadResult = await client.query(

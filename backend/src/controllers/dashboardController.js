@@ -82,6 +82,47 @@ exports.getMarkerDashboard = (req, res) => {
   res.sendFile(path.join(__dirname, '../../frontend/Marker/marker-dashboard.html'));
 };
 
+exports.getMarkerTaskManagementPage = (req, res) => {
+  if (req.user.role !== 'MARKER') {
+    return res.redirect('/login?error=access_denied');
+  }
+  res.sendFile(path.join(__dirname, '../../frontend/Marker/task-management.html'));
+};
+
+exports.getMarkerMarkPage = (req, res) => {
+    // 检查角色权限
+    if (req.user.role !== 'MARKER') {
+        return res.redirect('/login?error=access_denied');
+    }
+    // 发送对应的HTML文件
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/mark-assignment.html'));
+}
+
+exports.getMarkerViewRubricPage = (req, res) => {
+    // 检查角色权限
+    if (req.user.role !== 'MARKER') {
+        return res.redirect('/login?error=access_denied');
+    }
+    // 发送对应的HTML文件
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/rubric.html'));
+}
+
+exports.getMarkerFeedbackPage = (req, res) => {
+    // 检查角色权限
+    if (req.user.role !== 'MARKER') {
+        return res.redirect('/login?error=access_denied');
+    }
+    // 发送对应的HTML文件
+    res.sendFile(path.join(__dirname, '../../frontend/Marker/view-feedback.html'));
+}
+
+exports.getMarkerPastTaskPage = (req, res) => {
+  if (req.user.role !== 'MARKER') {
+    return res.redirect('/login?error=access_denied');
+  }
+  res.sendFile(path.join(__dirname, '../../frontend/Marker/past-task.html'));
+};
+
 exports.redirectToRoleDashboard = (req, res) => {
   switch (req.user.role) {
     case 'COORDINATOR':
@@ -93,4 +134,13 @@ exports.redirectToRoleDashboard = (req, res) => {
     default:
       res.redirect('/login');
   }
+};
+
+exports.getMarkerConnectPage = (req, res) => {
+  if (!req.user || req.user.role !== 'MARKER') {
+    return res.redirect('/login?error=access_denied');
+  }
+  res.sendFile(
+    require('path').join(__dirname, '../../frontend/Marker/connect-marker.html')
+  );
 };

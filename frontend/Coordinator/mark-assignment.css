@@ -92,9 +92,9 @@ body {
 }
 
 .back-btn {
-  background: var(--primary);
-  color: #fff;
-  border: none;
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
   font-weight: 600;
   cursor: pointer;
   padding: 10px 20px;
@@ -105,7 +105,9 @@ body {
 }
 
 .back-btn:hover {
-  background: #1a202c;
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--primary);
 }
 
 .main-content {
@@ -138,7 +140,8 @@ body {
   display: grid;
   grid-template-columns: 80px 1fr 450px;
   gap: 16px;
-  height: calc(100vh - 200px);
+  height: calc(100vh - 120px);
+  min-height: 900px;
 }
 
 /* Document viewer */
@@ -149,6 +152,8 @@ body {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  max-height: 100%;
 }
 
 .document-controls {
@@ -288,6 +293,8 @@ body {
   border-radius: var(--radius);
   padding: 20px;
   overflow-y: auto;
+  height: 100%;
+  max-height: 100%;
 }
 
 .criterion {
@@ -613,12 +620,13 @@ body {
   }
 
   .document-viewer {
-    height: 500px; /* 移动端保持适当高度 */
+    height: 700px;
     order: 2;
   }
 
   .marking-criteria {
-    height: auto;
+    height: 700px;
+    min-height: 700px;
     order: 3;
   }
 
@@ -677,6 +685,8 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: #fafafa;
+  min-height: 700px;
+  height: 100%;
 }
 
 .pdf-viewer {
@@ -700,6 +710,9 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   max-width: 100%;
   height: auto;
+  /* A4比例设置 */
+  width: 100%;
+  max-width: 800px; /* 设置最大宽度 */
 }
 
 #pdf-canvas {
@@ -770,16 +783,7 @@ body {
   text-align: center;
 }
 
-/* Ensure document viewer has fixed height for internal scrolling */
-.document-viewer {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 200px); /* 固定高度 */
-}
+/* 重复的document-viewer规则已删除，使用上面的设置 */
 
 .document-controls {
   display: flex;
@@ -816,4 +820,46 @@ body {
   text-align: center;
   background: #f5f5f5;
   border-radius: 4px;
+}
+
+/* Locked state styles */
+.marking-criteria.locked {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.marking-criteria.locked .score-input,
+.marking-criteria.locked .criterion-feedback textarea,
+.marking-criteria.locked .grade-btn {
+  background-color: #f5f5f5 !important;
+  color: #999 !important;
+  cursor: not-allowed !important;
+}
+
+.marking-criteria.locked .grade-btn:hover {
+  background-color: #f5f5f5 !important;
+  color: #999 !important;
+}
+
+/* PDF thumbnail navigation buttons */
+.thumbnail-nav-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--muted);
+  margin: 2px;
+  transition: all 0.2s ease;
+}
+
+.thumbnail-nav-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }

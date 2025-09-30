@@ -20,8 +20,10 @@ COPY ./frontend/ ./frontend/
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
+# Create uploads directory and set permissions
+RUN mkdir -p /app/uploads /app/temp_uploads && chown -R nodejs:nodejs /app
+
+# Change to nodejs user
 USER nodejs
 
 # Expose port

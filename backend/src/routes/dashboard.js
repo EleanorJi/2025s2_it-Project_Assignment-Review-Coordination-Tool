@@ -16,6 +16,11 @@ router.get('/coordinator/rubric', authenticate, dashboardController.getCoordinat
 router.get('/coordinator/past', authenticate, dashboardController.getCoordinatorPastPage);
 // Protect Marker Dashboard
 router.get('/marker', authenticate, dashboardController.getMarkerDashboard);
+router.get('/marker/taskManagement', authenticate, dashboardController.getMarkerTaskManagementPage);
+router.get('/marker/mark', authenticate, dashboardController.getMarkerMarkPage);
+router.get('/marker/rubric', authenticate, dashboardController.getMarkerViewRubricPage);
+router.get('/marker/feedback', authenticate, dashboardController.getMarkerFeedbackPage);
+router.get('/marker/past-task', authenticate, dashboardController.getMarkerPastTaskPage);
 
 // Universal dashboard entry, automatically redirect based on user role
 router.get('/', authenticate, dashboardController.redirectToRoleDashboard);

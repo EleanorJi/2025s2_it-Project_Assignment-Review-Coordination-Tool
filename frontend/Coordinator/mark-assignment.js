@@ -75,6 +75,11 @@
     // ✅ New addition: load saved scores and feedback data
     await loadSavedScoresAndFeedback();
 
+    if (window.savedScoresData?.finalized) {
+      console.log('✅ 检测到 finalized 状态，锁定所有输入');
+      lockAllInputs();
+    }
+
     generateCriteriaHTML();
 
     setupDocumentNavigation();
@@ -82,7 +87,7 @@
     setupScoreInputs();
     setupFeedback();
     setupActionButtons();
-
+    
     updateAllCriterionDisplays();
     updateTotalScoreDisplay();
   }
@@ -576,7 +581,9 @@
           <div class="score-input-section">
             <div class="score-input-container">
               <label for="score-input-${criterionId}">Manual Score:</label>
-              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"/>
+              <input type="number" id="score-input-${criterionId}" class="score-input"
+                     min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"
+                     ${window.savedScoresData?.finalized ? 'disabled' : ''}/>
               <span class="max-score">/ ${criterion.maxScore}</span>
             </div>
           </div>
@@ -591,13 +598,14 @@
           </div>
 
           <div class="feedback-section">
-            <button class="show-feedback-btn">+ Add Feedback</button>
+            <button class="show-feedback-btn" ${window.savedScoresData?.finalized ? 'style="display: none;"' : ''}>+ Add Feedback</button>
             <div class="criterion-feedback ${window.savedScoresData?.feedback?.[criterionId] ? '' : 'hidden'}">
               <div class="feedback-header">
                 <span>Criterion Feedback</span>
-                <button class="close-feedback">×</button>
+                ${!window.savedScoresData?.finalized ? '<button class="close-feedback">×</button>' : ''}
               </div>
-              <textarea placeholder="Please write your feedback on this criterion.">${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
+              <textarea placeholder="Please write your feedback on this criterion."
+                        ${window.savedScoresData?.finalized ? 'disabled' : ''}>${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
             </div>
           </div>
 
@@ -766,20 +774,31 @@
                   position: relative;
                   margin: 0 auto 20px auto;
                   max-width: 100%;
+                  display: flex;
+                  justify-content: center;
               `;
 
               const canvas = document.createElement('canvas');
               canvas.className = 'pdf-page-canvas';
+
+              // 设置canvas的实际尺寸（基于缩放后的viewport）
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              // 计算显示尺寸，保持A4比例
+              const maxWidth = 800;
+              const displayWidth = Math.min(viewport.width, maxWidth);
+              const displayHeight = (viewport.height * displayWidth) / viewport.width;
+
+              // 设置CSS样式，确保按A4比例显示并应用缩放
               canvas.style.cssText = `
                   display: block;
-                  width: 100%;
-                  height: auto;
+                  width: ${displayWidth}px;
+                  height: ${displayHeight}px;
+                  max-width: 100%;
                   border: 1px solid #ddd;
                   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
               `;
-
-              canvas.height = viewport.height;
-              canvas.width = viewport.width;
 
               const renderContext = {
                   canvasContext: canvas.getContext('2d'),
@@ -1012,13 +1031,57 @@
       const thumbnailsContainer = document.querySelector('.document-thumbnails');
       thumbnailsContainer.innerHTML = '';
 
-      for (let i = 1; i <= totalPdfPages; i++) {
+      // 如果总页数超过10页，只显示当前页附近的10页
+      const maxVisiblePages = 10;
+      let startPage = 1;
+      let endPage = Math.min(totalPdfPages, maxVisiblePages);
+
+      if (totalPdfPages > maxVisiblePages) {
+          // 计算显示范围，确保当前页在中间
+          const halfVisible = Math.floor(maxVisiblePages / 2);
+          startPage = Math.max(1, currentPdfPage - halfVisible);
+          endPage = Math.min(totalPdfPages, startPage + maxVisiblePages - 1);
+
+          // 如果到达末尾，调整起始页
+          if (endPage === totalPdfPages) {
+              startPage = Math.max(1, endPage - maxVisiblePages + 1);
+          }
+      }
+
+      // 添加上翻页按钮（如果不在第一页）
+      if (startPage > 1) {
+          const prevBtn = document.createElement('div');
+          prevBtn.className = 'thumbnail-nav-btn';
+          prevBtn.innerHTML = '↑';
+          prevBtn.title = `Go to page ${Math.max(1, startPage - maxVisiblePages)}`;
+          prevBtn.addEventListener('click', () => {
+              const newStartPage = Math.max(1, startPage - maxVisiblePages);
+              goToPage(newStartPage);
+          });
+          thumbnailsContainer.appendChild(prevBtn);
+      }
+
+      // 添加页面缩略图
+      for (let i = startPage; i <= endPage; i++) {
           const thumbnail = document.createElement('div');
           thumbnail.className = `thumbnail ${i === currentPdfPage ? 'active' : ''}`;
           thumbnail.dataset.page = i;
           thumbnail.textContent = i;
           thumbnail.addEventListener('click', () => goToPage(i));
           thumbnailsContainer.appendChild(thumbnail);
+      }
+
+      // 添加下翻页按钮（如果不在最后一页）
+      if (endPage < totalPdfPages) {
+          const nextBtn = document.createElement('div');
+          nextBtn.className = 'thumbnail-nav-btn';
+          nextBtn.innerHTML = '↓';
+          nextBtn.title = `Go to page ${Math.min(totalPdfPages, endPage + 1)}`;
+          nextBtn.addEventListener('click', () => {
+              const newStartPage = Math.min(totalPdfPages - maxVisiblePages + 1, endPage + 1);
+              goToPage(newStartPage);
+          });
+          thumbnailsContainer.appendChild(nextBtn);
       }
   }
 
@@ -1093,6 +1156,10 @@
 
   // Grade selection
   function setupGradeSelection() {
+    // 如果是 finalized 状态，不设置等级选择事件
+    if (window.savedScoresData?.finalized) {
+      return;
+    }
     const criteria = $$('.criterion');
 
     criteria.forEach(criterion => {
@@ -1197,6 +1264,10 @@
 
   // Automatically select corresponding grade when manually inputting score
   function setupScoreInputs() {
+     // 如果是 finalized 状态，不设置分数输入事件
+     if (window.savedScoresData?.finalized) {
+       return;
+     }
     const scoreInputs = $$('.score-input');
 
     scoreInputs.forEach(input => {
@@ -1276,6 +1347,10 @@
 
   // Feedback functionality
   function setupFeedback() {
+    // 如果是 finalized 状态，不设置反馈事件
+    if (window.savedScoresData?.finalized) {
+        return;
+    }
     const showFeedbackBtns = $$('.show-feedback-btn');
     const closeButtons = $$('.close-feedback');
 
@@ -1349,7 +1424,9 @@
         try {
           await submitMarks();
           showNotification('Marks submitted successfully', 'success');
-          // Disable buttons after submission
+          // 提交后锁定所有输入框
+          lockAllInputs();
+          // 提交后禁用按钮
           disableActionButtons();
         } catch (error) {
           console.error('Error submitting marks:', error);
@@ -1375,6 +1452,40 @@
         <div class="finalized-message">Marks have been submitted.</div>
       `;
       updateTotalScoreDisplay();
+    }
+  }
+
+  // 锁定所有输入框（save后调用）
+  function lockAllInputs() {
+    // 锁定所有分数输入框
+    const scoreInputs = $$('.score-input');
+    scoreInputs.forEach(input => {
+      input.disabled = true;
+      input.style.backgroundColor = '#f5f5f5';
+      input.style.color = '#999';
+    });
+
+    // 锁定所有反馈文本框
+    const feedbackTextareas = $$('.criterion-feedback textarea');
+    feedbackTextareas.forEach(textarea => {
+      textarea.disabled = true;
+      textarea.style.backgroundColor = '#f5f5f5';
+      textarea.style.color = '#999';
+    });
+
+    // 锁定所有等级选择按钮
+    const gradeButtons = $$('.grade-btn');
+    gradeButtons.forEach(button => {
+      button.disabled = true;
+      button.style.backgroundColor = '#f5f5f5';
+      button.style.color = '#999';
+      button.style.cursor = 'not-allowed';
+    });
+
+    // 添加锁定状态的视觉指示
+    const markingCriteria = $('.marking-criteria');
+    if (markingCriteria) {
+      markingCriteria.classList.add('locked');
     }
   }
 
@@ -1610,10 +1721,11 @@
     // Create dialog
     const dialog = document.createElement('div');
     dialog.style.cssText = `
-      background: #2d3748;
-      border-radius: 12px;
+      background: #fff;
+      border-radius: 8px;
       padding: 0;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      border: 1px solid #E6EAF2;
       max-width: 400px;
       width: 90%;
       overflow: hidden;
@@ -1622,17 +1734,17 @@
     // Create title bar
     const titleBar = document.createElement('div');
     titleBar.style.cssText = `
-      background: #1a202c;
+      background: #F5F7FB;
       padding: 16px 20px;
-      border-bottom: 1px solid #4a5568;
+      border-bottom: 1px solid #E6EAF2;
     `;
-    titleBar.innerHTML = '<span style="color: white; font-weight: bold; font-size: 16px;">127.0.0.1:5501 says</span>';
+    titleBar.innerHTML = '<span style="color: #0F172A; font-weight: 600; font-size: 16px;">Confirm Action</span>';
 
     // Create content area
     const content = document.createElement('div');
     content.style.cssText = `
       padding: 20px;
-      color: white;
+      color: #0F172A;
       font-size: 14px;
       line-height: 1.5;
     `;
@@ -1642,8 +1754,8 @@
     const buttonArea = document.createElement('div');
     buttonArea.style.cssText = `
       padding: 16px 20px;
-      background: #1a202c;
-      border-top: 1px solid #4a5568;
+      background: #F5F7FB;
+      border-top: 1px solid #E6EAF2;
       display: flex;
       justify-content: flex-end;
       gap: 12px;
@@ -1653,35 +1765,55 @@
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.style.cssText = `
-      background: #4a5568;
-      color: white;
-      border: none;
+      background: #fff;
+      color: #0F172A;
+      border: 1px solid #E6EAF2;
       padding: 8px 16px;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
+      transition: all 0.2s;
     `;
     cancelBtn.addEventListener('click', () => {
       document.body.removeChild(modal);
     });
 
-    // Create OK button
+    // 添加Cancel按钮hover效果
+    cancelBtn.addEventListener('mouseenter', () => {
+      cancelBtn.style.background = '#F5F7FB';
+      cancelBtn.style.borderColor = '#0F172A';
+    });
+    cancelBtn.addEventListener('mouseleave', () => {
+      cancelBtn.style.background = '#fff';
+      cancelBtn.style.borderColor = '#E6EAF2';
+    });
+
+    // 创建OK按钮
     const okBtn = document.createElement('button');
     okBtn.textContent = 'OK';
     okBtn.style.cssText = `
-      background: #667eea;
-      color: white;
-      border: none;
+      background: #0F172A;
+      color: #fff;
+      border: 1px solid #0F172A;
       padding: 8px 16px;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
+      transition: all 0.2s;
     `;
     okBtn.addEventListener('click', () => {
       document.body.removeChild(modal);
-      window.history.back();
+        window.history.back();
+    });
+
+    // 添加OK按钮hover效果
+    okBtn.addEventListener('mouseenter', () => {
+      okBtn.style.background = '#1a202c';
+    });
+    okBtn.addEventListener('mouseleave', () => {
+      okBtn.style.background = '#0F172A';
     });
 
     // Assemble dialog
