@@ -34,67 +34,8 @@
         console.error('Failed to load past tasks:', err);
         host.innerHTML = '';
         toast('Failed to load past tasks');
-    // ===== Demo data（可替换为后端返回）=====
-    // 结构：year, tasks[{title, description, status, assignments[], created_at}]
-
-    data = [
-      {
-        year: 2024,
-        tasks: [
-          { 
-            title: 'HPS302 Assignment Moderation - Semester 2', 
-            description: 'Advanced Psychology Research Methods',
-            status: 'archived',
-            created_at: '2024-07-15',
-            assignments: [
-              { title: 'Assignment 1', status: 'archived', due_date: '2024-08-15', submissions: 45 },
-              { title: 'Assignment 2', status: 'archived', due_date: '2024-09-20', submissions: 42 }
-            ],
-            rubric: { uploaded: true, filename: 'rubric_s2_2024.docx' },
-            reports: { available: true, filename: 'final_report_s2_2024.pdf' }
-          },
-          {
-            title: 'HPS302 Assignment Moderation - Semester 1',
-            description: 'Advanced Psychology Research Methods',
-            status: 'archived',
-            created_at: '2024-02-10',
-            assignments: [
-              { title: 'Assignment 1', status: 'archived', due_date: '2024-03-15', submissions: 48 },
-              { title: 'Assignment 2', status: 'archived', due_date: '2024-04-20', submissions: 46 }
-            ],
-            rubric: { uploaded: true, filename: 'rubric_s1_2024.docx' },
-            reports: { available: true, filename: 'final_report_s1_2024.pdf' }
-          }
-        ]
-      },
-      {
-        year: 2023,
-        tasks: [
-          {
-            title: 'HPS302 Assignment Moderation - Semester 2',
-            description: 'Advanced Psychology Research Methods',
-            status: 'archived',
-            created_at: '2023-07-15',
-            assignments: [
-              { title: 'Assignment 1', status: 'archived', due_date: '2023-08-15', submissions: 52 },
-              { title: 'Assignment 2', status: 'archived', due_date: '2023-09-20', submissions: 50 }
-            ],
-            rubric: { uploaded: true, filename: 'rubric_s2_2023.docx' },
-            reports: { available: true, filename: 'final_report_s2_2023.pdf' }
-          },
-          {
-            title: 'HPS302 Assignment Moderation - Semester 1',
-            description: 'Advanced Psychology Research Methods',
-            status: 'archived',
-            created_at: '2023-02-10',
-            assignments: [
-              { title: 'Assignment 1', status: 'archived', due_date: '2023-03-15', submissions: 55 },
-              { title: 'Assignment 2', status: 'archived', due_date: '2023-04-20', submissions: 53 }
-            ],
-            rubric: { uploaded: true, filename: 'rubric_s1_2023.docx' },
-            reports: { available: true, filename: 'final_report_s1_2023.pdf' }
-          }
-        ]
+        // fallback to empty state
+        data = [];
         render();
       }
     }
