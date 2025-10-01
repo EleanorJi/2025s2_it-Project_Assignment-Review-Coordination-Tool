@@ -151,6 +151,7 @@ async function fetchFeedbackContent(assignmentId, markerId) {
 
 // 数据转换函数
 function transformData(assignmentData, projectData, baselineData, markerData, feedbackData, rubricData) {
+
     // 构建assignment显示名称
     const projectName = projectData?.name || 'Unknown Project';
     const assignmentDisplayName = `${projectName} - Moderation ${assignmentData.round || 0}`;

@@ -164,6 +164,23 @@
   
   /* ===================== Past Assignment ===================== */
   .pa-sub{color:var(--muted);margin-top:-6px;margin-bottom:8px;font-weight:600}
+  .pa-block{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:16px}
+  .pa-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+  .pa-title{font-weight:800;font-size:18px;display:inline-flex;align-items:center}
+  .pa-toggle{font-weight:800;color:var(--muted);user-select:none}
+  .pa-list{margin-top:10px}
+  .pa-row{display:flex;align-items:center;justify-content:space-between;padding:12px 10px;border:1px solid var(--border);border-radius:12px;background:#fff}
+  .pa-row + .pa-row{margin-top:10px}
+  .pa-actions{display:flex;gap:10px}
+  .pa-muted{color:var(--muted)}
+  .pa-block.collapsed .pa-list{display:none}
+  .pa-status{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-weight:700;border:1px solid transparent;margin-left:10px;font-size:12px}
+  .pa-status.archived{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
+  .pa-status.completed{background:#e0e7ff;border-color:#c7d2fe;color:#3730a3}
+  .pa-status-menu{position:fixed;top:0;left:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);padding:6px;display:none;gap:6px;z-index:10000}
+  .pa-status-menu.show{display:flex}
+  .pa-status-item{padding:6px 10px;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .pa-status-item:hover{background:#f8fafc}
   
   /* Controls */
   .pa-controls{display:flex;gap:12px;margin-bottom:20px;justify-content:flex-end}
