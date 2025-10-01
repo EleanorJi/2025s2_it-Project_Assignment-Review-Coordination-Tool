@@ -8,7 +8,7 @@ document.querySelectorAll('.nav-item').forEach(b=>{
       }
     });
   });
-  // ✅ 显示用户名
+  // ✅ display username
   try {
     const rawUser = localStorage.getItem("user");
     if (rawUser) {

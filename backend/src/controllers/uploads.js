@@ -10,7 +10,7 @@ const { parseRubricFile } = require('../utils/fileParser');
 
 const router = express.Router();
 
-// 目录
+// Directory setup
 const TEMP_DIR = path.join(__dirname, '../../temp_uploads');
 const PERM_ROOT = path.join(__dirname, '../../uploads');
 fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -30,28 +30,28 @@ const draftUpload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-// 1) 草稿上传：/api/uploads/drafts  (form-data: file, slot)
+// 1) Draft upload: /api/uploads/drafts  (form-data: file, slot)
 router.post('/drafts', draftUpload.single('file'), async (req, res) => {
   try {
-    // slot: 'assignment1' | 'assignment2' | 'rubric'（前端传，用来知道是哪个窗口的文件）
+    // slot: 'assignment1' | 'assignment2' | 'rubric' (sent by frontend to know which window's file)
     const slot = req.body.slot;
     if (!['assignment1','assignment2','rubric'].includes(slot)) {
       await fsp.unlink(req.file.path).catch(()=>{});
       return res.status(400).json({ error: 'invalid slot' });
     }
     
-    // 验证文件类型
+    // Validate file type
     const fileType = req.file.mimetype;
     
-    // 调试：输出检测到的MIME类型
-    console.log(`📋 文件调试信息:`, {
+    // Debug: output detected MIME type
+    console.log(`📋 File debug info:`, {
       originalname: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
       slot: slot
     });
     
-    // Assignment只能上传PDF
+    // Assignment can only upload PDF
     if (slot === 'assignment1' || slot === 'assignment2') {
       if (fileType !== 'application/pdf') {
         await fsp.unlink(req.file.path).catch(()=>{});
@@ -62,15 +62,15 @@ router.post('/drafts', draftUpload.single('file'), async (req, res) => {
       }
     }
     
-    // Rubric可以上传多种格式，但不能是PDF
+    // Rubric can upload multiple formats, but not PDF
     if (slot === 'rubric') {
       const allowedMimeTypes = [
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // DOCX
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',        // XLSX
         'text/csv',                                                                  // CSV
-        'application/vnd.ms-excel',                                                  // XLS (旧格式)
-        'application/msword',                                                        // DOC (旧格式)
-        'application/octet-stream'                                                   // 通用二进制格式（临时允许）
+        'application/vnd.ms-excel',                                                  // XLS (legacy format)
+        'application/msword',                                                        // DOC (legacy format)
+        'application/octet-stream'                                                   // Generic binary format (temporarily allowed)
       ];
       
       if (!allowedMimeTypes.includes(fileType)) {
@@ -89,11 +89,11 @@ router.post('/drafts', draftUpload.single('file'), async (req, res) => {
       mime_type: req.file.mimetype,
       size: req.file.size,
       temp_name: path.basename(req.file.path),
-      // 可设置过期时间，后端定期清理
+      // Set expiry time, backend periodically cleans up
       expires_at: new Date(Date.now() + 1000 * 60 * 60 * 6).toISOString()
     };
-    // 把 draft 信息存在内存不可行；这里简单返回，前端保留 draft_id+temp_name。
-    // 若需要后端记忆，可把 draft 保存到 Redis/DB 临时表，这里从简由前端回传 temp_name。
+    // Store draft info in memory is not feasible; return simply here, frontend keeps draft_id+temp_name.
+    // If backend memory is needed, can save draft to Redis/DB temp table, simplified here with frontend passing back temp_name.
     res.json(draft);
   } catch (e) {
     console.error(e);
@@ -101,7 +101,7 @@ router.post('/drafts', draftUpload.single('file'), async (req, res) => {
   }
 });
 
-// 2) 删除 Draft：/api/uploads/drafts/:tempName
+// 2) Delete Draft: /api/uploads/drafts/:tempName
 router.delete('/drafts/:tempName', async (req, res) => {
   try {
     const abs = path.join(TEMP_DIR, path.basename(req.params.tempName));
@@ -120,10 +120,10 @@ function ensurePermDir() {
   return dir;
 }
 
-// 注意：单个提交功能已移除，只支持批量提交
-// 原 commit 路由已禁用，请使用 /api/uploads/batch-commit
+// Note: Single commit feature has been removed, only batch commit is supported
+// Original commit route has been disabled, please use /api/uploads/batch-commit
 
-// 4) 下载：/api/uploads/:id/download  （提交后才有）
+// 4) Download: /api/uploads/:id/download  (only available after commit)
 router.get('/:id/download', async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -141,8 +141,8 @@ router.get('/:id/download', async (req, res) => {
   }
 });
 
-// 4.5) 批量提交：/api/uploads/batch-commit (重新设计)
-// 一次性创建一个完整的submission，包括1个rubric和2个assignment
+// 4.5) Batch commit: /api/uploads/batch-commit (redesigned)
+// Create a complete submission at once, including 1 rubric and 2 assignments
 router.post('/batch-commit', async (req, res) => {
   const client = await db.connect();
   try {
@@ -156,7 +156,7 @@ router.post('/batch-commit', async (req, res) => {
       owner_id 
     } = req.body || {};
 
-    // 验证所有必需参数
+    // Validate all required parameters
     const requiredFields = [
       { name: 'rubric_temp_name', value: rubric_temp_name },
       { name: 'assignment1_temp_name', value: assignment1_temp_name },
@@ -174,20 +174,20 @@ router.post('/batch-commit', async (req, res) => {
       }
     }
 
-    // 验证所有临时文件都存在
+    // Validate all temporary files exist
     const tempFiles = [
       { name: 'rubric', temp_name: rubric_temp_name },
       { name: 'assignment1', temp_name: assignment1_temp_name },
       { name: 'assignment2', temp_name: assignment2_temp_name }
     ];
 
-    console.log('🔍 验证临时文件...');
+    console.log('🔍 Validating temporary files...');
     for (const file of tempFiles) {
-      const tempAbs = path.join(TEMP_DIR, file.temp_name); // 直接使用完整的temp_name
-      console.log(`检查文件: ${file.name} -> ${tempAbs}`);
+      const tempAbs = path.join(TEMP_DIR, file.temp_name); // Use complete temp_name directly
+      console.log(`Checking file: ${file.name} -> ${tempAbs}`);
       
       const stat = await fsp.stat(tempAbs).catch((error) => {
-        console.log(`文件检查失败: ${error.message}`);
+        console.log(`File check failed: ${error.message}`);
         return null;
       });
       
@@ -197,10 +197,10 @@ router.post('/batch-commit', async (req, res) => {
           checked_path: tempAbs
         });
       }
-      console.log(`✅ 文件存在: ${file.name}, 大小: ${stat.size} 字节`);
+      console.log(`✅ File exists: ${file.name}, size: ${stat.size} bytes`);
     }
 
-    // 验证due date格式和顺序
+    // Validate due date format and order
     const assignment1DueDate = new Date(assignment1_due_date);
     const assignment2DueDate = new Date(assignment2_due_date);
 
@@ -218,7 +218,7 @@ router.post('/batch-commit', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // 验证course_offering_id是否存在
+    // Validate if course_offering_id exists
     const offeringCheck = await client.query(
       'SELECT offering_id FROM course_offering WHERE offering_id = $1',
       [course_offering_id]
@@ -228,14 +228,14 @@ router.post('/batch-commit', async (req, res) => {
       return res.status(400).json({ error: 'Invalid course_offering_id' });
     }
 
-    // Step 1: 将现有的submission设为inactive，然后创建新的active submission
-    console.log('📄 将现有submission设为inactive...');
+    // Step 1: Set existing submissions to inactive, then create new active submission
+    console.log('📄 Setting existing submissions to inactive...');
     await client.query(
       `UPDATE submission SET active = false WHERE course_offering_id = $1 AND active = true`,
       [course_offering_id]
     );
     
-    console.log('📄 创建新的 submission 记录...');
+    console.log('📄 Creating new submission record...');
     const submissionResult = await client.query(
       `INSERT INTO submission (course_offering_id, active) 
        VALUES ($1, true) 
@@ -243,21 +243,21 @@ router.post('/batch-commit', async (req, res) => {
       [course_offering_id]
     );
     const submissionId = submissionResult.rows[0].submission_id;
-    console.log(`✅ Submission 创建成功: submission_id=${submissionId}`);
+    console.log(`✅ Submission created successfully: submission_id=${submissionId}`);
 
-    // Step 2: 创建 rubric 记录
-    console.log('📋 创建 rubric 记录...');
+    // Step 2: Create rubric record
+    console.log('📋 Creating rubric record...');
     const rubricResult = await client.query(
       `INSERT INTO rubric (uploaded_by, submission_id) 
        VALUES ($1, $2) 
        RETURNING rubric_id`,
-      [owner_id || 1, submissionId] // 使用默认owner_id=1如果未提供
+      [owner_id || 1, submissionId] // Use default owner_id=1 if not provided
     );
     const rubricId = rubricResult.rows[0].rubric_id;
-    console.log(`✅ Rubric 创建成功: rubric_id=${rubricId}`);
+    console.log(`✅ Rubric created successfully: rubric_id=${rubricId}`);
 
-    // Step 3: 创建两个 assignment 记录 (round 1 和 round 2)
-    console.log('📅 创建 assignment 记录...');
+    // Step 3: Create two assignment records (round 1 and round 2)
+    console.log('📅 Creating assignment records...');
     const assignment1Result = await client.query(
       `INSERT INTO assignment (offering_id, name, description, due_at, round, submission_id) 
        VALUES ($1, $2, $3, $4, $5, $6) 
@@ -287,33 +287,33 @@ router.post('/batch-commit', async (req, res) => {
       ]
     );
     const assignment2Id = assignment2Result.rows[0].assignment_id;
-    console.log(`✅ Assignments 创建成功: assignment1_id=${assignment1Id}, assignment2_id=${assignment2Id}`);
+    console.log(`✅ Assignments created successfully: assignment1_id=${assignment1Id}, assignment2_id=${assignment2Id}`);
 
     const uploadResults = [];
 
-    // 处理所有文件
-    console.log('📁 开始处理文件...');
+    // Process all files
+    console.log('📁 Starting file processing...');
     for (const file of tempFiles) {
       try {
-        console.log(`\n处理文件: ${file.name}`);
-        const tempAbs = path.join(TEMP_DIR, file.temp_name); // 直接使用完整的temp_name
-        console.log(`临时文件路径: ${tempAbs}`);
+        console.log(`\nProcessing file: ${file.name}`);
+        const tempAbs = path.join(TEMP_DIR, file.temp_name); // Use complete temp_name directly
+        console.log(`Temporary file path: ${tempAbs}`);
         
-        // 读取文件信息
+        // Read file information
         const ext = path.extname(tempAbs).replace('.','') || 'pdf';
         const mimeType = mime.lookup(ext) || 'application/pdf';
         const originalName = `${file.name}.${ext}`;
-        console.log(`文件信息: ext=${ext}, mimeType=${mimeType}, originalName=${originalName}`);
+        console.log(`File info: ext=${ext}, mimeType=${mimeType}, originalName=${originalName}`);
 
-        // 移动到永久目录
+        // Move to permanent directory
         const permDir = ensurePermDir();
         const finalName = `${uuidv4()}.${ext}`;
         const permAbs = path.join(permDir, finalName);
         const storagePath = path.relative(PERM_ROOT, permAbs).replace(/\\/g,'/');
-        console.log(`目标路径: ${permAbs}`);
-        console.log(`存储路径: ${storagePath}`);
+        console.log(`Target path: ${permAbs}`);
+        console.log(`Storage path: ${storagePath}`);
 
-        // 确定文件类型和关联
+        // Determine file type and association
         let fileType, targetAssignmentId, targetRubricId;
         if (file.name === 'rubric') {
           fileType = 'RUBRIC';
@@ -328,11 +328,11 @@ router.post('/batch-commit', async (req, res) => {
           targetAssignmentId = assignment2Id;
           targetRubricId = null;
         }
-        console.log(`文件类型: ${fileType}, assignment_id=${targetAssignmentId}, rubric_id=${targetRubricId}`);
+        console.log(`File type: ${fileType}, assignment_id=${targetAssignmentId}, rubric_id=${targetRubricId}`);
 
-        // 插入数据库记录
-        console.log('💾 插入数据库记录...');
-        console.log(`插入参数: owner_id=${owner_id || null}, assignment_id=${targetAssignmentId}, rubric_id=${targetRubricId}`);
+        // Insert database record
+        console.log('💾 Inserting database record...');
+        console.log(`Insert parameters: owner_id=${owner_id || null}, assignment_id=${targetAssignmentId}, rubric_id=${targetRubricId}`);
         
         const { rows } = await client.query(
           `INSERT INTO upload (owner_id, assignment_id, rubric_id,
@@ -349,7 +349,7 @@ router.post('/batch-commit', async (req, res) => {
             storagePath
           ]
         );
-        console.log(`✅ 数据库记录插入成功: upload_id=${rows[0].upload_id}`);
+        console.log(`✅ Database record inserted successfully: upload_id=${rows[0].upload_id}`);
 
         // 移动文件 - 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
         console.log('📂 移动文件...');
@@ -364,54 +364,54 @@ router.post('/batch-commit', async (req, res) => {
           download_url: `/api/uploads/${rows[0].upload_id}/download`
         });
       } catch (fileError) {
-        console.error(`❌ 处理文件 ${file.name} 时出错:`, fileError);
-        throw fileError; // 重新抛出错误以触发回滚
+        console.error(`❌ Error processing file ${file.name}:`, fileError);
+        throw fileError; // Re-throw error to trigger rollback
       }
     }
 
     await client.query('COMMIT');
-    console.log('✅ 所有操作完成，事务提交成功!');
+    console.log('✅ All operations completed, transaction committed successfully!');
 
-    // 解析rubric文件并更新行列数
+    // Parse rubric file and update row/column count
     try {
-      console.log('📊 开始解析rubric文件...');
+      console.log('📊 Starting rubric file parsing...');
       const rubricFile = uploadResults.find(file => file.file_type === 'rubric');
       if (rubricFile) {
         const rubricPath = path.join(PERM_ROOT, rubricFile.upload_record.storage_path);
-        console.log(`📍 Rubric文件路径: ${rubricPath}`);
-        console.log(`📄 Rubric文件MIME类型: ${rubricFile.upload_record.mime_type}`);
+        console.log(`📍 Rubric file path: ${rubricPath}`);
+        console.log(`📄 Rubric file MIME type: ${rubricFile.upload_record.mime_type}`);
         
-        // 检查文件是否存在
+        // Check if file exists
         const fileExists = await fsp.stat(rubricPath).catch(() => null);
         if (!fileExists) {
-          console.error('❌ Rubric文件不存在:', rubricPath);
+          console.error('❌ Rubric file does not exist:', rubricPath);
           return;
         }
-        console.log(`✅ Rubric文件存在，大小: ${fileExists.size} 字节`);
+        console.log(`✅ Rubric file exists, size: ${fileExists.size} bytes`);
         
         const { rows, columns } = await parseRubricFile(rubricPath, rubricFile.upload_record.mime_type);
-        console.log(`🎯 解析结果: ${rows}行 x ${columns}列`);
+        console.log(`🎯 Parsing result: ${rows} rows x ${columns} columns`);
         
-        // 更新rubric表中的row和column字段
+        // Update row and column fields in rubric table
         await db.query(
           'UPDATE rubric SET "row" = $1, "column" = $2 WHERE rubric_id = $3',
           [rows, columns, rubricId]
         );
         
-        console.log(`✅ Rubric表格信息已更新: ${rows}行 x ${columns}列`);
+        console.log(`✅ Rubric table info updated: ${rows} rows x ${columns} columns`);
         
-        // 在返回结果中包含表格信息
+        // Include table info in return result
         uploadResults.forEach(file => {
           if (file.file_type === 'rubric') {
             file.table_info = { rows, columns };
           }
         });
       } else {
-        console.log('⚠️ 没有找到rubric文件');
+        console.log('⚠️ No rubric file found');
       }
     } catch (parseError) {
-      console.error('❌ 解析rubric文件失败，但不影响主流程:', parseError);
-      console.error('❌ 错误堆栈:', parseError.stack);
+      console.error('❌ Failed to parse rubric file, but does not affect main process:', parseError);
+      console.error('❌ Error stack:', parseError.stack);
     }
 
     res.json({
@@ -445,7 +445,7 @@ router.post('/batch-commit', async (req, res) => {
   }
 });
 
-// 4.9) 调试：检查临时文件
+// 4.9) Debug: Check temp files
 router.get('/debug/temp-files', async (req, res) => {
   try {
     const files = await fsp.readdir(TEMP_DIR);
@@ -471,7 +471,7 @@ router.get('/debug/temp-files', async (req, res) => {
   }
 });
 
-// 5) 获取激活的submission：/api/uploads/active-submission
+// 5) Get active submission: /api/uploads/active-submission
 router.get('/active-submission/:offering_id', async (req, res) => {
   try {
     const { offering_id } = req.params;
@@ -479,7 +479,7 @@ router.get('/active-submission/:offering_id', async (req, res) => {
       return res.status(400).json({ error: 'offering_id is required' });
     }
     
-    // 获取激活的submission及其相关信息
+    // Get active submission and its related information
     const { rows } = await db.query(`
       SELECT 
         s.submission_id,
@@ -529,7 +529,7 @@ router.get('/active-submission/:offering_id', async (req, res) => {
   }
 });
 
-// 6) 发布验证：/api/uploads/publish
+// 6) Publish validation: /api/uploads/publish
 router.post('/publish', async (req, res) => {
   try {
     const { assignment_id } = req.body;
@@ -537,7 +537,7 @@ router.post('/publish', async (req, res) => {
       return res.status(400).json({ error: 'assignment_id is required' });
     }
     
-    // 检查assignment是否有due_date
+    // Check if assignment has due_date
     const { rows } = await db.query(
       'SELECT assignment_id, due_at, name FROM assignment WHERE assignment_id = $1',
       [assignment_id]
@@ -554,7 +554,7 @@ router.post('/publish', async (req, res) => {
       });
     }
     
-    // 这里可以添加更多发布逻辑，比如更新状态等
+    // More publish logic can be added here, such as updating status
     // await db.query('UPDATE assignment SET status = $1 WHERE assignment_id = $2', ['PUBLISHED', assignment_id]);
     
     res.json({

@@ -9,11 +9,11 @@
   --bad: #DC2626;
   --radius: 4px;
   --shadow: 0 2px 8px rgba(2,6,23,0.08);
-  --grade-high-distinction: #4caf50;  /* 绿色 */
-  --grade-distinction: #8bc34a;       /* 浅绿色 */
-  --grade-credit: #ffc107;            /* 黄色 */
-  --grade-pass: #ff9800;              /* 橙色 */
-  --grade-fail: #ff4444;              /* 红色 - 新增 */
+  --grade-high-distinction: #4caf50;  /* Green */
+  --grade-distinction: #8bc34a;       /* Light green */
+  --grade-credit: #ffc107;            /* Yellow */
+  --grade-pass: #ff9800;              /* Orange */
+  --grade-fail: #ff4444;              /* Red - new addition */
 }
 
 * {
@@ -793,7 +793,7 @@ body {
   flex-shrink: 0; /* 防止控制栏被压缩 */
 }
 
-/* 添加滚动条样式 */
+/* Add scrollbar styles */
 .pdf-viewer::-webkit-scrollbar {
   width: 12px;
 }

@@ -10,8 +10,8 @@
 
   // API Configuration
   const API_BASE_URL = '/api'; // Adjust based on your backend
-  let ASSIGNMENT_ID = null; // 改为变量，动态获取
-  let PROJECT_ID = null; // 存储project_id
+  let ASSIGNMENT_ID = null; // Changed to variable, dynamically retrieved
+  let PROJECT_ID = null; // Store project_id
 
   // Current state
   let currentPage = 1;
@@ -19,11 +19,11 @@
   let gradeData = {};
   let currentGrades = {}; // Default to High Distinction
 
-  // 在文件开头添加PDF.js配置
+  // Add PDF.js configuration at file beginning
   const pdfjsLib = window['pdfjs-dist/build/pdf'];
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-  // PDF查看器状态
+  // PDF viewer state
   let pdfDoc = null;
   let currentPdfPage = 1;
   let totalPdfPages = 0;
@@ -32,14 +32,14 @@
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 3.0;
 
-  // 存储所有页面的canvas和尺寸
+  // Store all pages' canvas and dimensions
   let pageCanvases = [];
   let pageHeights = [];
   let totalHeight = 0;
 
   // Initialize the interface
   async function init() {
-    // ✅ 显示用户名
+    // ✅ Display username
     try {
       const rawUser = localStorage.getItem("user");
       // console.log("User Info:", rawUser);
@@ -56,24 +56,29 @@
       console.error("Failed to load username:", err);
     }
 
-    // 调试用，查看当前用户信息
+    // Debug use, check current user information
     // getCurrentUser();
 
-    // ✅ 从URL获取project_id和assignment标识
+    // ✅ Get project_id and assignment identifier from URL
     await resolveAssignmentId();
 
     if (!ASSIGNMENT_ID) {
-      throw new Error('无法确定assignment ID');
+      throw new Error('Unable to determine assignment ID');
     }
 
-    // 显示Assignment和project的信息（名称、截止日期等）
+    // Display Assignment and project information (name, due date, etc.)
     setupAssignmentDetails();
 
     // Load rubric data from backend
     await loadRubricData();
 
-    // ✅ 新增：加载已保存的分数和反馈数据
+    // ✅ New addition: load saved scores and feedback data
     await loadSavedScoresAndFeedback();
+
+    if (window.savedScoresData?.finalized) {
+      console.log('✅ 检测到 finalized 状态，锁定所有输入');
+      lockAllInputs();
+    }
 
     generateCriteriaHTML();
 
@@ -87,12 +92,12 @@
     updateTotalScoreDisplay();
   }
 
-  // 加载已保存到后端的的score和feedback数据
+  // Load saved scores and feedback data from backend
   async function loadSavedScoresAndFeedback() {
     try {
       const currentUser = getCurrentUser();
       if (!currentUser) {
-        console.warn('无法获取当前用户信息，跳过加载已保存数据');
+        console.warn('Unable to get current user info, skipping loading saved data');
         return;
       }
 
@@ -102,31 +107,31 @@
       } else if (currentUser.role === 'MARKER') {
         response = await fetch(`${API_BASE_URL}/uploads/scoring/marker/${ASSIGNMENT_ID}/${currentUser.userId}`);
       } else {
-        console.warn('未知用户角色，跳过加载已保存数据');
+        console.warn('Unknown user role, skipping loading saved data');
         return;
       }
 
       if (!response.ok) {
         if (response.status === 404) {
-          console.log('未找到已保存的数据，使用默认值');
+          console.log('No saved data found, using default values');
           return;
         }
-        throw new Error(`加载失败: ${response.status}`);
+        throw new Error(`Loading failed: ${response.status}`);
       }
 
       const data = await response.json();
 
-      // 根据用户角色处理不同的数据结构
+      // Handle different data structures based on user role
       const scoresData = currentUser.role === 'COORDINATOR'
         ? data.baseline_scores
         : data.marker_scores;
 
       if (!scoresData || scoresData.length === 0) {
-        console.log('没有已保存的分数数据');
+        console.log('No saved score data');
         return;
       }
 
-      // 创建映射以便后续使用
+      // Create mapping for subsequent use
       window.savedScoresData = {
         scores: {},
         feedback: {},
@@ -134,24 +139,24 @@
           ? (data.marker_scores?.[0]?.finalized || false)
           : (data.baseline_scores?.[0]?.finalized || false)
       };
-      console.log('✅ 设置的 finalized 状态:', window.savedScoresData.finalized);
+      console.log('✅ Set finalized status:', window.savedScoresData.finalized);
 
-      // 处理分数和反馈数据 - 直接使用seq_no作为前端ID
+      // Process scores and feedback data - directly use seq_no as frontend ID
       scoresData.forEach(scoreItem => {
-        // 根据后端criterion_id找到对应的前端criterion（使用seq_no）
+        // Find corresponding frontend criterion based on backend criterion_id (using seq_no)
         const criterion = originalData.criteria.find(c => c.criterion_id === scoreItem.criterion_id);
         if (criterion) {
-          const frontendCriterionId = criterion.seq_no; // seq_no就是前端ID
+          const frontendCriterionId = criterion.seq_no; // seq_no is the frontend ID
 
-          // 保存分数
+          // Save scores
           window.savedScoresData.scores[frontendCriterionId] = scoreItem.score;
 
-          // 保存反馈
+          // Save feedback
           if (scoreItem.comment) {
             window.savedScoresData.feedback[frontendCriterionId] = scoreItem.comment;
           }
 
-          // 根据分数设置对应的等级
+          // Set corresponding grade based on score
           if (scoreItem.matched_level && gradeData[frontendCriterionId]) {
             const matchedGrade = findMatchingGrade(frontendCriterionId, scoreItem.score);
             if (matchedGrade !== null) {
@@ -161,20 +166,20 @@
         }
       });
 
-      console.log('✅ 已保存的数据加载成功:', window.savedScoresData);
+      console.log('✅ Saved data loaded successfully:', window.savedScoresData);
 
     } catch (error) {
-      console.error('❌ 加载已保存数据失败:', error);
-      // 不抛出错误，继续使用默认值
+      console.error('❌ Failed to load saved data:', error);
+      // Don't throw error, continue using default values
     }
   }
 
-  // 根据分数查找匹配的等级
+  // Find matching grade based on score
   function findMatchingGrade(criterionId, score) {
     const grades = gradeData[criterionId];
     if (!grades) return null;
 
-    // 按等级从高到低排序
+    // Sort grades from high to low
     const sortedGrades = Object.keys(grades)
       .map(grade => parseInt(grade))
       .sort((a, b) => b - a);
@@ -191,7 +196,7 @@
     return null;
   }
 
-  // 解析URL参数，获取真实的assignment_id
+  // Parse URL parameters to get real assignment_id
   async function resolveAssignmentId() {
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -199,42 +204,42 @@
     const assignmentParam = urlParams.get('assignment');
 
     if (!projectId) {
-      throw new Error('URL中缺少project_id参数');
+      throw new Error('Missing project_id parameter in URL');
     }
 
     if (!assignmentParam || !['assignment1', 'assignment2'].includes(assignmentParam)) {
-      throw new Error('assignment参数必须是assignment1或assignment2');
+      throw new Error('assignment parameter must be assignment1 or assignment2');
     }
 
     PROJECT_ID = projectId;
 
     try {
-      // 调用现有接口获取latest-ids
+      // Call existing interface to get latest-ids
       const response = await fetch(`${API_BASE_URL}/uploads/project/${PROJECT_ID}/latest-ids`);
       if (!response.ok) {
-        throw new Error('获取项目信息失败');
+        throw new Error('Failed to get project info');
       }
 
       const data = await response.json();
 
-      // 根据assignment参数选择对应的assignment_id
+      // Select corresponding assignment_id based on assignment parameter
       if (assignmentParam === 'assignment1' && data.assignment1) {
         ASSIGNMENT_ID = data.assignment1.assignment_id;
       } else if (assignmentParam === 'assignment2' && data.assignment2) {
         ASSIGNMENT_ID = data.assignment2.assignment_id;
       } else {
-        throw new Error(`找不到对应的assignment: ${assignmentParam}`);
+        throw new Error(`Cannot find corresponding assignment: ${assignmentParam}`);
       }
-      console.log(`✅ 解析成功: project_id=${PROJECT_ID}`);
-      console.log(`✅ 解析成功: ${assignmentParam} -> assignment_id=${ASSIGNMENT_ID}`);
+      console.log(`✅ Parse successful: project_id=${PROJECT_ID}`);
+      console.log(`✅ Parse successful: ${assignmentParam} -> assignment_id=${ASSIGNMENT_ID}`);
 
     } catch (error) {
-      console.error('解析assignment ID失败:', error);
-      throw new Error(`无法解析assignment ID: ${error.message}`);
+      console.error('Failed to parse assignment ID:', error);
+      throw new Error(`Unable to parse assignment ID: ${error.message}`);
     }
   }
 
-  // 显示Assignment和project的信息（名称、截止日期等）
+  // Display Assignment and project information (name, due date, etc.)
   async function setupAssignmentDetails() {
     try {
       if (!ASSIGNMENT_ID) {
@@ -242,7 +247,7 @@
         return;
       }
 
-      // 1. 获取assignment详细信息
+      // 1. Get assignment details
       const assignmentResponse = await fetch(`/api/uploads/assignment/${ASSIGNMENT_ID}/status`);
       if (!assignmentResponse.ok) {
         throw new Error(`Failed to fetch assignment details: ${assignmentResponse.status}`);
@@ -251,12 +256,12 @@
       const assignmentData = await assignmentResponse.json();
       const assignment = assignmentData.assignment;
 
-      // 设置PROJECT_ID（如果尚未设置）
+      // Set PROJECT_ID (if not yet set)
       if (!PROJECT_ID && assignment.project_id) {
         PROJECT_ID = assignment.project_id;
       }
 
-      // 2. 获取project详细信息
+      // 2. Get project details
       let projectName = 'Unnamed Project';
       if (PROJECT_ID) {
         try {
@@ -271,14 +276,14 @@
         }
       }
 
-      // 3. 格式化日期
+      // 3. Format date
       let dueDateText = 'Due date not set';
       if (assignment.due_at) {
         const dueDate = new Date(assignment.due_at);
         dueDateText = `Due: ${formatDueDate(dueDate)}`;
       }
 
-      // 4. 更新页面元素
+      // 4. Update page elements
       const assignmentTitleEl = document.querySelector('.assignment-title');
       const dueDateEl = document.querySelector('.due-date');
 
@@ -299,7 +304,7 @@
     } catch (error) {
       console.error('❌ Failed to setup assignment details:', error);
 
-      // 设置默认值作为fallback
+      // Set default values as fallback
       const assignmentTitleEl = document.querySelector('.assignment-title');
       const dueDateEl = document.querySelector('.due-date');
 
@@ -313,7 +318,7 @@
     }
   }
 
-  // 日期格式化辅助函数（匹配你提供的格式：Tue Sep 16, 2025 10:00）
+  // Date formatting helper function (matching your provided format: Tue Sep 16, 2025 10:00)
   function formatDueDate(date) {
     const options = {
       weekday: 'short',
@@ -334,7 +339,7 @@
         throw new Error('Project ID is not available');
       }
 
-      // 获取项目的最新ID信息
+      // Get project's latest ID information
       const idsResponse = await fetch(`${API_BASE_URL}/uploads/project/${PROJECT_ID}/latest-ids`);
       if (!idsResponse.ok) {
         throw new Error('Failed to load project IDs');
@@ -345,7 +350,7 @@
         throw new Error('No rubric found for this project');
       }
 
-      // 使用获取到的rubric_id来获取评分标准详情
+      // Use obtained rubric_id to get grading criteria details
       const rubricId = idsData.rubric.rubric_id;
       const response = await fetch(`${API_BASE_URL}/uploads/rubric/${rubricId}/details`);
       if (!response.ok) {
@@ -353,11 +358,11 @@
       }
 
       const data = await response.json();
-      originalData = data; // 保存原始数据
+      originalData = data; // Save original data
       criterionData = formatRubric(data);
       console.log('✅ original Criterion data:', data);
 
-      // 根据rubric数据初始化currentGrades和gradeData
+      // Initialize currentGrades and gradeData based on rubric data
       initializeGradeData(data);
 
       console.log('✅ Criterion data stored:', criterionData);
@@ -375,20 +380,20 @@
   function formatRubric(data) {
     const formattedData = {};
 
-    // 遍历所有评分标准
+    // Iterate through all grading criteria
     data.criteria.forEach((criterion, index) => {
-      const criterionId = index + 1; // 使用1-based索引作为键
+      const criterionId = index + 1; // Use 1-based index as key
       const descriptions = {};
 
-      // 遍历该标准的所有等级水平
+      // Iterate through all grade levels for this criterion
       criterion.grade_levels.forEach((level, levelIndex) => {
-        // 将描述文本按换行符分割成数组，并过滤空行
+        // Split description text by line breaks into array, filter empty lines
         const criteriaList = level.description
           .split('\n')
           .map(item => item.trim())
           .filter(item => item.length > 0);
 
-        // 构建points字符串，格式如："0-4 points"
+        // Build points string, format like: "0-4 points"
         const points = `${level.min_score}-${level.max_score} points`;
 
         descriptions[4 - levelIndex] = {
@@ -397,7 +402,7 @@
         };
       });
 
-      // 构建每个评分标准的数据结构
+      // Build data structure for each grading criterion
       formattedData[criterionId] = {
         title: criterion.title,
         maxScore: criterion.max_score,
@@ -408,26 +413,26 @@
     return formattedData;
   }
 
-  // 根据rubric数据初始化gradeData和currentGrades
+  // Initialize gradeData and currentGrades based on rubric data
   function initializeGradeData(rubricData) {
-    // 重置gradeData和currentGrades
+    // Reset gradeData and currentGrades
     gradeData = {};
     currentGrades = {};
 
-    // 遍历每个评分标准
+    // Iterate through each grading criterion
     rubricData.criteria.forEach((criterion, index) => {
       const criterionId = index + 1;
 
-      // 为每个评分标准初始化默认等级（选择最高等级）
+      // Initialize default grade for each grading criterion (select highest grade)
       if (criterion.grade_levels && criterion.grade_levels.length > 0) {
-        // 按seq_no降序排序，选择最高的等级作为默认值
+        // Sort by seq_no in descending order, select highest grade as default
         const sortedLevels = [...criterion.grade_levels].sort((a, b) => b.seq_no - a.seq_no);
         currentGrades[criterionId] = sortedLevels[0].seq_no - 1;
 
-        // 构建gradeData数据结构
+        // Build gradeData data structure
         gradeData[criterionId] = {};
 
-        // 为每个评分标准创建独立的等级映射
+        // Create independent grade mapping for each grading criterion
         criterion.grade_levels.forEach(level => {
           gradeData[criterionId][5 - level.seq_no] = {
             name: level.level_name,
@@ -442,49 +447,49 @@
     });
   }
 
-  // 根据等级序号和总等级数量获取对应的颜色（支持5个级别）
+  // Get corresponding color based on grade sequence number and total grade levels (supports 5 levels)
   function getGradeColor(seqNo, totalLevels) {
-    // 5个级别的颜色映射（从高到低）
+    // Color mapping for 5 levels (from high to low)
     const colorMappings = {
-      5: [ // 5个级别的情况
-        'var(--grade-high-distinction)', // 最高等级 - 级别4
-        'var(--grade-distinction)',      // 级别3
-        'var(--grade-credit)',           // 级别2
-        'var(--grade-pass)',             // 级别1
-        'var(--grade-fail)'              // 最低等级 - 级别0
+      5: [ // Case with 5 levels
+        'var(--grade-high-distinction)', // Highest level - Level 4
+        'var(--grade-distinction)',      // Level 3
+        'var(--grade-credit)',           // Level 2
+        'var(--grade-pass)',             // Level 1
+        'var(--grade-fail)'              // Lowest level - Level 0
       ],
-      4: [ // 4个级别的情况（保持原有逻辑）
-        'var(--grade-high-distinction)', // 最高等级
+      4: [ // Case with 4 levels (maintain original logic)
+        'var(--grade-high-distinction)', // Highest level
         'var(--grade-distinction)',
         'var(--grade-credit)',
         'var(--grade-pass)'
       ],
-      3: [ // 3个级别的情况
+      3: [ // Case with 3 levels
         'var(--grade-high-distinction)',
         'var(--grade-distinction)',
         'var(--grade-pass)'
       ],
-      2: [ // 2个级别的情况
+      2: [ // Case with 2 levels
         'var(--grade-pass)',
         'var(--grade-fail)'
       ]
     };
 
-    // 根据总等级数量选择合适的颜色映射
-    const colors = colorMappings[totalLevels] || colorMappings[4]; // 默认使用4级映射
+    // Select appropriate color mapping based on total grade levels
+    const colors = colorMappings[totalLevels] || colorMappings[4]; // Default to 4-level mapping
 
-    // 计算颜色索引（seqNo从高到低，需要映射到颜色数组）
+    // Calculate color index (seqNo from high to low, needs to map to color array)
     const colorIndex = totalLevels - 1 - seqNo;
 
-    // 确保颜色索引在有效范围内
+    // Ensure color index is within valid range
     const safeIndex = Math.max(0, Math.min(colorIndex, colors.length - 1));
     return colors[safeIndex] || 'var(--grade-pass)';
   }
 
-  // 备用默认数据加载函数（更新为支持5个级别）
+  // Backup default data loading function (updated to support 5 levels)
   function loadDefaultRubricData() {
-    // 使用默认的5个级别数据
-    currentGrades = { 1: 4, 2: 4, 3: 4 }; // 默认选择最高等级（级别4）
+    // Use default 5-level data
+    currentGrades = { 1: 4, 2: 4, 3: 4 }; // Default select highest level (Level 4)
     gradeData = {
       4: { name: 'High Distinction', color: 'var(--grade-high-distinction)', score: '9-10' },
       3: { name: 'Distinction', color: 'var(--grade-distinction)', score: '7-8' },
@@ -532,7 +537,7 @@
     };
   }
 
-  // 动态生成评分标准HTML
+  // Dynamically generate grading criteria HTML
   function generateCriteriaHTML() {
     const container = $('.marking-criteria');
     if (!container) {
@@ -540,19 +545,19 @@
       return;
     }
 
-    // 清空容器
+    // Clear container
     container.innerHTML = '';
 
-    // 获取标准数量
+    // Get number of criteria
     const criterionIds = Object.keys(criterionData);
     const lastCriterionId = criterionIds[criterionIds.length - 1];
 
-    // 动态生成每个评分标准
+    // Dynamically generate each grading criterion
     criterionIds.forEach(criterionId => {
       const criterion = criterionData[criterionId];
       const currentGrade = currentGrades[criterionId] || 4;
 
-      // ✅ 使用已保存的分数或默认值
+      // ✅ Use saved scores or default values
       const savedScore = window.savedScoresData?.scores?.[criterionId];
       const initialScore = savedScore !== undefined ? savedScore : criterion.maxScore;
 
@@ -576,7 +581,9 @@
           <div class="score-input-section">
             <div class="score-input-container">
               <label for="score-input-${criterionId}">Manual Score:</label>
-              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"/>
+              <input type="number" id="score-input-${criterionId}" class="score-input"
+                     min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"
+                     ${window.savedScoresData?.finalized ? 'disabled' : ''}/>
               <span class="max-score">/ ${criterion.maxScore}</span>
             </div>
           </div>
@@ -587,22 +594,23 @@
           </div>
 
           <div class="grade-description">
-            <!-- 描述内容将由updateCriterionDisplay动态更新 -->
+            <!-- Description content will be dynamically updated by updateCriterionDisplay -->
           </div>
 
           <div class="feedback-section">
-            <button class="show-feedback-btn">+ Add Feedback</button>
+            <button class="show-feedback-btn" ${window.savedScoresData?.finalized ? 'style="display: none;"' : ''}>+ Add Feedback</button>
             <div class="criterion-feedback ${window.savedScoresData?.feedback?.[criterionId] ? '' : 'hidden'}">
               <div class="feedback-header">
                 <span>Criterion Feedback</span>
-                <button class="close-feedback">×</button>
+                ${!window.savedScoresData?.finalized ? '<button class="close-feedback">×</button>' : ''}
               </div>
-              <textarea placeholder="Please write your feedback on this criterion.">${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
+              <textarea placeholder="Please write your feedback on this criterion."
+                        ${window.savedScoresData?.finalized ? 'disabled' : ''}>${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
             </div>
           </div>
 
           ${isLastCriterion ? `
-            <!-- 只在最后一个标准添加操作按钮 -->
+            <!-- Only add action buttons to the last criterion -->
             <div class="action-buttons">
               <div class="total-score-display">/100</div>
               ${!window.savedScoresData?.finalized ? `
@@ -623,7 +631,7 @@
     console.log('✅ Action buttons added to last criterion:', lastCriterionId);
   }
 
-  // 更新总分显示
+  // Update total score display
   function updateTotalScoreDisplay() {
     const totalScoreElement = document.querySelector('.total-score-display');
     if (totalScoreElement) {
@@ -631,34 +639,34 @@
       totalScoreElement.textContent = totalScore === 0 ? '/100' : `${totalScore}/100`;
     }
   }
-  // 计算加权总分（基于100分制）
+  // Calculate weighted total score (based on 100-point system)
   function calculateWeightedTotalScore() {
     const scores = getCurrentScores();
     let totalWeightedScore = 0;
     let totalMaxScore = 0;
 
-    // 计算每个criterion的权重分数
+    // Calculate weighted score for each criterion
     Object.keys(scores).forEach(criterionId => {
       const score = scores[criterionId];
       const criterion = criterionData[criterionId];
 
       if (criterion) {
         const maxScore = criterion.maxScore;
-        // 计算该criterion在100分中的权重分数
+        // Calculate weighted score for this criterion in 100-point system
         const weightedScore = (score / maxScore) * (maxScore / 100) * 100;
         totalWeightedScore += weightedScore;
         totalMaxScore += maxScore;
       }
     });
 
-    // 如果总分不是100，需要按比例调整
+    // If total is not 100, need to scale proportionally
     const scalingFactor = totalMaxScore > 0 ? 100 / totalMaxScore : 0;
     const finalScore = totalWeightedScore * scalingFactor;
 
-    return Math.round(finalScore * 10) / 10; // 保留一位小数
+    return Math.round(finalScore * 10) / 10; // Keep one decimal place
   }
 
-  // 生成单个评分标准的等级选项HTML
+  // Generate grade options HTML for single grading criterion
   function generateGradeOptions(criterionId, currentGrade) {
     const grades = gradeData[criterionId];
     if (!grades) {
@@ -666,7 +674,7 @@
       return '';
     }
 
-    // 按等级从高到低排序（4, 3, 2, 1, 0）- 确保HTML显示顺序正确
+    // Sort grades from high to low (4, 3, 2, 1, 0) - ensure correct HTML display order
     const sortedGrades = Object.keys(grades).sort((a, b) => b - a);
 
     return sortedGrades.map(grade => {
@@ -684,10 +692,10 @@
       setupPdfControls();
   }
 
-  // 初始化PDF查看器
+  // Initialize PDF viewer
   async function setupPdfViewer() {
       try {
-          // 1. 获取assignment的文件信息
+          // 1. Get assignment file information
           const filesResponse = await fetch(`${API_BASE_URL}/uploads/assignment/${ASSIGNMENT_ID}/files`);
           if (!filesResponse.ok) {
               throw new Error('Failed to fetch assignment files');
@@ -698,11 +706,11 @@
               throw new Error('No files found for this assignment');
           }
 
-          // 取第一个文件（假设是PDF）
+          // Get first file (assume it's PDF)
           const fileInfo = filesData.files[0];
           console.log('File info:', fileInfo);
 
-          // 2. 获取PDF文件
+          // 2. Get PDF file
           const pdfResponse = await fetch(`${API_BASE_URL}/uploads/${fileInfo.upload_id}/download`);
           if (!pdfResponse.ok) {
               throw new Error('Failed to download PDF file');
@@ -711,23 +719,23 @@
           const pdfBlob = await pdfResponse.blob();
           const pdfUrl = URL.createObjectURL(pdfBlob);
 
-          // 3. 使用PDF.js加载PDF
+          // 3. Use PDF.js to load PDF
           const loadingTask = pdfjsLib.getDocument(pdfUrl);
           pdfDoc = await loadingTask.promise;
 
           totalPdfPages = pdfDoc.numPages;
           currentPdfPage = 1;
 
-          // 4. 渲染所有页面到连续画布
+          // 4. Render all pages to continuous canvas
           await renderAllPages();
 
-          // 5. 更新页面信息
+          // 5. Update page information
           updatePagination();
 
-          // 6. 更新缩略图
+          // 6. Update thumbnails
           updateThumbnails();
 
-          // 7. 设置滚动监听
+          // 7. Set scroll listener
           setupScrollListener();
 
       } catch (error) {
@@ -736,7 +744,7 @@
       }
   }
 
-  // 渲染所有页面到连续画布
+  // Render all pages to continuous canvas
   async function renderAllPages() {
       try {
           showPdfLoading(true);
@@ -759,7 +767,7 @@
               const page = await pdfDoc.getPage(i);
               const viewport = page.getViewport({ scale: currentScale });
 
-              // 创建页面包装器
+              // Create page wrapper
               const pageWrapper = document.createElement('div');
               pageWrapper.className = 'pdf-page-wrapper';
               pageWrapper.style.cssText = `
@@ -802,7 +810,7 @@
               pageWrapper.appendChild(canvas);
               canvasContainer.appendChild(pageWrapper);
 
-              // 使用包装器的高度
+              // Use wrapper's height
               const pageHeight = pageWrapper.offsetHeight;
               pageCanvases.push(canvas);
               pageHeights.push(pageHeight);
@@ -819,7 +827,7 @@
       }
   }
 
-  // 设置滚动监听
+  // Set scroll listener
   function setupScrollListener() {
       const pdfViewer = document.getElementById('pdf-viewer');
 
@@ -828,7 +836,7 @@
       });
   }
 
-  // 根据滚动位置更新当前页面
+  // Update current page based on scroll position
   function updateCurrentPageFromScroll() {
       const pdfViewer = document.getElementById('pdf-viewer');
       const scrollTop = pdfViewer.scrollTop;
@@ -837,7 +845,7 @@
       let accumulatedHeight = 0;
       let newCurrentPage = 1;
 
-      // 获取所有页面包装器
+      // Get all page wrappers
       const pageWrappers = document.querySelectorAll('.pdf-page-wrapper');
 
       for (let i = 0; i < pageWrappers.length; i++) {
@@ -845,14 +853,14 @@
           const wrapperHeight = wrapper.offsetHeight;
           accumulatedHeight += wrapperHeight;
 
-          // 如果滚动位置超过当前页面累计高度的一半，则认为进入下一页
+          // If scroll position exceeds half of current page accumulated height, consider entering next page
           if (scrollTop + (viewerHeight / 2) < accumulatedHeight) {
               newCurrentPage = i + 1;
               break;
           }
       }
 
-      // 更新当前页面（如果发生变化）
+      // Update current page (if changed)
       if (newCurrentPage !== currentPdfPage) {
           currentPdfPage = newCurrentPage;
           updatePagination();
@@ -860,7 +868,7 @@
       }
   }
 
-  // 滚动到指定页面
+  // Scroll to specified page
   function scrollToPage(pageNum) {
       const pdfViewer = document.getElementById('pdf-viewer');
 
@@ -881,7 +889,7 @@
       });
   }
 
-  // 渲染PDF页面
+  // Render PDF page
   async function renderPage(pageNum) {
       try {
           showPdfLoading(true);
@@ -908,13 +916,13 @@
       }
   }
 
-  // 设置PDF控制功能
+  // Set PDF control functions
   function setupPdfControls() {
-      // 翻页按钮
+      // Page flip buttons
       document.getElementById('prev-page').addEventListener('click', prevPage);
       document.getElementById('next-page').addEventListener('click', nextPage);
 
-      // 页码输入
+      // Page number input
       document.getElementById('page-number').addEventListener('change', (e) => {
           const pageNum = parseInt(e.target.value);
           if (pageNum >= 1 && pageNum <= totalPdfPages) {
@@ -922,18 +930,18 @@
           }
       });
 
-      // 缩放按钮
+      // Zoom buttons
       document.getElementById('zoom-in').addEventListener('click', zoomIn);
       document.getElementById('zoom-out').addEventListener('click', zoomOut);
 
-      // 下载按钮
+      // Download button
       document.querySelector('.download-btn').addEventListener('click', downloadPdf);
 
-      // 键盘导航
+      // Keyboard navigation
       document.addEventListener('keydown', handleKeyboardNavigation);
   }
 
-  // 翻页功能
+  // Page flip functions
   async function prevPage() {
       if (currentPdfPage > 1) {
           scrollToPage(currentPdfPage - 1);
@@ -950,18 +958,18 @@
       scrollToPage(pageNum);
   }
 
-  // 修改缩放功能 - 重新渲染所有页面
+  // Modify zoom function - re-render all pages
   async function updateZoom() {
       document.getElementById('zoom-level').textContent = Math.round(currentScale * 100) + '%';
       await renderAllPages();
 
-      // 滚动回当前页面
+      // Scroll back to current page
       setTimeout(() => {
           scrollToPage(currentPdfPage);
       }, 100);
   }
 
-  // 缩放功能
+  // Zoom functions
   async function zoomIn() {
       if (currentScale < MAX_SCALE) {
           currentScale += SCALE_STEP;
@@ -976,10 +984,10 @@
       }
   }
 
-  // 下载功能
+  // Download function
   async function downloadPdf() {
       try {
-          // 获取文件信息
+          // Get file information
           const filesResponse = await fetch(`${API_BASE_URL}/uploads/assignment/${ASSIGNMENT_ID}/files`);
           if (!filesResponse.ok) {
               throw new Error('Failed to fetch file info');
@@ -993,7 +1001,7 @@
           const fileInfo = filesData.files[0];
           const downloadUrl = `${API_BASE_URL}/uploads/${fileInfo.upload_id}/download`;
 
-          // 创建临时链接进行下载
+          // Create temporary link for download
           const link = document.createElement('a');
           link.href = downloadUrl;
           link.download = fileInfo.file_name;
@@ -1007,18 +1015,18 @@
       }
   }
 
-  // 更新页面信息
+  // Update page information
   function updatePagination() {
       document.getElementById('current-page').textContent = currentPdfPage;
       document.getElementById('total-pages').textContent = totalPdfPages;
       document.getElementById('page-number').value = currentPdfPage;
 
-      // 更新按钮状态
+      // Update button status
       document.getElementById('prev-page').disabled = currentPdfPage <= 1;
       document.getElementById('next-page').disabled = currentPdfPage >= totalPdfPages;
   }
 
-  // 更新缩略图
+  // Update thumbnails
   function updateThumbnails() {
       const thumbnailsContainer = document.querySelector('.document-thumbnails');
       thumbnailsContainer.innerHTML = '';
@@ -1077,7 +1085,7 @@
       }
   }
 
-  // 更新活动缩略图
+  // Update active thumbnail
   function updateActiveThumbnail() {
       const thumbnails = document.querySelectorAll('.thumbnail');
       thumbnails.forEach(thumb => {
@@ -1086,9 +1094,9 @@
       });
   }
 
-  // 键盘导航
+  // Keyboard navigation
   function handleKeyboardNavigation(e) {
-      // 确保焦点不在输入框中
+      // Ensure focus is not in input fields
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       switch(e.key) {
@@ -1121,7 +1129,7 @@
               break;
       }
   }
-  // 显示/隐藏加载状态
+  // Show/hide loading state
   function showPdfLoading(show) {
       const loadingEl = document.getElementById('pdf-loading');
       const pdfViewer = document.getElementById('pdf-viewer');
@@ -1135,7 +1143,7 @@
       }
   }
 
-  // 显示错误信息
+  // Show error message
   function showPdfError(message) {
       const errorEl = document.getElementById('pdf-error');
       errorEl.textContent = message;
@@ -1148,6 +1156,10 @@
 
   // Grade selection
   function setupGradeSelection() {
+    // 如果是 finalized 状态，不设置等级选择事件
+    if (window.savedScoresData?.finalized) {
+      return;
+    }
     const criteria = $$('.criterion');
 
     criteria.forEach(criterion => {
@@ -1185,7 +1197,7 @@
     updateTotalScoreDisplay();
   }
 
-  // 更新单个评分标准的显示
+  // Update single grading criterion display
   function updateCriterionDisplay(criterionId) {
     const criterion = $(`.criterion[data-criterion="${criterionId}"]`);
     if (!criterion) return;
@@ -1197,7 +1209,7 @@
     // console.log('grade:', grade);
     // console.log('gradeInfo:', gradeInfo);
 
-    // ✅ 添加安全检查
+    // ✅ Add safety check
     const criterionInfo = criterionData[criterionId];
     if (!criterionInfo) {
       console.warn(`Criterion data not found for ID: ${criterionId}`);
@@ -1206,20 +1218,20 @@
 
     const description = criterionInfo.descriptions[grade];
 
-    // ✅ 添加对description的安全检查
+    // ✅ Add safety check for description
     if (!description) {
       console.warn(`Description not found for criterion ${criterionId}, grade ${grade}`);
       return;
     }
 
-    // 更新grade options
+    // Update grade options
     const gradeOptions = criterion.querySelectorAll('.grade-option');
     gradeOptions.forEach(option => {
       const optionGrade = parseInt(option.dataset.grade);
       option.classList.toggle('active', optionGrade === grade);
     });
 
-    // 更新grade info
+    // Update grade info
     const gradeLevel = criterion.querySelector('.grade-level');
     const gradeScore = criterion.querySelector('.grade-score');
     const scoreInput = criterion.querySelector('.score-input');
@@ -1231,7 +1243,7 @@
       gradeScore.textContent = `${currentScore.toFixed(1)}/${maxScore}`;
     }
 
-    // 更新description
+    // Update description
     const gradeDescription = criterion.querySelector('.grade-description');
     if (gradeDescription && description) {
       gradeDescription.innerHTML = `
@@ -1243,15 +1255,19 @@
     }
   }
 
-  // 更新所有评分标准的显示
+  // Update all grading criteria displays
   function updateAllCriterionDisplays() {
     Object.keys(currentGrades).forEach(criterionId => {
       updateCriterionDisplay(parseInt(criterionId));
     });
   }
 
-  // 当手动输入分数时，自动选择对应的等级
+  // Automatically select corresponding grade when manually inputting score
   function setupScoreInputs() {
+     // 如果是 finalized 状态，不设置分数输入事件
+     if (window.savedScoresData?.finalized) {
+       return;
+     }
     const scoreInputs = $$('.score-input');
 
     scoreInputs.forEach(input => {
@@ -1260,29 +1276,29 @@
         const maxScore = parseFloat(input.max);
         let score = parseFloat(input.value) || 0;
 
-        // 添加分数验证
+        // Add score validation
         let scoreAdjusted = false;
         if (score > maxScore) {
           score = maxScore;
           input.value = maxScore;
           scoreAdjusted = true;
 
-          // 显示提示信息
+          // Show notification
           showNotification(`Score cannot exceed maximum ${maxScore} points`, 'warning');
         }
 
-        // 传递 criterionId 参数
+        // Pass criterionId parameter
         const grade = calculateGradeFromScore(score, maxScore, criterionId);
         selectGrade(criterionId, grade);
         updateTotalScoreDisplay();
 
-        // 如果分数被调整，强制更新当前criterion的显示
+        // If score was adjusted, force update current criterion display
         if (scoreAdjusted) {
           updateCriterionDisplay(criterionId);
         }
       });
 
-      // 添加 blur 事件进行最终验证
+      // Add blur event for final validation
       input.addEventListener('blur', () => {
         const criterionId = parseInt(input.id.split('-')[2]);
         const maxScore = parseFloat(input.max);
@@ -1292,26 +1308,26 @@
           score = maxScore;
           input.value = maxScore;
           showNotification(`Score adjusted to maximum ${maxScore} points`, 'info');
-          updateCriterionDisplay(criterionId); // 强制更新显示
+          updateCriterionDisplay(criterionId); // Force update display
         }
       });
     });
   }
 
-  // 根据分数计算对应的等级（假设5个等级）
+  // Calculate corresponding grade based on score (assuming 5 grades)
   function calculateGradeFromScore(score, maxScore, criterionId) {
     const grades = gradeData[criterionId];
     if (!grades) {
       console.warn('Grade data not found for criterion:', criterionId);
-      return 4; // 默认返回最高等级
+      return 4; // Default return highest grade
     }
 
-    // 按等级从高到低排序
+    // Sort grades from high to low
     const sortedGrades = Object.keys(grades)
       .map(grade => parseInt(grade))
       .sort((a, b) => b - a);
 
-    // 遍历等级，找到分数对应的等级
+    // Iterate through grades to find corresponding grade for score
     for (const grade of sortedGrades) {
       const gradeInfo = grades[grade];
       if (gradeInfo && gradeInfo.min_score !== undefined && gradeInfo.max_score !== undefined) {
@@ -1321,25 +1337,29 @@
       }
     }
 
-    // 如果分数超出范围，返回最接近的等级
+    // If score is out of range, return closest grade
     if (score < (grades[sortedGrades[sortedGrades.length - 1]]?.min_score || 0)) {
-      return sortedGrades[sortedGrades.length - 1]; // 返回最低等级
+      return sortedGrades[sortedGrades.length - 1]; // Return lowest grade
     }
-    return sortedGrades[0]; // 返回最高等级
+    return sortedGrades[0]; // Return highest grade
   }
 
 
   // Feedback functionality
   function setupFeedback() {
+    // 如果是 finalized 状态，不设置反馈事件
+    if (window.savedScoresData?.finalized) {
+        return;
+    }
     const showFeedbackBtns = $$('.show-feedback-btn');
     const closeButtons = $$('.close-feedback');
 
-    // Show feedback buttons - 如果有保存的反馈，自动展开
+    // Show feedback buttons - if saved feedback exists, auto expand
     showFeedbackBtns.forEach(button => {
       const criterion = button.closest('.criterion');
       const criterionId = parseInt(criterion.dataset.criterion);
 
-      // 如果有保存的反馈，自动展开
+      // If saved feedback exists, auto expand
       if (window.savedScoresData?.feedback?.[criterionId]) {
         const feedback = button.nextElementSibling;
         if (feedback) {
@@ -1384,7 +1404,7 @@
     const saveBtn = $('#saveBtn');
     const submitBtn = $('#submitBtn');
 
-    // 如果已提交，直接返回，不设置事件监听
+    // If already submitted, return directly without setting event listeners
     if (window.savedScoresData?.finalized) {
       return;
     }
@@ -1416,7 +1436,7 @@
     });
   }
 
-  // 禁用操作按钮
+  // Disable action buttons
   function disableActionButtons() {
     const saveBtn = $('#saveBtn');
     const submitBtn = $('#submitBtn');
@@ -1425,7 +1445,7 @@
     if (saveBtn) saveBtn.disabled = true;
     if (submitBtn) submitBtn.disabled = true;
 
-    // 或者替换为已提交的消息
+    // Or replace with submitted message
     if (actionButtons) {
       actionButtons.innerHTML = `
         <div class="total-score-display">/100</div>
@@ -1470,21 +1490,21 @@
   }
 
 
-  //===========================存分数到后端===========================
+  //===========================Save scores to backend===========================
 
-  // 获取当前用户信息
+  // Get current user information
   function getCurrentUser() {
     try {
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
         const user = JSON.parse(rawUser);
 
-        // 先log检查一下用户数据的结构
+        // First log to check user data structure
         console.log("User Info:", user);
         console.log("Available fields:", Object.keys(user));
 
-        // 根据log结果调整字段名
-        // 常见的字段名可能是：id, userId, user_id, role, userRole, etc.
+        // Adjust field names based on log results
+        // Common field names might be: id, userId, user_id, role, userRole, etc.
         return {
           userId: user.id,
           role: user.role
@@ -1497,10 +1517,10 @@
     }
   }
 
-  // Save marks to backend - 根据用户角色选择不同的接口
+  // Save marks to backend - select different interfaces based on user role
   async function saveMarks() {
     if (window.savedScoresData?.finalized) {
-      showNotification('此作业的评分已提交，无法再次提交', 'error');
+      showNotification('Marks for this assignment have been submitted and cannot be resubmitted', 'error');
       return;
     }
     const currentUser = getCurrentUser();
@@ -1516,18 +1536,18 @@
     let requestBody;
 
     if (currentUser.role === 'COORDINATOR') {
-      // COORDINATOR 使用 baseline 接口
+      // COORDINATOR uses baseline interface
       url = `${API_BASE_URL}/uploads/scoring/baseline/batch`;
       requestBody = {
         assignment_id: ASSIGNMENT_ID,
         scores: transformScoresForBackend(marksData.scores, marksData.feedback)
       };
     } else if (currentUser.role === 'MARKER') {
-      // MARKER 使用 marker 接口
+      // MARKER uses marker interface
       url = `${API_BASE_URL}/uploads/scoring/marker/batch`;
       requestBody = {
         assignment_id: ASSIGNMENT_ID,
-        marker_id: currentUser.userId, // 添加 marker_id
+        marker_id: currentUser.userId, // Add marker_id
         scores: transformScoresForBackend(marksData.scores, marksData.feedback)
       };
     } else {
@@ -1551,22 +1571,22 @@
     return response.json();
   }
 
-  // Submit marks to backend - 先保存再确认
+  // Submit marks to backend - save first then confirm
   async function submitMarks() {
     if (window.savedScoresData?.finalized) {
-      showNotification('此作业的评分已提交，无法再次提交', 'error');
+      showNotification('Marks for this assignment have been submitted and cannot be resubmitted', 'error');
       return;
     }
     const currentUser = getCurrentUser();
 
-    // 第一步：先批量保存分数
+    // Step 1: First save scores in batch
     const saveResult = await saveMarks();
 
-    // 第二步：确认分数 - 现在使用批量确认
+    // Step 2: Confirm scores - now use batch confirmation
     let submitUrl;
     let submitBody;
 
-    // 获取所有需要确认的criterion_id（从originalData中获取）
+    // Get all criterion_ids that need confirmation (from originalData)
     const criterionIds = originalData.criteria.map(criterion => criterion.criterion_id);
 
     if (currentUser.role === 'COORDINATOR') {
@@ -1603,19 +1623,19 @@
     return submitResponse.json();
   }
 
-  // 辅助函数：将前端分数格式转换为后端需要的格式
+  // Helper function: convert frontend score format to backend required format
   function transformScoresForBackend(scores, feedback) {
     if (!originalData || !originalData.criteria) {
       throw new Error('Rubric data not loaded yet');
     }
 
     return originalData.criteria.map(criterion => {
-      // 使用 criterion.seq_no 作为前端存储的键（因为前端可能是按顺序存储的）
-      // 或者如果你在前端使用了其他键，需要相应调整
-      const frontendKey = criterion.seq_no.toString(); // 或者 criterion.criterion_id.toString()
+      // Use criterion.seq_no as frontend storage key (since frontend might store by order)
+      // Or if you use other keys in frontend, adjust accordingly
+      const frontendKey = criterion.seq_no.toString(); // Or criterion.criterion_id.toString()
 
       return {
-        criterion_id: criterion.criterion_id, // 使用后端返回的真实ID
+        criterion_id: criterion.criterion_id, // Use real ID returned by backend
         score: scores[frontendKey] || 0,
         comment: feedback[frontendKey] || null
       };
@@ -1647,7 +1667,7 @@
     return feedback;
   }
 
-  // ==================结束存分数到后端=================
+  // ==================End save scores to backend=================
 
   // Show notification
   function showNotification(message, type = 'info') {
@@ -1683,7 +1703,7 @@
 
   /* ===== Back Confirmation Dialog ===== */
   function showBackConfirmation(){
-    // 创建模态背景
+    // Create modal background
     const modal = document.createElement('div');
     modal.style.cssText = `
       position: fixed;
@@ -1698,7 +1718,7 @@
       z-index: 10000;
     `;
 
-    // 创建对话框
+    // Create dialog
     const dialog = document.createElement('div');
     dialog.style.cssText = `
       background: #fff;
@@ -1711,7 +1731,7 @@
       overflow: hidden;
     `;
 
-    // 创建标题栏
+    // Create title bar
     const titleBar = document.createElement('div');
     titleBar.style.cssText = `
       background: #F5F7FB;
@@ -1720,7 +1740,7 @@
     `;
     titleBar.innerHTML = '<span style="color: #0F172A; font-weight: 600; font-size: 16px;">Confirm Action</span>';
 
-    // 创建内容区域
+    // Create content area
     const content = document.createElement('div');
     content.style.cssText = `
       padding: 20px;
@@ -1730,7 +1750,7 @@
     `;
     content.innerHTML = 'Are you sure you want to go back?<br>Your progress will be saved.';
 
-    // 创建按钮区域
+    // Create button area
     const buttonArea = document.createElement('div');
     buttonArea.style.cssText = `
       padding: 16px 20px;
@@ -1741,7 +1761,7 @@
       gap: 12px;
     `;
 
-    // 创建Cancel按钮
+    // Create Cancel button
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.style.cssText = `
@@ -1796,7 +1816,7 @@
       okBtn.style.background = '#0F172A';
     });
 
-    // 组装对话框
+    // Assemble dialog
     buttonArea.appendChild(cancelBtn);
     buttonArea.appendChild(okBtn);
     dialog.appendChild(titleBar);
@@ -1804,17 +1824,17 @@
     dialog.appendChild(buttonArea);
     modal.appendChild(dialog);
 
-    // 添加到页面
+    // Add to page
     document.body.appendChild(modal);
 
-    // 点击背景关闭
+    // Click background to close
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         document.body.removeChild(modal);
       }
     });
 
-    // ESC键关闭
+    // ESC key to close
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         document.body.removeChild(modal);

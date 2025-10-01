@@ -3,7 +3,7 @@
   const $  = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 
-  // ---------- 状态管理 ----------
+  // ---------- State Management ----------
   const state = {
     tasks: []
   };
@@ -44,75 +44,75 @@
     return data;
   }
 
-  // 从后端获取项目数据
+  // Get project data from backend
   async function fetchProjects() {
     try {
-      console.log('🔄 开始获取项目数据...');
+      console.log('🔄 Starting to fetch project data...');
       const response = await fetch(API.listProjects);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log(`📊 获取到 ${data.projects?.length || 0} 个项目`);
+      console.log(`📊 Retrieved ${data.projects?.length || 0} projects`);
 
-      // 清空当前状态
+      // Clear current state
       state.tasks = [];
 
-      // 处理项目数据
+      // Process project data
       for (const project of data.projects) {
-        console.log(`\n📋 处理项目: ${project.name} (ID: ${project.project_id})`);
+        console.log(`\n📋 Processing project: ${project.name} (ID: ${project.project_id})`);
 
         let assignment1Status = 'unpublished';
         let assignment2Status = 'unpublished';
 
         try {
-          // 1. 首先获取项目的最新assignment IDs
+          // 1. First get the latest assignment IDs for the project
           const latestIdsResponse = await fetch(`/api/uploads/project/${project.project_id}/latest-ids`);
           if (latestIdsResponse.ok) {
             const latestIds = await latestIdsResponse.json();
-            console.log('📦 获取到最新IDs:', latestIds);
+            console.log('📦 Retrieved latest IDs:', latestIds);
 
-            // 2. 获取assignment1的状态
+            // 2. Get assignment1 status
             if (latestIds.assignment1) {
               const statusResponse1 = await fetch(`/api/uploads/assignment/${latestIds.assignment1.assignment_id}/status`);
               if (statusResponse1.ok) {
                 const statusData1 = await statusResponse1.json();
                 assignment1Status = statusData1.assignment.is_published ? 'published' : 'unpublished';
-                console.log(`📄 Assignment1 发布状态: ${statusData1.assignment.is_published}`);
+                console.log(`📄 Assignment1 publish status: ${statusData1.assignment.is_published}`);
               } else {
-                console.warn('⚠️ 获取assignment1状态失败');
+                console.warn('⚠️ Failed to get assignment1 status');
               }
             } else {
-              console.log('📄 Assignment1: 无数据');
+              console.log('📄 Assignment1: No data');
             }
 
-            // 3. 获取assignment2的状态
+            // 3. Get assignment2 status
             if (latestIds.assignment2) {
               const statusResponse2 = await fetch(`/api/uploads/assignment/${latestIds.assignment2.assignment_id}/status`);
               if (statusResponse2.ok) {
                 const statusData2 = await statusResponse2.json();
                 assignment2Status = statusData2.assignment.is_published ? 'published' : 'unpublished';
-                console.log(`📄 Assignment2 发布状态: ${statusData2.assignment.is_published}`);
+                console.log(`📄 Assignment2 publish status: ${statusData2.assignment.is_published}`);
               } else {
-                console.warn('⚠️ 获取assignment2状态失败');
+                console.warn('⚠️ Failed to get assignment2 status');
               }
             } else {
-              console.log('📄 Assignment2: 无数据');
+              console.log('📄 Assignment2: No data');
             }
           } else {
-            console.warn('⚠️ 获取最新IDs失败');
+            console.warn('⚠️ Failed to get latest IDs');
           }
         } catch (error) {
-          console.error('❌ 获取assignment状态过程中出错:', error);
+          console.error('❌ Error occurred while getting assignment status:', error);
         }
 
-        // 确定task状态：如果有任何assignment被publish，则为active，否则为draft
+        // Determine task status: if any assignment is published, then active, otherwise draft
         let taskStatus = 'draft';
         if (assignment1Status === 'published' || assignment2Status === 'published') {
           taskStatus = 'active';
         }
-        console.log(`🏷️ 项目状态: ${taskStatus}`);
-        console.log(`📊 Assignment1状态: ${assignment1Status}, Assignment2状态: ${assignment2Status}`);
+        console.log(`🏷️ Project status: ${taskStatus}`);
+        console.log(`📊 Assignment1 status: ${assignment1Status}, Assignment2 status: ${assignment2Status}`);
 
         state.tasks.push({
           title: project.name,
@@ -136,14 +136,14 @@
           ]
         });
 
-        console.log(`✅ 项目 ${project.name} 处理完成`);
+        console.log(`✅ Project ${project.name} processing completed`);
       }
 
-      console.log('🎉 所有项目数据处理完成，开始渲染界面');
-      // 重新渲染界面
+      console.log('🎉 All project data processing completed, starting interface rendering');
+      // Re-render interface
       render();
     } catch (error) {
-      console.error('❌ 获取项目数据失败:', error);
+      console.error('❌ Failed to get project data:', error);
       toast('Failed to load projects. Please try again later.');
     }
   }
@@ -187,7 +187,7 @@
     chevron.className = 'tm-task-chevron';
     chevron.innerHTML = '▾';
 
-    // 让整个header可点击
+    // Make the entire header clickable
     header.addEventListener('click', () => toggleTaskSection(section));
 
     header.appendChild(titleContainer);
@@ -228,7 +228,7 @@
     chevron.className = 'tm-rubric-chevron';
     chevron.innerHTML = '▾';
 
-    // 让整个header可点击
+    // Make the entire header clickable
     header.addEventListener('click', () => toggleRubricSection(section));
 
     header.appendChild(title);
@@ -245,28 +245,28 @@
       location.href = `/dashboard/coordinator/rubric?project=${task.project_id}`;
     });
 
-    // 检查A1是否已发布，如果已发布则隐藏Upload按钮
+    // Check if A1 is published, if published then hide Upload button
     const isA1Published = task.assignments.find(a => a.id === 'assignment1')?.status === 'published';
 
-    console.log(`📊 Rubric按钮显示逻辑: A1发布状态=${isA1Published}, 有rubric文件=${task.file_counts?.rubric > 0}`);
+    console.log(`📊 Rubric button display logic: A1 publish status=${isA1Published}, has rubric files=${task.file_counts?.rubric > 0}`);
 
     if (isA1Published) {
-      // A1已发布，只显示View按钮（如果有rubric文件）
+      // A1 published, only show View button (if has rubric files)
       if (task.file_counts?.rubric > 0) {
         actions.appendChild(viewBtn);
-        console.log('🔘 Rubric显示: View按钮');
+        console.log('🔘 Rubric display: View button');
       } else {
-        console.log('🔘 Rubric显示: 无按钮（A1已发布且无rubric文件）');
+        console.log('🔘 Rubric display: No button (A1 published and no rubric files)');
       }
     } else {
-      // A1未发布，正常显示按钮
+      // A1 not published, display buttons normally
       if (task.file_counts?.rubric > 0) {
         actions.appendChild(uploadBtn);
         actions.appendChild(viewBtn);
-        console.log('🔘 Rubric显示: Upload, View按钮');
+        console.log('🔘 Rubric display: Upload, View buttons');
       } else {
         actions.appendChild(uploadBtn);
-        console.log('🔘 Rubric显示: Upload按钮');
+        console.log('🔘 Rubric display: Upload button');
       }
     }
 
@@ -293,18 +293,18 @@
 
     const status = document.createElement('span');
     status.className = `tm-assignment-status ${assignment.status}`;
-    console.log(`📝 Assignment状态显示: assignmentId=${assignment.id}, projectId=${task.project_id}, status=${assignment.status}`);
+    console.log(`📝 Assignment status display: assignmentId=${assignment.id}, projectId=${task.project_id}, status=${assignment.status}`);
 
-    // 正确格式化状态显示文本
+    // Format status display text correctly
     if (assignment.status === 'published') {
       status.textContent = 'Published';
-      console.log(`✅ ${assignment.title} 状态: 已发布`);
+      console.log(`✅ ${assignment.title} status: Published`);
     } else if (assignment.status === 'unpublished') {
       status.textContent = 'Unpublished';
-      console.log(`⏸️ ${assignment.title} 状态: 未发布`);
+      console.log(`⏸️ ${assignment.title} status: Unpublished`);
     } else {
       status.textContent = assignment.status;
-      console.log(`❓ ${assignment.title} 状态: ${assignment.status} (未知状态)`);
+      console.log(`❓ ${assignment.title} status: ${assignment.status} (Unknown status)`);
     }
 
     titleContainer.appendChild(title);
@@ -314,7 +314,7 @@
     chevron.className = 'tm-assignment-chevron';
     chevron.innerHTML = '▾';
 
-    // 让整个header可点击
+    // Make the entire header clickable
     header.addEventListener('click', () => toggleAssignmentSection(section));
 
     header.appendChild(titleContainer);
@@ -347,28 +347,28 @@
       location.href = `/dashboard/coordinator/feedback?project=${task.project_id}&assignment=${assignment.id}`;
     });
 
-    console.log(`🔄 为 ${assignment.title} 设置按钮: status=${assignment.status}, file_counts=${task.file_counts?.assignment}`);
+    console.log(`🔄 Setting buttons for ${assignment.title}: status=${assignment.status}, file_counts=${task.file_counts?.assignment}`);
 
-    // 根据assignment状态显示不同的按钮
+    // Display different buttons based on assignment status
     if (assignment.status === 'published') {
 
-      // 已发布：隐藏Upload按钮，显示其他按钮
+      // Published: Hide Upload button, display other buttons
       actions.appendChild(viewBtn);
       actions.appendChild(markBtn);
       actions.appendChild(feedbackBtn);
-      console.log(`🔘 ${assignment.title} 显示按钮: View, Mark, Feedback (已发布，隐藏Upload)`);
+      console.log(`🔘 ${assignment.title} display buttons: View, Mark, Feedback (Published, hide Upload)`);
     } else {
-      // 未发布：显示Upload按钮
+      // Unpublished: Display Upload button
       actions.appendChild(uploadBtn);
 
-      // 只有有assignment文件时才显示View按钮和发布按钮
+      // Only display View button and Publish button when assignment files exist
       if (task.file_counts?.assignment > 0) {
         actions.appendChild(viewBtn);
         actions.appendChild(publishBtn);
-        console.log(`🔘 ${assignment.title} 显示按钮: Upload, View, Publish`);
+        console.log(`🔘 ${assignment.title} display buttons: Upload, View, Publish`);
       } else {
         actions.appendChild(publishBtn);
-        console.log(`🔘 ${assignment.title} 显示按钮: Upload, Publish`);
+        console.log(`🔘 ${assignment.title} display buttons: Upload, Publish`);
       }
     }
 
@@ -386,14 +386,14 @@
     return button;
   }
 
-  // ---------- 交互功能 ----------
+  // ---------- Interactive Functions ----------
 
-  // 切换task section的展开/收起
+  // Toggle task section expand/collapse
   function toggleTaskSection(section) {
     const content = section.querySelector('.tm-task-content');
     const chevron = section.querySelector('.tm-task-chevron');
 
-    // 关闭其他所有task sections
+    // Close all other task sections
     $$('.tm-task-section').forEach(otherSection => {
       if (otherSection !== section) {
         const otherContent = otherSection.querySelector('.tm-task-content');
@@ -403,11 +403,11 @@
       }
     });
 
-    // 切换当前section
+    // Toggle current section
     content.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
 
-    // 关闭所有assignment和rubric的展开状态
+    // Close all assignment and rubric expanded states
     if (content.classList.contains('expanded')) {
       $$('.tm-assignment-actions, .tm-rubric-actions').forEach(actions => {
         actions.classList.remove('expanded');
@@ -418,12 +418,12 @@
     }
   }
 
-  // 切换rubric section的展开/收起
+  // Toggle rubric section expand/collapse
   function toggleRubricSection(section) {
     const actions = section.querySelector('.tm-rubric-actions');
     const chevron = section.querySelector('.tm-rubric-chevron');
 
-    // 关闭其他所有rubric和assignment的展开状态
+    // Close all other rubric and assignment expanded states
     $$('.tm-assignment-actions').forEach(otherActions => {
       otherActions.classList.remove('expanded');
     });
@@ -431,17 +431,17 @@
       otherChevron.classList.remove('expanded');
     });
 
-    // 切换当前section
+    // Toggle current section
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
   }
 
-  // 切换assignment section的展开/收起
+  // Toggle assignment section expand/collapse
   function toggleAssignmentSection(section) {
     const actions = section.querySelector('.tm-assignment-actions');
     const chevron = section.querySelector('.tm-assignment-chevron');
 
-    // 关闭其他所有assignment和rubric的展开状态
+    // Close all other assignment and rubric expanded states
     $$('.tm-assignment-actions').forEach(otherActions => {
       if (otherActions !== actions) {
         otherActions.classList.remove('expanded');
@@ -459,15 +459,15 @@
       otherChevron.classList.remove('expanded');
     });
 
-    // 切换当前section
+    // Toggle current section
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
   }
 
-  // 发布assignment
+  // Publish assignment
   async function publishAssignment(taskId, assignmentId) {
     try {
-      // 获取最新的assignment_id
+      // Get latest assignment_id
       const latestIdsResponse = await fetch(`/api/uploads/project/${taskId}/latest-ids`);
 
       if (!latestIdsResponse.ok) {
@@ -476,7 +476,7 @@
 
       const latestIds = await latestIdsResponse.json();
 
-      // 前端校验：检查assignment是否存在
+      // Frontend validation: Check if assignment exists
       let targetAssignmentId;
       let assignmentName;
 
@@ -488,13 +488,13 @@
         assignmentName = 'Assignment 2';
       }
 
-      // 前端明确校验
+      // Explicit frontend validation
       if (!targetAssignmentId) {
         toast(`${assignmentName} is empty. Please create it first.`);
-        return null; // 直接返回，不继续后续操作
+        return null; // Return directly, do not continue subsequent operations
       }
 
-      // 调用发布接口
+      // Call publish interface
       const publishResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/publish`, {
         method: 'PUT',
         headers: {
@@ -513,17 +513,17 @@
       const result = await publishResponse.json();
 
       toast('Assignment published successfully!');
-      // 重新加载数据
+      // Reload data
       await fetchProjects();
 
       return result;
     } catch (error) {
-      console.error('发布作业失败:', error);
+      console.error('Failed to publish assignment:', error);
 
-      // 区分处理不同的错误类型（前端显示用英文）
+      // Handle different error types separately (display in English for frontend)
       if (error.message.includes('Assignment not found')) {
         toast('Assignment not found. Please refresh the page and try again.');
-      } else if (error.message.includes('请先发布作业1') || error.message.includes('未找到作业1最新版本')) {
+      } else if (error.message.includes('Please publish Assignment 1 first') || error.message.includes('Assignment 1 version not found')) {
         toast('Please publish Assignment 1 first before publishing Assignment 2.');
       } else if (error.message.includes('Cannot publish assignment')) {
         toast('Cannot publish assignment. Please make sure the project has at least one rubric and one assignment.');
@@ -535,7 +535,7 @@
     }
   }
 
-  // ---------- 项目创建弹窗 ----------
+  // ---------- Project Creation Modal ----------
   let projectModal, projectInput, descriptionInput, projectMsg, lastFocusEl;
 
   function ensureProjectModal() {
@@ -581,7 +581,7 @@
       descriptionInput = $('#project-description', projectModal);
       projectMsg = $('#pm-msg', projectModal);
 
-      // 事件绑定
+      // Event binding
       $('#pm-close', projectModal)?.addEventListener('click', closeProjectModal);
       $('#pm-cancel', projectModal)?.addEventListener('click', closeProjectModal);
       projectModal.addEventListener('click', (e) => {
@@ -640,7 +640,7 @@
           toast(`Project "${data.project.name}" created`);
           setTimeout(() => {
               closeProjectModal();
-              fetchProjects(); // 刷新项目列表
+              fetchProjects(); // Refresh project list
           }, 250);
       } catch (err) {
           setProjectMsg(err.message || 'Create failed');
@@ -662,8 +662,8 @@
     setTimeout(()=>{ el.style.opacity=0; el.style.transform='translateY(6px)'; setTimeout(()=> el.remove(), 200); }, ms);
   }
 
-  // 初始化
-  // 显示用户名
+  // Initialization
+  // Display username
   try {
   const rawUser = localStorage.getItem("user");
   if (rawUser) {
@@ -677,15 +677,15 @@
   }
   fetchProjects();
 
-  // 将 Add New Assignment 按钮改为打开项目创建弹窗
+  // Change Add New Assignment button to open project creation modal
   const btnAdd = $('#btnAdd');
   if (btnAdd) {
       btnAdd.addEventListener('click', openProjectModal);
   }
 
-  // ---------- 日期处理功能 ----------
+  // ---------- Date Processing Functions ----------
 
-  // 格式化日期为 YYYY-MM-DD 格式
+  // Format date to YYYY-MM-DD format
   function formatDateForInput(date) {
     if (!date) return '';
     const d = new Date(date);
@@ -695,37 +695,37 @@
     return `${year}-${month}-${day}`;
   }
 
-  // 格式化日期为 dd/mm/yyyy 格式用于显示
+  // Format date to dd/mm/yyyy format for display
   function formatDateForDisplay(dateString) {
     if (!dateString) return '';
     const [year, month, day] = dateString.split('-');
     return `${day}/${month}/${year}`;
   }
 
-  // 验证日期是否有效
+  // Validate if date is valid
   function isValidDate(dateString) {
     if (!dateString) return false;
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date);
   }
 
-  // ---------- 弹窗功能 ----------
+  // ---------- Modal Functions ----------
 
   // Rubric Modal
   function openRubricModal(projectId) {
     const modal = $('#rubricModal');
     if (!modal) return;
 
-    // 重置表单
+    // Reset form
     $('#rubricFile').value = '';
     $('#rubricText').textContent = 'Upload rubric...';
     $('#rubricErrLine').style.display = 'none';
 
-    // 显示弹窗
+    // Show modal
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    // 绑定事件
+    // Bind events
     bindRubricModalEvents(projectId);
   }
 
@@ -738,7 +738,7 @@
     const textDisplay = $('#rubricText');
     const errLine = $('#rubricErrLine');
 
-    // 关闭弹窗
+    // Close modal
     const closeModal = () => {
       modal.classList.remove('show');
       document.body.style.overflow = '';
@@ -749,7 +749,7 @@
       if (e.target === modal) closeModal();
     });
 
-    // 文件上传处理
+    // File upload handling
     const handleFileSelect = (file) => {
       if (file) {
         textDisplay.textContent = file.name;
@@ -761,7 +761,7 @@
       handleFileSelect(e.target.files[0]);
     });
 
-    // 拖拽上传
+    // Drag and drop upload
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -780,7 +780,7 @@
       }
     });
 
-    // 提交
+    // Submit
     submitBtn.addEventListener('click', async () => {
       const file = fileInput.files[0];
       if (!file) {
@@ -795,7 +795,7 @@
 
         toast('Rubric uploaded successfully!');
         closeModal();
-        await fetchProjects(); // 刷新数据
+        await fetchProjects(); // Refresh data
       } catch (error) {
         console.error('Upload error:', error);
         toast('Failed to upload rubric. Please try again.');
@@ -808,17 +808,17 @@
     const modal = $('#assignment1Modal');
     if (!modal) return;
 
-    // 重置表单
+    // Reset form
     $('#assignment1Due').value = '';
     $('#assignment1File').value = '';
     $('#assignment1Text').textContent = 'Upload assignment...';
     $('#assignment1ErrLine').style.display = 'none';
 
-    // 显示弹窗
+    // Show modal
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    // 绑定事件
+    // Bind events
     bindAssignment1ModalEvents(projectId);
   }
 
@@ -832,7 +832,7 @@
     const textDisplay = $('#assignment1Text');
     const errLine = $('#assignment1ErrLine');
 
-    // 关闭弹窗
+    // Close modal
     const closeModal = () => {
       modal.classList.remove('show');
       document.body.style.overflow = '';
@@ -843,7 +843,7 @@
       if (e.target === modal) closeModal();
     });
 
-    // 文件上传处理
+    // File upload handling
     const handleFileSelect = (file) => {
       if (file) {
         textDisplay.textContent = file.name;
@@ -855,7 +855,7 @@
       handleFileSelect(e.target.files[0]);
     });
 
-    // 拖拽上传
+    // Drag and drop upload
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -874,29 +874,29 @@
       }
     });
 
-    // 提交
+    // Submit
     submitBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
       const file = fileInput.files[0];
 
-      // 验证表单
+      // Form validation
       if (!due || !file) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please complete all required fields.';
         return;
       }
 
-      // 验证日期格式
+      // Date format validation
       if (!isValidDate(due)) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please select a valid due date.';
         return;
       }
 
-      // 验证日期不能是过去的日期
+      // Validate date is not in the past
       const selectedDate = new Date(due);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // 重置时间到当天开始
+      today.setHours(0, 0, 0, 0); // Reset time to start of day
 
       if (selectedDate < today) {
         errLine.style.display = 'block';
@@ -911,7 +911,7 @@
 
         toast('Assignment 1 uploaded successfully!');
         closeModal();
-        await fetchProjects(); // 刷新数据
+        await fetchProjects(); // Refresh data
       } catch (error) {
         console.error('Upload error:', error);
         toast('Failed to upload assignment. Please try again.');
@@ -924,17 +924,17 @@
     const modal = $('#assignment2Modal');
     if (!modal) return;
 
-    // 重置表单
+    // Reset form
     $('#assignment2Due').value = '';
     $('#assignment2File').value = '';
     $('#assignment2Text').textContent = 'Upload assignment...';
     $('#assignment2ErrLine').style.display = 'none';
 
-    // 显示弹窗
+    // Show modal
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    // 绑定事件
+    // Bind events
     bindAssignment2ModalEvents(projectId);
   }
 
@@ -948,7 +948,7 @@
     const textDisplay = $('#assignment2Text');
     const errLine = $('#assignment2ErrLine');
 
-    // 关闭弹窗
+    // Close modal
     const closeModal = () => {
       modal.classList.remove('show');
       document.body.style.overflow = '';
@@ -959,7 +959,7 @@
       if (e.target === modal) closeModal();
     });
 
-    // 文件上传处理
+    // File upload handling
     const handleFileSelect = (file) => {
       if (file) {
         textDisplay.textContent = file.name;
@@ -971,7 +971,7 @@
       handleFileSelect(e.target.files[0]);
     });
 
-    // 拖拽上传
+    // Drag and drop upload
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -990,29 +990,29 @@
       }
     });
 
-    // 提交
+    // Submit
     submitBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
       const file = fileInput.files[0];
 
-      // 验证表单
+      // Form validation
       if (!due || !file) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please complete all required fields.';
         return;
       }
 
-      // 验证日期格式
+      // Date format validation
       if (!isValidDate(due)) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please select a valid due date.';
         return;
       }
 
-      // 验证日期不能是过去的日期
+      // Validate date is not in the past
       const selectedDate = new Date(due);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // 重置时间到当天开始
+      today.setHours(0, 0, 0, 0); // Reset time to start of day
 
       if (selectedDate < today) {
         errLine.style.display = 'block';
@@ -1026,7 +1026,7 @@
 
         toast('Assignment 2 uploaded successfully!');
         closeModal();
-        await fetchProjects(); // 刷新数据
+        await fetchProjects(); // Refresh data
       } catch (error) {
         console.error('Upload error:', error);
         toast('Failed to upload assignment. Please try again.');

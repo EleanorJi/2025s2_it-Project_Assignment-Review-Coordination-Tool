@@ -1,17 +1,17 @@
 // coordinator.js
 (() => {
   document.addEventListener('DOMContentLoaded', () => {
-    // 其他页面的初始化写在这里
+    // Other page initialization goes here
     initCommonNav();
 
-    // 仅在上传页执行（依赖 <body data-page="upload">）
+    // Execute only on upload page (depends on <body data-page="upload">)
     if (document.body.dataset.page === 'upload') {
       initUploadPage();
     }
   });
 
 function initCommonNav() {
-  // 从 localStorage 取用户信息
+  // Get user info from localStorage
   const userStr = localStorage.getItem('user');
   if (userStr) {
     try {
@@ -26,27 +26,27 @@ function initCommonNav() {
   }
 }
 
-  // ====== 原 upload.js 合并过来的逻辑 ======
+  // ====== Logic merged from original upload.js ======
   function initUploadPage() {
-    // 1) 选择文件后把文案改为文件名（视觉反馈）
+    // 1) After selecting files, change text to filename (visual feedback)
     document.querySelectorAll('.drop input[type="file"]').forEach(input => {
-      const label = input.parentElement.querySelector('div'); // drop > div 文案容器
+      const label = input.parentElement.querySelector('div'); // drop > div text container
       input.addEventListener('change', () => {
         if (input.files && input.files[0]) {
           label.innerHTML = `${input.files[0].name}<div class="hint">Selected</div>`;
-          refreshValidation(input.closest('.assign')); // 选中文件后刷新校验
+          refreshValidation(input.closest('.assign')); // Refresh validation after selecting file
         }
       });
     });
 
-    // 2) 监听日期/数值输入，实时刷新校验
+    // 2) Listen for date/numeric input, refresh validation in real time
     document.querySelectorAll('.assign .input').forEach(inp => {
       inp.addEventListener('input', () => {
         refreshValidation(inp.closest('.assign'));
       });
     });
 
-    // 3) 保存草稿 / 发布（示例：拿到表单数据 -> 你可以 fetch 到后端）
+    // 3) Save draft / publish (example: get form data -> you can fetch to backend)
     document.querySelectorAll('.assign').forEach(card => {
       const saveBtn    = card.querySelector('.btn:not(.primary)');
       const publishBtn = card.querySelector('.btn.primary');
@@ -56,7 +56,7 @@ function initCommonNav() {
         const payload = collectCardData(card);
         console.log('[draft]', payload);
         // fetch('/api/assignments/draft', {method:'POST', body: toFormData(payload)})
-        alert('Draft saved (console 有 payload)');
+        alert('Draft saved (payload in console)');
       });
 
       publishBtn?.addEventListener('click', (e) => {
@@ -66,12 +66,13 @@ function initCommonNav() {
         if (!ok) { alert('Please complete required files and due date.'); return; }
         console.log('[publish]', payload);
         // fetch('/api/assignments/publish', {method:'POST', body: toFormData(payload)})
-        alert('Published (console 有 payload)');
+        alert('Published (payload in console)');
       });
     });
   }
 
-  // ====== 工具函数 ======
+    
+  // ====== Utility Functions ======
   function collectCardData(card) {
     const [roundEl, dueEl, devEl] = card.querySelectorAll('.form-row .input');
     const files = card.querySelectorAll('.drop input[type="file"]');
@@ -104,7 +105,8 @@ function initCommonNav() {
     `;
   }
 
-  // 可选：把 JSON 转成 FormData（方便文件上传）
+  
+  // Optional: Convert JSON to FormData (convenient for file upload)
   function toFormData(obj) {
     const fd = new FormData();
     Object.entries(obj).forEach(([k,v]) => {

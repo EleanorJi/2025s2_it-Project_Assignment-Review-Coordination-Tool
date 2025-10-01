@@ -1,6 +1,6 @@
-// rubric.js — 拉取后端数据并渲染到表格
+// rubric.js — Fetch backend data and render to table
 document.addEventListener('DOMContentLoaded', () => {
-    // ✅ 显示用户名
+    // ✅ Display username
     try {
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const metaEl = document.getElementById('rubric-meta');
       const tbody = document.getElementById('rubric-body');
 
-      // 显示加载状态
+      // Show loading state
       metaEl.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px; color: var(--muted);">
           <div class="loading"></div>
@@ -39,22 +39,22 @@ document.addEventListener('DOMContentLoaded', () => {
       let data;
 
       try {
-        // 第一步：通过project_id获取最新的rubric_id
-        console.log('🌐 获取最新rubric_id...');
+        // Step 1: Get latest rubric_id through project_id
+        console.log('🌐 Getting latest rubric_id...');
         const rubricRes = await fetch(`/api/uploads/project/${encodeURIComponent(projectId)}/latest-rubric`);
 
         if (!rubricRes.ok) {
-          console.log('rubric_id获取错误:', rubricId);
+          console.log('rubric_id fetch error:', rubricId);
           const errorText = await rubricRes.text();
           throw new Error(`Failed to get rubric ID: ${rubricRes.status} - ${errorText}`);
         }
 
         const rubricInfo = await rubricRes.json();
         rubricId = rubricInfo.rubric_id;
-        console.log('✅ 获取到rubric_id:', rubricId);
+        console.log('✅ Retrieved rubric_id:', rubricId);
 
-        // 第二步：通过rubric_id获取详细的rubric数据
-        console.log('🌐 获取rubric详情...');
+        // Step 2: Get detailed rubric data through rubric_id
+        console.log('🌐 Getting rubric details...');
         const detailRes = await fetch(`/api/uploads/rubric/${encodeURIComponent(rubricId)}/details`);
 
         if (!detailRes.ok) {
@@ -63,15 +63,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         data = await detailRes.json();
-        console.log('✅ 获取到rubric详情数据:', data);
+        console.log('✅ Retrieved rubric detail data:', data);
 
-        // 使用后端返回的数据更新UI
+        // Update UI using backend returned data
         updateRubricUI(data, metaEl, tbody);
 
       } catch (error) {
-        console.error('❌ 加载rubric错误:', error);
+        console.error('❌ Loading rubric error:', error);
 
-        // 显示错误信息
+        // Show error message
         metaEl.innerHTML = `
           <div style="color: #dc3545; margin-bottom: 8px;">
             Failed to load rubric data
@@ -89,19 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
           </tr>
         `;
 
-        // 使用demo数据作为fallback
+        // Use demo data as fallback
         try {
           data = demoRubric();
           updateRubricUI(data, metaEl, tbody);
-          console.log('🔄 使用demo数据作为fallback');
+          console.log('🔄 Using demo data as fallback');
         } catch (demoError) {
-          console.error('❌ 连demo数据也失败了:', demoError);
+          console.error('❌ Even demo data failed:', demoError);
         }
       }
     }
 
     function updateRubricUI(data, metaEl, tbody) {
-      // 更新meta信息 - 使用后端返回的数据结构
+      // Update meta information - using backend returned data structure
       metaEl.innerHTML = `
         <div style="font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 2px;">
           Rubric ID: ${data.rubric.rubric_id} · ${data.rubric.rows} Rows · ${data.rubric.columns} Columns
@@ -110,12 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
           Version: ${data.rubric.version} · Created: ${new Date(data.rubric.created_at).toLocaleDateString()} ·
           ${data.summary.criteria_count} Criteria, ${data.summary.grade_levels_count} Grade Levels
         </div>
-      `;
+        `;
 
-      // 渲染表格
-      tbody.innerHTML = '';
-
-      if (!data.criteria || data.criteria.length === 0) {
+      // Render table
+      tbody.innerHTML = '';      if (!data.criteria || data.criteria.length === 0) {
         tbody.innerHTML = `
           <tr>
             <td colspan="7" style="text-align: center; padding: 20px; color: var(--muted);">
@@ -129,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
       data.criteria.forEach((criterion, idx) => {
         const tr = document.createElement('tr');
 
-        // 左侧 criteria - 使用后端字段名
+        // Left side criteria - using backend field names
         const td0 = td();
         td0.innerHTML = `
           <div class="criterion-title">${criterion.seq_no || idx + 1}. ${esc(criterion.title)}</div>
@@ -137,8 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         tr.appendChild(td0);
 
-        // 根据后端返回的等级水平渲染列
-        // 等级顺序为: HD, D, C, P, F
+        // Render columns based on backend returned grade levels
+        // Grade level order: HD, D, C, P, F
         const gradeLevelOrder = ['High Distinction', 'Distinction', 'Credit', 'Pass', 'Fail'];
 
         gradeLevelOrder.forEach(levelName => {
@@ -146,15 +144,15 @@ document.addEventListener('DOMContentLoaded', () => {
           const cell = td();
 
           if (level) {
-            // 显示分数范围
+            // Display score range
             if (level.min_score !== undefined && level.max_score !== undefined) {
               cell.innerHTML += `<div class="badge">${level.min_score} - ${level.max_score}</div>`;
             }
-            // 显示描述
+            // Display description
             if (level.description) {
               cell.innerHTML += `<div>${nl2br(esc(level.description))}</div>`;
             }
-            // 显示分数范围标签
+            // Display score range label
             if (level.min_score !== undefined && level.max_score !== undefined) {
               cell.innerHTML += `<div class="score-range">(${level.min_score} - ${level.max_score})</div>`;
             }
@@ -164,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
           tr.appendChild(cell);
         });
 
-        // 右侧最大分 - 使用max_score字段
+        // Right side max score - using max_score field
         const tdScore = td();
         tdScore.innerHTML = `<div class="meta" style="font-weight: 700;">/ ${esc(String(criterion.max_score ?? '0'))}</div>`;
         tr.appendChild(tdScore);
@@ -178,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function esc(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
   function nl2br(s){ return s.replace(/\n/g,'<br>'); }
 
-  /* ===== Demo data (接口未通时使用，不影响后续接入) ===== */
+  /* ===== Demo data (used when API is not available, does not affect future integration) ===== */
   function demoRubric(){
     return {
       year: '2025',

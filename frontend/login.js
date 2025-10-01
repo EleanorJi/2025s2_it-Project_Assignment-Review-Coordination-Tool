@@ -44,15 +44,15 @@
         btn.disabled = true;
         status.textContent = 'Signing in…';
 
-        // 尝试 /api/auth/login 端点
+        // try /api/auth/login endpoint first
         let res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include', // 重要：允许携带 Cookie
+          credentials: 'include', // Important: allow sending cookies
           body: JSON.stringify(payload)
         });
 
-        // 如果 404，尝试旧的 /api/login 端点
+        // If 404, try the old /api/login endpoint
         if (res.status === 404) {
           res = await fetch('/api/login', {
             method: 'POST',
@@ -68,8 +68,8 @@
           throw new Error(data.message || 'Login failed');
         }
 
-        // ✅ 不再存储 userId 到 localStorage（由 Cookie 处理）
-        // ✅ 只存储用户信息和角色用于前端权限判断
+        // ✅ No longer store userId in localStorage (handled by Cookie)
+        // ✅ Only store user information and role for front-end permission judgment
         if (data.user) {
           localStorage.setItem('user', JSON.stringify(data.user));
           localStorage.setItem('userRole', data.user.role);
@@ -78,11 +78,11 @@
         status.classList.add('ok');
         status.textContent = 'Login successful! Redirecting...';
 
-        // 根据角色跳转到对应仪表盘
+        // Redirect to the corresponding dashboard based on role
         setTimeout(() => {
           let target;
           if (data.user?.role === 'COORDINATOR') {
-            // 跳转到后端保护的路由，不是直接跳转到静态文件！
+            // Redirect to backend-protected route, not directly to static file!
             target = '/dashboard/coordinator';
           } else if (data.user?.role === 'MARKER') {
             target = '/dashboard/marker';
@@ -101,7 +101,7 @@
     });
   }
 
-  // 忘记密码功能
+  // Forgot password feature
   const forgotLink = document.getElementById('forgot');
   if (forgotLink) {
     forgotLink.onclick = (e) => {
@@ -110,22 +110,22 @@
     };
   }
 
-  // 页面加载时检查是否已登录（可选）
+  // Check if already logged in on page load (optional)
   function checkAlreadyLoggedIn() {
-    // 检查是否有 user 信息（但主要依赖 Cookie）
+    // Check if user information exists (mainly relies on Cookie)
     const user = localStorage.getItem('user');
     if (user) {
       try {
         const userData = JSON.parse(user);
         let target;
         if (data.user?.role === 'COORDINATOR') {
-        // 跳转到后端保护的路由，不是直接跳转到静态文件！
-        target = '/dashboard/coordinator';
+          // Redirect to backend-protected route, not directly to static file!
+          target = '/dashboard/coordinator';
         } else if (data.user?.role === 'MARKER') {
         target = '/dashboard/marker';
         }
 
-        // 如果用户访问登录页但已登录，自动跳转
+        // If user accesses login page but is already logged in, redirect automatically
         if (target && window.location.pathname.endsWith('login.html')) {
           window.location.href = target;
         }
@@ -135,6 +135,6 @@
     }
   }
 
-  // 页面加载时执行检查
+  // Run the check on page load
   checkAlreadyLoggedIn();
 })();

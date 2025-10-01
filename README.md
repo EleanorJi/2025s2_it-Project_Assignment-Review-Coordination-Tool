@@ -19,177 +19,303 @@ Project: Assignment Moderation Tool
 ## Project Structure
 
 ```
-assignment-moderation-tool/
+IT-Project-80/
 ├── README.md
 ├── .gitignore
-├── docker-compose.yml          # Local development environment
+├── docker-compose.yml          # Docker development environment
+├── docker.env                 # Docker environment variables
+├── docker.env.example         # Docker environment template
+├── DOCKER_README.md           # Docker setup documentation
+├── LOGIN_TEST.md              # Login testing documentation
 ├── 
-├── backend/                    # Node.js API Service
+├── backend/                   # Node.js API Service
+│   ├── Dockerfile
 │   ├── package.json
-│   ├── .env.example
-│   ├── .env                   # Local environment variables
+│   ├── package-lock.json
 │   ├── src/
 │   │   ├── app.js            # Main application file
 │   │   ├── config/           # Configuration files
+│   │   │   ├── constants.js
 │   │   │   ├── database.js
-│   │   │   ├── auth.js
-│   │   │   └── constants.js
+│   │   │   └── email.js
 │   │   ├── middleware/       # Middleware
 │   │   │   ├── auth.js
-│   │   │   ├── validation.js
-│   │   │   └── errorHandler.js
-│   │   ├── routes/           # Modularized routes
+│   │   │   ├── errorHandler.js
+│   │   │   ├── projectValidation.js
+│   │   │   └── roleAuth.js
+│   │   ├── routes/           # API routes
 │   │   │   ├── index.js
 │   │   │   ├── auth.js
+│   │   │   ├── dashboard.js
 │   │   │   ├── invitations.js
-│   │   │   ├── assignments.js
-│   │   │   └── scoring.js
+│   │   │   ├── page.js
+│   │   │   └── uploads_v2.js
 │   │   ├── controllers/      # Controllers
 │   │   │   ├── authController.js
+│   │   │   ├── dashboardController.js
 │   │   │   ├── invitationController.js
-│   │   │   └── assignmentController.js
-│   │   ├── models/           # Data models
-│   │   │   ├── User.js
-│   │   │   ├── Assignment.js
-│   │   │   └── Submission.js
+│   │   │   └── uploads.js
+│   │   ├── models/           # Data models (empty)
 │   │   ├── services/         # Business logic
-│   │   │   ├── authService.js
-│   │   │   ├── emailService.js
-│   │   │   └── scoringService.js
+│   │   │   └── emailService.js
+│   │   ├── templates/        # Email templates
+│   │   │   └── emailTemplates/
+│   │   │       ├── invitation-email.html
+│   │   │       └── revocation-email.html
 │   │   └── utils/            # Utility functions
-│   │       ├── encryption.js
-│   │       ├── validation.js
-│   │       └── helpers.js
+│   │       ├── enhanced_rubric_parser.js
+│   │       ├── fileParser.js
+│   │       ├── helpers.js
+│   │       └── templateUtils.js
 │   └── tests/               # Test files
 │       ├── unit/
 │       └── integration/
 ├── 
-├── frontend/                # React/Vue Frontend Application
-│   ├── package.json
-│   ├── public/
-│   │   └── index.html
-│   ├── src/
-│   │   ├── main.js          # Entry file
-│   │   ├── App.vue          # Main component
-│   │   ├── router/          # Routing configuration
-│   │   ├── components/      # Common components
+├── frontend/                # HTML/CSS/JS Frontend Application
+│   ├── Dockerfile
+│   ├── nginx.conf           # Nginx configuration
+│   ├── login.html           # Login page
+│   ├── login.js
+│   ├── signup.html          # Signup page
+│   ├── signup.js
+│   ├── confirm.html         # Confirmation page
+│   ├── styles.css           # Global styles
+│   ├── styles copy.css
+│   ├── public/              # Static assets
+│   ├── dist/                # Build output
+│   ├── src/                 # Source code structure
+│   │   ├── assets/
+│   │   ├── components/
 │   │   │   ├── common/
 │   │   │   ├── forms/
 │   │   │   └── layout/
-│   │   ├── views/           # Page components
-│   │   │   ├── Login.vue
-│   │   │   ├── Signup.vue
-│   │   │   ├── Dashboard.vue
-│   │   │   └── Assignment/
-│   │   ├── stores/          # State management
-│   │   │   ├── auth.js
-│   │   │   └── assignments.js
-│   │   ├── services/        # API calls
-│   │   │   ├── api.js
-│   │   │   ├── auth.js
-│   │   │   └── assignments.js
-│   │   ├── utils/           # Utility functions
-│   │   └── assets/          # Static resources
-│   └── dist/               # Build output
+│   │   ├── router/
+│   │   ├── services/
+│   │   ├── stores/
+│   │   ├── utils/
+│   │   └── views/
+│   │       └── Assignment/
+│   ├── Coordinator/         # Coordinator dashboard pages
+│   │   ├── coordinator-dashboard.html
+│   │   ├── coordinator-dashboard.css
+│   │   ├── coordinator.js
+│   │   ├── feedback.html
+│   │   ├── feedback.css
+│   │   ├── feedback.js
+│   │   ├── invite.html
+│   │   ├── invite.css
+│   │   ├── invite.js
+│   │   ├── mark-assignment.html
+│   │   ├── mark-assignment.css
+│   │   ├── mark-assignment.js
+│   │   ├── past-assignment.html
+│   │   ├── past-assignment.css
+│   │   ├── past-assignment.js
+│   │   ├── rubric.html
+│   │   ├── rubric.css
+│   │   ├── rubric.js
+│   │   ├── task-management.html
+│   │   ├── task-management.css
+│   │   └── task-management.js
+│   └── Marker/              # Marker dashboard pages
+│       ├── marker-dashboard.html
+│       ├── marker-dashboard.css
+│       └── marker.js
 │
 ├── database/               # Database related
-│   ├── migrations/         # Database migrations
-│   │   ├── 001_initial.sql
-│   │   └── 002_add_indexes.sql
-│   ├── seeds/             # Initial data
-│   │   └── initial_data.sql
-│   └── scripts/           # Database scripts
-│       ├── setup.sh
-│       └── backup.sh
+│   ├── IT SQL.sql         # Main database schema
+│   ├── migrations/        # Database migrations (empty)
+│   ├── scripts/           # Database scripts (empty)
+│   └── seeds/             # Initial data
+│       └── initial_data.sql
 │
-├── docs/                  # Documentation
-│   ├── API.md            # API documentation
-│   ├── DATABASE.md       # Database design documentation
-│   └── DEPLOYMENT.md     # Deployment documentation
-│
-└── scripts/              # Deployment and development scripts
-    ├── dev-start.sh
-    ├── build.sh
-    └── deploy.sh
+├── test/                  # Test files and resources
+│   ├── doc/              # Test documents
+│   │   ├── assigment test.pdf    # Sample assignment file
+│   │   └── rubric test.xlsx      # Sample rubric file
+│   └── image_readme/     # README demonstration images
 ```
 
-## Login and invitation test steps:
+## Getting Started & Demo
 
-1. Create a database locally.
-   - Make sure you have installed the PostgreSQL database. If not, you can download and install it from [the PostgreSQL website](https://www.postgresql.org/download/).
-   - Open the database pgAdmin4 (if it cannot be found, you can search for pgAdmin4 on the start interface)
-   - Log in to your PostgreSQL server (usually localhost, port 5432, username postgres, and password is the one you set during installation).
-   - Create a new database named `assignment_mod`:
-     - Right-click on "Databases" in the left sidebar and select "Create" > "Database...".
-     - Enter `assignment_mod` as the database name and click "Save".
-   - Set up an initial user (for example, username `admin`, password `password`), and ensure that this user has all permissions for the `assignment_mod` database.
-   - To insert an initial "admin" database table, you can use the following SQL command:
-     ```sql
-     INSERT INTO app_user (name, email, password_hash, role, is_active)
-     VALUES (
-      'admin',
-      'admin@grading.com',
-      'admin123',
-      'COORDINATOR',
-      true
-     );
-     ```
-   - Make sure that the database connection configuration in backend/src/config/database.js matches your database settings (such as the username, password - it should be the password you set during installation, the host and the port).
-2. Start the backend server:
-   - Make sure that you have installed all the dependencies (`npm install`, `node.js`, `express`, etc.).
-   - Open the terminal at the current project location
-   - Run `node backend/src/app.js` to start the backend server.
-3. Test login:
-   1. Open the browser and visit `http://localhost:3000/login.html`
-      
-      You should see the login page:
-      ![img.png](test_image_readme/img.png)
-   2. Input the email/username and password to log in.
+### Local Setup and Running
 
-      If you are using the above SQL, then enter:
-         - Email/Username: admin@grading.com/admin
-         - Password: admin123
-      
-      Then can see "Login successful!"：
-      ![img_1.png](test_image_readme/img_1.png)
+For local development and testing, please follow our Docker implementation guide:
 
-4. Test invitation:
+📖 **[Complete Docker Setup Guide](DOCKER_README.md)**
 
-   Postman Usage Declaration: We use Postman because we haven't completed the transition of the login-dashboard-invitation interface yet. Once it's completed later, we won't need Postman.
-   
-   1. Download Postman from [the Postman website](https://www.postman.com/downloads/) and install it.
-   2. Open Postman and enter "POST" http://localhost:3000/api/invitations
-   3. add headers
-        ```
-        Content-Type: application/json
-        x-user-id: 1
-        ```
-        ![img_2.png](test_image_readme/img_2.png)
-   4. add body -> raw -> JSON
-      ```json
-      {
-       "email": "marker1@example.com"
-      }
-       ```
-   5. Click "Send"
-   
-      You should see the response like this:
-      ```json
-      {
-       "success": true,
-       "message": "Invitation sent successfully"
-       }
-   6. In the terminal, copy the token: XXX
-   7. Open the browser and visit http://localhost:3000/signup.html?token=XXX
-      
-      will see the signup page:
-      ![img_3.png](test_image_readme/img_3.png)
-      Enter your username and password, check the terms of agreement, and click "Sign Up".
-   8. After successful registration, you will see:
-      ![img_4.png](test_image_readme/img_4.png)
-      Click "Sign in" to navigate to the login page.
-   9. It will return to the previous login interface.
-      ![img_5.png](test_image_readme/img_5.png)
-   10. Input the email/username and password to log in.
-   11. Clicking on "Sign In" will result in "Login successful!":
-      ![img_6.png](test_image_readme/img_6.png)
+#### Quick Start with Docker
+
+1. **Prerequisites**: Ensure Docker and Docker Compose are installed on your system
+2. **Clone the repository** and navigate to the project directory
+3. **Run the application**:
+   ```bash
+   docker-compose up --build
+   ```
+4. **Wait for initialization**: The setup process takes a few seconds. Once you see the completion message in terminal, the application is ready
+5. **Access the application**: Open your browser and navigate to `http://localhost`
+
+![Docker Startup](test/image_readme/image1.png)
+
+### Demo Walkthrough
+
+#### 1. Administrator Login
+
+Open the application at `http://localhost` and log in with the test admin account:
+
+- **Username**: `admin@grading.com`
+- **Password**: `admin123`
+
+![Login Page](test/image_readme/image2.png)
+
+Upon successful login, you'll be redirected to the Coordinator Dashboard.
+
+#### 2. Coordinator Dashboard Overview
+
+The dashboard provides an overview of the current system status. Note that some overview features are still in development and display placeholder content.
+
+![Coordinator Dashboard](test/image_readme/image3.png)
+
+#### 3. Marker Management
+
+Navigate to **"Markers Management"** to manage marker accounts:
+
+- **Invite new markers**: Enter an email address to send invitations
+- **Manage existing markers**: Use "Resend" and "Revoke" buttons to manage invitations
+- **Test functionality**: You can use your own email address for testing
+
+![Markers Management](test/image_readme/image4.png)
+
+#### 4. Email Invitation System
+
+When a marker invitation is sent, the recipient receives an email invitation:
+
+![Email Invitation](test/image_readme/image5.png)
+
+Click the link in the email to complete marker registration:
+
+![Marker Registration](test/image_readme/image6.png)
+
+#### 5. Marker Dashboard
+
+After registration, markers can log in with their credentials to access the marker interface:
+
+![Marker Registration Successful](test/image_readme/image7.png)
+![Marker Dashboard](test/image_readme/image8.png)
+
+
+*Note: The marker interface is currently in display mode with limited functionality.*
+
+#### 6. Task Management
+
+Return to the Coordinator Dashboard and click **"Task Management"**:
+
+**Creating a New Task:**
+
+1. Click **"Add New Task"**
+2. Click **"Create"** 
+3. Enter the project name
+4. The task is successfully created
+
+![Task Creation](test/image_readme/image10.png)
+
+#### 7. Rubric Upload
+
+**Upload a rubric for the task:**
+
+1. Click **"Upload Rubric"**
+2. Select the test file: `test/doc/rubric test.xlsx`
+3. Upload the rubric file
+
+![Rubric Upload](test/image_readme/image11.png)
+
+**View the uploaded rubric:**
+
+Click **"View Rubric"** to see the rubric content:
+
+![Rubric Content](test/image_readme/image12.png)
+
+#### 8. Assignment Upload
+
+**Upload assignment files:**
+
+1. Click **"Upload Assignment"**
+2. Select the test file: `test/doc/assignment test.pdf`
+3. Upload the assignment
+
+![Assignment Upload](test/image_readme/image13.png)
+
+#### 9. Task Activation
+
+After uploading both rubric and assignment:
+
+1. Click **"Publish Assignment"**
+2. The task is now activated and ready for marking
+
+![Task Activation](test/image_readme/image14.png)
+
+#### 10. Marking Interface
+
+Access the marking functionality:
+
+1. Click **"Mark Assignment"**
+2. Enter scores for different criteria
+3. Confirm the scores and click **"Submit"**
+
+![Marking Interface](test/image_readme/image15.png)
+
+The marking is successfully submitted.
+
+![Submission Success](test/image_readme/image16.png)
+
+#### 11. Feedback System
+
+The feedback interface is available but currently in display mode:
+
+![Feedback Interface](test/image_readme/image17.png)
+
+*Note: Feedback functionality is under development.*
+
+#### 12. Historical Tasks
+
+Return to the dashboard to view historical task examples:
+
+![Historical Tasks](test/image_readme/image18.png)
+
+This demonstrates how coordinators can track previous assignments and tasks.
+
+### Alternative Access - Live Deployment
+
+If you encounter issues with local Docker setup, you can access our deployed version:
+
+🌐 **Live Demo**: [https://it-project-80-production-06bc.up.railway.app/](https://it-project-80-production-06bc.up.railway.app/)
+
+*Use the same testing procedures and credentials as described above.*
+
+---
+
+## Features Summary
+
+### Current Implementation Status
+
+✅ **Completed Features:**
+- User authentication system (Admin/Coordinator/Marker roles)
+- Email invitation system for markers
+- Task creation and management
+- Rubric upload and parsing (.xlsx format)
+- Assignment upload (.pdf format)
+- Basic marking interface
+- Docker containerization
+- Database integration (PostgreSQL)
+
+🚧 **In Development:**
+- Dashboard overview functionality
+- Complete marker interface integration
+- Feedback system implementation
+- Advanced reporting features
+
+### Test Files Location
+
+For testing uploads, use the following test files:
+- **Rubric**: `test/doc/rubric test.xlsx`
+- **Assignment**: `test/doc/assignment test.pdf`

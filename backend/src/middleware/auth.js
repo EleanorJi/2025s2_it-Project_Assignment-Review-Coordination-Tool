@@ -2,11 +2,11 @@ const db = require('../config/database');
 
 const authenticate = async (req, res, next) => {
   try {
-    console.log('🔍 认证中间件被调用');
-    console.log('📦 请求Cookies:', req.cookies);
-    console.log('🆔 userId值:', req.cookies.userId);
-    console.log('📍 请求路径:', req.path);
-    // 从 Cookie 中获取 userId
+    console.log('🔍 Authentication middleware called');
+    console.log('📦 Request Cookies:', req.cookies);
+    console.log('🆔 userId value:', req.cookies.userId);
+    console.log('📍 Request path:', req.path);
+    // Get userId from Cookie
     const userId = req.cookies.userId;
 
     if (!userId) {

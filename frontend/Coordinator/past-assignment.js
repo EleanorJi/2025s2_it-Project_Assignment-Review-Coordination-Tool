@@ -20,6 +20,7 @@
   
     // ===== Demo data（可替换为后端返回）=====
     // 结构：year, tasks[{title, description, status, assignments[], created_at}]
+
     const data = [
       {
         year: 2024,
@@ -308,14 +309,13 @@
       }
     }
   
-    // Simple toast（使用全局 .toast 样式）
+    
+    // Simple toast (using global .toast styles)
     function toast(msg, ms=2000){
       const t=document.createElement('div');
       t.className='toast'; t.textContent=msg; document.body.appendChild(t);
       requestAnimationFrame(()=> t.classList.add('show'));
       setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=> t.remove(), 200); }, ms);
-    }
-  
-    render();
+    }    render();
   })();
   
