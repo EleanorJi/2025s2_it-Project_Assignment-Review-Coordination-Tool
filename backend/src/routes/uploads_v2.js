@@ -885,6 +885,180 @@ router.get('/projects', async (req, res) => {
   }
 });
 
+// Past tasks: GET /api/uploads/past-tasks
+// Returns archived projects grouped by computed semester (Australia/Melbourne),
+// each project includes latest Round 1 and Round 2 assignment (by version),
+// and provides target URLs for feedback and rubric pages
+router.get('/past-tasks', async (req, res) => {
+  try {
+    console.log('📚 Getting past tasks (archived projects)...');
+
+    // 1) Get archived projects with their latest due_at (max of assignments)
+    const archivedProjects = await db.query(`
+      SELECT 
+        p.project_id,
+        p.name,
+        p.status,
+        MAX(a.due_at) AS latest_due
+      FROM project p
+      JOIN assignment a ON a.project_id = p.project_id
+      WHERE p.status IN ('archived','completed')
+      GROUP BY p.project_id, p.name
+      ORDER BY latest_due DESC NULLS LAST
+    `);
+
+    // 2) For all these projects, fetch latest version assignment per round (1 and 2)
+    const projectIds = archivedProjects.rows.map(r => r.project_id);
+    let latestAssignments = [];
+    if (projectIds.length > 0) {
+      const inParams = projectIds.map((_, i) => `$${i + 1}`).join(',');
+      const latestSql = `
+        SELECT a.* FROM assignment a
+        JOIN (
+          SELECT project_id, round, MAX(version) AS max_version
+          FROM assignment
+          WHERE project_id IN (${inParams})
+          GROUP BY project_id, round
+        ) t
+        ON a.project_id = t.project_id AND a.round = t.round AND a.version = t.max_version
+      `;
+      const latestRs = await db.query(latestSql, projectIds);
+      latestAssignments = latestRs.rows;
+    }
+
+    // 3) Build map: project_id -> { round1, round2 }
+    const idToAssignments = new Map();
+    for (const row of latestAssignments) {
+      const bucket = idToAssignments.get(row.project_id) || {};
+      if (row.round === 1) bucket.round1 = row;
+      if (row.round === 2) bucket.round2 = row;
+      idToAssignments.set(row.project_id, bucket);
+    }
+
+    // 4) Helper to compute semester in Australia/Melbourne
+    const tz = 'Australia/Melbourne';
+    function computeSemester(dueIso) {
+      if (!dueIso) return { year: null, sem: null };
+      const d = new Date(dueIso);
+      // Get components in Australia/Melbourne
+      const parts = new Intl.DateTimeFormat('en-AU', {
+        timeZone: tz,
+        year: 'numeric', month: 'numeric', day: 'numeric'
+      }).formatToParts(d).reduce((acc, p) => { acc[p.type] = parseInt(p.value, 10) || acc[p.type]; return acc; }, {});
+      const month = parts.month; // 1-12
+      const year = parts.year;
+      if (month >= 2 && month <= 6) {
+        return { year, sem: 1 };
+      }
+      // 7..12 and 1 belong to Semester 2; year is the July year
+      if (month >= 7) {
+        return { year, sem: 2 };
+      }
+      // month === 1 => Semester 2 of previous year
+      return { year: year - 1, sem: 2 };
+    }
+
+    // 5) Assemble groups { year, semester, projects: [...] }
+    const groupsMap = new Map(); // key: `${year}-S${sem}`
+
+    for (const p of archivedProjects.rows) {
+      const rounds = idToAssignments.get(p.project_id) || {};
+      const latestDue = p.latest_due || rounds.round2?.due_at || rounds.round1?.due_at;
+      const { year, sem } = computeSemester(latestDue);
+      if (!year || !sem) continue;
+
+      const key = `${year}-S${sem}`;
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, { year, semester: `Semester ${sem}`, projects: [] });
+      }
+
+      const assignments = [];
+      if (rounds.round1) {
+        assignments.push({
+          assignment_id: rounds.round1.assignment_id,
+          title: `${rounds.round1.name} (Round 1)`,
+          round: 1,
+          report_url: `/dashboard/coordinator/feedback?assignment=${encodeURIComponent(rounds.round1.assignment_id)}`,
+          rubric_url: `/dashboard/coordinator/rubric?project=${encodeURIComponent(p.project_id)}`
+        });
+      }
+      if (rounds.round2) {
+        assignments.push({
+          assignment_id: rounds.round2.assignment_id,
+          title: `${rounds.round2.name} (Round 2)`,
+          round: 2,
+          report_url: `/dashboard/coordinator/feedback?assignment=${encodeURIComponent(rounds.round2.assignment_id)}`,
+          rubric_url: `/dashboard/coordinator/rubric?project=${encodeURIComponent(p.project_id)}`
+        });
+      }
+
+      groupsMap.get(key).projects.push({
+        project_id: p.project_id,
+        project_name: p.name,
+        status: p.status,
+        assignments
+      });
+    }
+
+    // 6) Sort groups by year desc then S2 before S1; projects keep DB order
+    const groups = Array.from(groupsMap.values()).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      const sa = a.semester === 'Semester 2' ? 2 : 1;
+      const sb = b.semester === 'Semester 2' ? 2 : 1;
+      return sb - sa;
+    });
+
+    res.json({ groups });
+  } catch (error) {
+    console.error('❌ Failed to get past tasks:', error);
+    res.status(500).json({ error: 'Failed to get past tasks', details: error.message });
+  }
+});
+
+// Update project status: PUT /api/uploads/project/:project_id/status
+// Allowed transitions: active -> completed|archived, completed -> archived, archived -> completed (no draft)
+router.put('/project/:project_id/status', async (req, res) => {
+  const client = await db.connect();
+  try {
+    const { project_id } = req.params;
+    const { status } = req.body || {};
+
+    const allowed = ['completed', 'archived', 'active'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const currentRs = await client.query('SELECT status FROM project WHERE project_id = $1', [project_id]);
+    if (currentRs.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    const current = currentRs.rows[0].status;
+
+    // Transition rules:
+    // - No draft here
+    // - active -> completed | archived
+    // - completed -> archived
+    // - archived -> completed
+    if (current === 'archived' && !(status === 'archived' || status === 'completed')) {
+      return res.status(400).json({ error: 'Archived project can only move to completed' });
+    }
+    if (status === 'active' && current !== 'active') {
+      return res.status(400).json({ error: 'Cannot transition back to active' });
+    }
+    if (status === 'completed' && !['active','completed','archived'].includes(current)) {
+      return res.status(400).json({ error: 'Invalid transition to completed' });
+    }
+
+    await client.query('UPDATE project SET status = $1 WHERE project_id = $2', [status, project_id]);
+    return res.json({ project_id: Number(project_id), status });
+  } catch (error) {
+    console.error('Failed to update project status:', error);
+    return res.status(500).json({ error: 'Failed to update project status' });
+  } finally {
+    client.release();
+  }
+});
+
 // 10) Delete project: DELETE /api/uploads/project/:project_id
 router.delete('/project/:project_id', async (req, res) => {
   const client = await db.connect();
@@ -893,6 +1067,7 @@ router.delete('/project/:project_id', async (req, res) => {
     const { project_id } = req.params;
     
     console.log(`🗑️ Deleting project: project_id=${project_id}`);
+    console.log(`🗑️ Project ID type: ${typeof project_id}`);
 
     await client.query('BEGIN');
 
@@ -902,8 +1077,11 @@ router.delete('/project/:project_id', async (req, res) => {
       [project_id]
     );
     
+    console.log(`🗑️ Project check result: ${projectCheck.rows.length} rows found`);
+    
     if (projectCheck.rows.length === 0) {
       await client.query('ROLLBACK');
+      console.log(`🗑️ Project not found: ${project_id}`);
       return res.status(404).json({ error: 'Project not found' });
     }
 
@@ -931,7 +1109,70 @@ router.delete('/project/:project_id', async (req, res) => {
       }
     }
 
-    // Delete database records (depends on CASCADE delete)
+    // Delete related records in correct order to avoid foreign key constraints
+    // Get all assignment IDs and rubric IDs for this project first
+    const assignmentIds = await client.query(
+      'SELECT assignment_id FROM assignment WHERE project_id = $1',
+      [project_id]
+    );
+    
+    const rubricIds = await client.query(
+      'SELECT rubric_id FROM rubric WHERE project_id = $1',
+      [project_id]
+    );
+    
+    // 1. Delete upload records first (they reference both assignment and rubric)
+    if (assignmentIds.rows.length > 0) {
+      const assignmentIdList = assignmentIds.rows.map(row => row.assignment_id);
+      const assignmentPlaceholders = assignmentIdList.map((_, i) => `$${i + 1}`).join(',');
+      await client.query(`
+        DELETE FROM upload 
+        WHERE assignment_id IN (${assignmentPlaceholders})
+      `, assignmentIdList);
+    }
+    
+    if (rubricIds.rows.length > 0) {
+      const rubricIdList = rubricIds.rows.map(row => row.rubric_id);
+      const rubricPlaceholders = rubricIdList.map((_, i) => `$${i + 1}`).join(',');
+      await client.query(`
+        DELETE FROM upload 
+        WHERE rubric_id IN (${rubricPlaceholders})
+      `, rubricIdList);
+    }
+    
+    // 2. Delete other related records that reference assignments
+    if (assignmentIds.rows.length > 0) {
+      const ids = assignmentIds.rows.map(row => row.assignment_id);
+      
+      // Delete baseline_score records
+      if (ids.length > 0) {
+        const baselinePlaceholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await client.query(`
+          DELETE FROM baseline_score 
+          WHERE assignment_id IN (${baselinePlaceholders})
+        `, ids);
+      }
+      
+      // Delete feedback records
+      if (ids.length > 0) {
+        const feedbackPlaceholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await client.query(`
+          DELETE FROM feedback 
+          WHERE assignment_id IN (${feedbackPlaceholders})
+        `, ids);
+      }
+      
+      // Delete marker_score records
+      if (ids.length > 0) {
+        const markerPlaceholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await client.query(`
+          DELETE FROM marker_score 
+          WHERE assignment_id IN (${markerPlaceholders})
+        `, ids);
+      }
+    }
+    
+    // 3. Finally delete the project (this will CASCADE delete assignments and rubrics)
     await client.query('DELETE FROM project WHERE project_id = $1', [project_id]);
 
     await client.query('COMMIT');
@@ -950,6 +1191,7 @@ router.delete('/project/:project_id', async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('❌ Project deletion failed:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({ 
       error: 'Failed to delete project',
       details: error.message 

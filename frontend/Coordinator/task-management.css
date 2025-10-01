@@ -114,8 +114,33 @@
   .tm-task-status{display:inline-flex;align-items:center;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:600;margin-left:8px}
   .tm-task-status.draft{background:#f3f4f6;color:#6b7280}
   .tm-task-status.active{background:#ecfdf5;color:#065f46}
+  .tm-task-status.completed{background:#e0e7ff;color:#3730a3}
+  .tm-task-status.archived{background:#f3f4f6;color:#374151}
+  .tm-status-dropdown{position:relative;margin-left:8px}
+  .tm-status-toggle{background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:800}
+  .tm-status-menu{position:fixed;top:0;left:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);display:none;min-width:140px;z-index:10000}
+  .tm-status-menu.show{display:block}
+  .tm-status-item{padding:8px 10px;cursor:pointer;font-weight:600}
+  .tm-status-item:hover{background:#f8fafc}
+  .tm-delete-btn{background:transparent;border:none;color:#dc2626;cursor:pointer;padding:4px;margin-left:8px;border-radius:4px;transition:background-color 0.2s}
+  .tm-delete-btn:hover{background:#fef2f2}
   .tm-task-chevron{color:#6b7280;cursor:pointer;transition:transform 0.2s}
   .tm-task-chevron.expanded{transform:rotate(180deg)}
+  
+  /* Delete confirmation modal */
+  .tm-delete-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px}
+  .tm-delete-dialog{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:500px;width:100%;overflow:hidden}
+  .tm-delete-header{padding:20px 24px 0;border-bottom:1px solid var(--border)}
+  .tm-delete-header h3{margin:0;font-size:18px;font-weight:800;color:var(--text)}
+  .tm-delete-body{padding:20px 24px;color:var(--text)}
+  .tm-delete-body p{margin:0 0 12px 0;line-height:1.5}
+  .tm-delete-body ul{margin:8px 0;padding-left:20px}
+  .tm-delete-body li{margin:4px 0}
+  .tm-delete-footer{padding:16px 24px 20px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid var(--border)}
+  .tm-cancel-btn{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
+  .tm-cancel-btn:hover{background:#e5e7eb}
+  .tm-confirm-delete-btn{background:#dc2626;color:#fff;border:1px solid #dc2626}
+  .tm-confirm-delete-btn:hover{background:#b91c1c}
 
   /* Task content (collapsible) */
   .tm-task-content{padding:16px;display:none}
