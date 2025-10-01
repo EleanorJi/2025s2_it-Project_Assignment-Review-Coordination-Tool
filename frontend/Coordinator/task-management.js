@@ -65,6 +65,8 @@
 
         let assignment1Status = 'unpublished';
         let assignment2Status = 'unpublished';
+        let assignment1Finalized = false;
+        let assignment2Finalized = false;
 
         try {
           // 1. First get the latest assignment IDs for the project
@@ -83,6 +85,18 @@
               } else {
                 console.warn('⚠️ Failed to get assignment1 status');
               }
+
+              // 检查assignment1的评分是否已提交
+              try {
+                const finalizedResponse1 = await fetch(`/api/uploads/scoring/baseline/${latestIds.assignment1.assignment_id}`);
+                if (finalizedResponse1.ok) {
+                  const finalizedData1 = await finalizedResponse1.json();
+                  assignment1Finalized = finalizedData1.baseline_scores?.[0]?.finalized || false;
+                  console.log(`📄 Assignment1 评分状态: ${assignment1Finalized ? '已提交' : '未提交'}`);
+                }
+              } catch (error) {
+                console.log('📄 Assignment1 评分检查: 无数据或未评分');
+              }
             } else {
               console.log('📄 Assignment1: No data');
             }
@@ -95,7 +109,19 @@
                 assignment2Status = statusData2.assignment.is_published ? 'published' : 'unpublished';
                 console.log(`📄 Assignment2 publish status: ${statusData2.assignment.is_published}`);
               } else {
-                console.warn('⚠️ Failed to get assignment2 status');
+                console.warn('⚠️ 获取assignment2状态失败');
+              }
+
+              // 检查assignment2的评分是否已提交
+              try {
+                const finalizedResponse2 = await fetch(`/api/uploads/scoring/baseline/${latestIds.assignment2.assignment_id}`);
+                if (finalizedResponse2.ok) {
+                  const finalizedData2 = await finalizedResponse2.json();
+                  assignment2Finalized = finalizedData2.baseline_scores?.[0]?.finalized || false;
+                  console.log(`📄 Assignment2 评分状态: ${assignment2Finalized ? '已提交' : '未提交'}`);
+                }
+              } catch (error) {
+                console.log('📄 Assignment2 评分检查: 无数据或未评分');
               }
             } else {
               console.log('📄 Assignment2: No data');
@@ -138,12 +164,14 @@
             {
               id: 'assignment1',
               title: 'Assignment 1',
-              status: assignment1Status
+              status: assignment1Status,
+              finalized: assignment1Finalized
             },
             {
               id: 'assignment2',
               title: 'Assignment 2',
-              status: assignment2Status
+              status: assignment2Status,
+              finalized: assignment2Finalized
             }
           ]
         });
@@ -404,15 +432,16 @@
       }
     });
 
-    const viewBtn = createButton('View', () => {
-      location.href = `/dashboard/coordinator/view?project=${task.project_id}&assignment=${assignment.id}`;
-    });
 
     const publishBtn = createButton('Publish Assignment', () => {
       publishAssignment(task.project_id, assignment.id);
     });
 
     const markBtn = createButton('Mark Assignment', () => {
+      location.href = `/dashboard/coordinator/mark?project=${task.project_id}&assignment=${assignment.id}`;
+    });
+
+    const viewMarksBtn = createButton('View Marks', () => {
       location.href = `/dashboard/coordinator/mark?project=${task.project_id}&assignment=${assignment.id}`;
     });
 
@@ -425,18 +454,23 @@
     // Display different buttons based on assignment status
     if (assignment.status === 'published') {
 
-      // Published: Hide Upload button, display other buttons
-      actions.appendChild(viewBtn);
-      actions.appendChild(markBtn);
-      actions.appendChild(feedbackBtn);
-      console.log(`🔘 ${assignment.title} display buttons: View, Mark, Feedback (Published, hide Upload)`);
+      // 如果已提交评分，只显示View Marks按钮和Feedback按钮
+      if (assignment.finalized) {
+        actions.appendChild(viewMarksBtn);
+        actions.appendChild(feedbackBtn);
+        console.log(`🔘 ${assignment.title} 显示按钮: View Marks, Feedback (已发布且已提交评分)`);
+      } else {
+        // 未提交评分：显示Mark Assignment按钮和Feedback按钮
+        actions.appendChild(markBtn);
+        actions.appendChild(feedbackBtn);
+        console.log(`🔘 ${assignment.title} 显示按钮: Mark Assignment, Feedback (已发布但未提交评分)`);
+      }
     } else {
       // Unpublished: Display Upload button
       actions.appendChild(uploadBtn);
 
       // Only display View button and Publish button when assignment files exist
       if (task.file_counts?.assignment > 0) {
-        actions.appendChild(viewBtn);
         actions.appendChild(publishBtn);
         console.log(`🔘 ${assignment.title} display buttons: Upload, View, Publish`);
       } else {
@@ -840,22 +874,49 @@
     setTimeout(()=>{ el.style.opacity=0; el.style.transform='translateY(6px)'; setTimeout(()=> el.remove(), 200); }, ms);
   }
 
-  // Initialization
-  // Display username
-  try {
-  const rawUser = localStorage.getItem("user");
-  if (rawUser) {
-    const user = JSON.parse(rawUser);
-    if (user && user.name) {
-      document.getElementById("username").textContent = user.name;
-    }
-  }
-  } catch (err) {
-  console.error("Failed to load username:", err);
-  }
-  fetchProjects();
+  // 初始化
+  document.addEventListener('DOMContentLoaded', function() {
+    // 用户下拉菜单功能
+    const dropdown = document.querySelector('.dropdown');
+    const trigger = document.querySelector('.dropdown-trigger');
+    const menu = document.querySelector('.dropdown-menu');
+    let isOpen = false;
 
-  // Change Add New Assignment button to open project creation modal
+    // 显示用户名
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          document.getElementById("username").textContent = user.name;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load username:", err);
+    }
+
+    // 鼠标悬停显示下拉菜单
+    if (dropdown) {
+      dropdown.addEventListener('mouseenter', function() {
+        menu.style.display = 'block';
+      });
+
+      dropdown.addEventListener('mouseleave', function() {
+        menu.style.display = 'none';
+      });
+    }
+
+    // 加载项目数据
+    fetchProjects();
+  });
+
+  // Logout函数
+  window.logout = function() {
+    localStorage.removeItem('user');
+    window.location.href = '/login.html';
+  };
+
+  // 将 Add New Assignment 按钮改为打开项目创建弹窗
   const btnAdd = $('#btnAdd');
   if (btnAdd) {
       btnAdd.addEventListener('click', openProjectModal);
@@ -1005,6 +1066,7 @@
     const closeBtn = $('#assignment1Close');
     const submitBtn = $('#assignment1Submit');
     const dueInput = $('#assignment1Due');
+    const timeInput = $('#assignment1Time');
     const fileInput = $('#assignment1File');
     const dropArea = $('#assignment1Drop');
     const textDisplay = $('#assignment1Text');
@@ -1055,6 +1117,7 @@
     // Submit
     submitBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
+      const time = timeInput.value.trim();
       const file = fileInput.files[0];
 
       // Form validation
@@ -1071,21 +1134,31 @@
         return;
       }
 
-      // Validate date is not in the past
-      const selectedDate = new Date(due);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      // 组合日期和时间
+      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`; // 如果没有选择时间，默认为当天23:59:59
+      const selectedDateTime = new Date(dueDateTime);
+      const now = new Date();
 
-      if (selectedDate < today) {
+      // 验证日期时间不能是过去的
+      if (selectedDateTime < now) {
         errLine.style.display = 'block';
         errLine.textContent = 'Due date cannot be in the past.';
         return;
       }
 
       try {
+        // 组合日期和时间
+        let combinedDateTime;
+        if (time) {
+          // 如果有选择时间，组合日期和时间
+          combinedDateTime = `${due}T${time}:00`;
+        } else {
+          // 如果没有选择时间，设置为当天的23:59:59
+          combinedDateTime = `${due}T23:59:59`;
+        }
 
         const draft = await uploadDraftFile(file, 'assignment1');
-        await commitFile(draft.temp_name, 'assignment', 1, due, projectId);
+        await commitFile(draft.temp_name, 'assignment', 1, combinedDateTime, projectId);
 
         toast('Assignment 1 uploaded successfully!');
         closeModal();
@@ -1121,6 +1194,7 @@
     const closeBtn = $('#assignment2Close');
     const submitBtn = $('#assignment2Submit');
     const dueInput = $('#assignment2Due');
+    const timeInput = $('#assignment2Time');
     const fileInput = $('#assignment2File');
     const dropArea = $('#assignment2Drop');
     const textDisplay = $('#assignment2Text');
@@ -1171,6 +1245,7 @@
     // Submit
     submitBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
+      const time = timeInput.value.trim();
       const file = fileInput.files[0];
 
       // Form validation
@@ -1187,18 +1262,29 @@
         return;
       }
 
-      // Validate date is not in the past
-      const selectedDate = new Date(due);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      // 组合日期和时间
+      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`; // 如果没有选择时间，默认为当天23:59:59
+      const selectedDateTime = new Date(dueDateTime);
+      const now = new Date();
 
-      if (selectedDate < today) {
+      // 验证日期时间不能是过去的
+      if (selectedDateTime < now) {
         errLine.style.display = 'block';
         errLine.textContent = 'Due date cannot be in the past.';
         return;
       }
 
       try {
+        // 组合日期和时间
+        let combinedDateTime;
+        if (time) {
+          // 如果有选择时间，组合日期和时间
+          combinedDateTime = `${due}T${time}:00`;
+        } else {
+          // 如果没有选择时间，设置为当天的23:59:59
+          combinedDateTime = `${due}T23:59:59`;
+        }
+
         const draft = await uploadDraftFile(file, 'assignment2');
         await commitFile(draft.temp_name, 'assignment', 2, due, projectId);
 
