@@ -3,9 +3,6 @@ document.querySelectorAll('.nav-item').forEach(b=>{
     b.addEventListener('click',()=>{
       document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
-      if (b.dataset.view !== 'overview') {
-        alert('This is a demo: only the Overview layout is shown. Please follow the routes/templates for the remaining views.');
-      }
     });
   });
   // ✅ display username
