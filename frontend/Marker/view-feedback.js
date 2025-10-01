@@ -62,14 +62,21 @@ async function fetchFeedbackData() {
 
         // 获取项目信息
         const projectData = await fetchProjectData(assignmentData.project_id);
+        console.log('projectData:', projectData);
+        const projectInfo = projectData.project || {};
+        // 获取rubric信息
+        const rubricData = await fetchRubricDetails(projectData.rubric.rubric_id);
+        console.log('rubricData:', rubricData);
+
 
         // 转换数据格式为前端需要的格式
         const transformedData = transformData(
             assignmentData,
-            projectData,
+            projectInfo,
             baselineData,
             markerData,
-            feedbackData
+            feedbackData,
+            rubricData
         );
 
         console.log('Transformed feedback data:', transformedData);
@@ -80,6 +87,14 @@ async function fetchFeedbackData() {
         // 接口出错时使用demo数据兜底
         return demoFeedback();
     }
+}
+
+// 获取rubric详情
+async function fetchRubricDetails(rubricId) {
+    const res = await fetch(`/api/uploads/rubric/${rubricId}/details`);
+    if (!res.ok) throw new Error('Failed to fetch rubric details');
+    const data = await res.json();
+    return data.criteria || [];
 }
 
 // 获取assignment信息
@@ -95,7 +110,7 @@ async function fetchProjectData(projectId) {
     const res = await fetch(`/api/uploads/project/${projectId}/status`);
     if (!res.ok) throw new Error('Failed to fetch project data');
     const data = await res.json();
-    return data.project;
+    return data;
 }
 
 // 获取baseline分数
@@ -135,7 +150,7 @@ async function fetchFeedbackContent(assignmentId, markerId) {
 }
 
 // 数据转换函数
-function transformData(assignmentData, projectData, baselineData, markerData, feedbackData) {
+function transformData(assignmentData, projectData, baselineData, markerData, feedbackData, rubricData) {
     // 构建assignment显示名称
     const projectName = projectData?.name || 'Unknown Project';
     const assignmentDisplayName = `${projectName} - Moderation ${assignmentData.round || 0}`;
@@ -144,9 +159,12 @@ function transformData(assignmentData, projectData, baselineData, markerData, fe
     const criteria = baselineData.map((baseline, index) => {
         const markerScore = markerData.find(m => m.criterion_id === baseline.criterion_id);
 
+        // 在 rubricData 里找到对应 criterion
+        const rubricCriterion = rubricData.find(r => r.criterion_id === baseline.criterion_id);
+
         return {
             title: baseline.criterion_title || `Criterion ${index + 1}`,
-            subtitle: baseline.matched_level?.description || '',
+            subtitle: rubricCriterion?.description || '',
             max: baseline.criterion_max_score || 0,
             markerScore: markerScore?.score || 0,
             coordinatorScore: baseline.score || 0,
@@ -163,8 +181,7 @@ function transformData(assignmentData, projectData, baselineData, markerData, fe
         due: formatDate(assignmentData.due_at) || 'Not set',
         feedbackDate: formatDate(new Date()),
         criteria,
-        coordinatorFeedback: latestFeedback?.content || 'No detailed feedback provided.',
-        markerComments: 'nnnnnnnnnnn' // 这个可以从marker数据中汇总或单独存储
+        allFeedback: feedbackData   // ✅ 保存所有feedback
     };
 }
 
@@ -280,14 +297,21 @@ async function loadFeedback(data){
   });
 
   // 更新文本反馈
-  coordinatorFeedbackEl.textContent = data.coordinatorFeedback || 'No detailed feedback provided.';
-  if (!data.coordinatorFeedback) {
-    coordinatorFeedbackEl.classList.add('empty');
-  }
+  coordinatorFeedbackEl.innerHTML = '';
 
-  markerCommentsEl.textContent = data.markerComments || 'No comments provided.';
-  if (!data.markerComments) {
-    markerCommentsEl.classList.add('empty');
+  if (data.allFeedback && data.allFeedback.length > 0) {
+      data.allFeedback.forEach((fb, idx) => {
+          const div = document.createElement('div');
+          div.className = 'feedback-block';
+          div.innerHTML = `
+              <div class="feedback-date">${idx+1} • ${formatDate(fb.created_at || new Date())}</div>
+              <div class="feedback-content">${esc(fb.content || 'No feedback provided')}</div>
+          `;
+          coordinatorFeedbackEl.appendChild(div);
+      });
+  } else {
+      coordinatorFeedbackEl.textContent = 'No detailed feedback provided.';
+      coordinatorFeedbackEl.classList.add('empty');
   }
 }
 
