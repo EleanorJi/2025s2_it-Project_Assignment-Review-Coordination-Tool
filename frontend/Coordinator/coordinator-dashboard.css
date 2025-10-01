@@ -16,8 +16,22 @@
   .brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
   .brand-title{font-weight:800}
   .brand-sub{font-size:12px;color:var(--muted)}
-  .account{color:var(--text);font-weight:600}
-  .caret{margin-left:4px;color:var(--muted)}
+.account{color:var(--text);font-weight:600;position:relative;cursor:pointer}
+.caret{margin-left:4px;color:var(--muted)}
+.username-clickable{cursor:pointer;padding:4px 8px;border-radius:4px;transition:background-color 0.2s}
+.username-clickable:hover{background-color:#f5f5f5}
+
+.dropdown-menu{
+  position:absolute;top:100%;right:0;background:#fff;border:1px solid var(--border);
+  border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  min-width:120px;z-index:1000;display:none;
+}
+.dropdown-menu.show{display:block}
+.dropdown-menu a{
+  display:block;padding:10px 16px;color:var(--text);text-decoration:none;
+  font-weight:600;transition:background-color 0.2s;
+}
+.dropdown-menu a:hover{background-color:#f5f5f5;text-decoration:none}
 
   /* Layout */
   .app{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
@@ -48,6 +62,28 @@
   .card{
     background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;
   }
+  
+  /* Function Overview */
+  .function-overview{margin-bottom:24px}
+  .function-overview h2{font-size:20px;font-weight:800;margin:0 0 16px 0;color:var(--text)}
+  .function-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .function-card{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;gap:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  }
+  .function-card:hover{
+    transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.08);
+    border-color:#2563EB;
+  }
+  .function-icon{font-size:32px;flex-shrink:0}
+  .function-content{flex:1}
+  .function-title{font-size:16px;font-weight:800;margin:0 0 4px 0;color:var(--text)}
+  .function-desc{font-size:13px;color:var(--muted);margin:0 0 6px 0}
+  .function-stats{font-size:12px;color:#2563EB;font-weight:600}
+  .function-arrow{font-size:20px;color:var(--muted);transition:transform 0.2s}
+  .function-card:hover .function-arrow{transform:translateX(4px);color:#2563EB}
+  
   .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
   .kpi .kpi-num{font-size:28px;font-weight:900;margin-top:2px}
   .hint{font-size:12px;color:var(--muted)}
@@ -82,5 +118,6 @@
     .sidebar{height:auto}
     .cards-2, .kpi-row{grid-template-columns:1fr}
     .assign .btn{position:static;margin-top:10px}
+    .function-cards{grid-template-columns:1fr}
   }
   

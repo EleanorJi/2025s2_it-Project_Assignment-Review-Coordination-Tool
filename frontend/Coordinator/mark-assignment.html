@@ -16,9 +16,12 @@
   <div class="brand">
     <div class="brand-title">HPS302 Assignment Moderation Tool</div>
   </div>
-  <div class="account">
-    <span id="username"></span><span class="caret">▾</span>
-  </div>
+    <div class="account dropdown">
+      <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
+      <div class="dropdown-menu">
+        <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+      </div>
+    </div>
 </header>
 
 <div class="app">
@@ -26,7 +29,7 @@
   <main class="main-content">
     <!-- Title and Back button row -->
     <div class="title-row">
-      <h1>Mark Assignment</h1>
+      <h1 id="page-title">Mark Assignment</h1>
       <button class="back-btn">Back</button>
     </div>
 

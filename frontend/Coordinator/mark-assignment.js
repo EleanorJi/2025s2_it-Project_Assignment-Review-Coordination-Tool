@@ -27,7 +27,7 @@
   let pdfDoc = null;
   let currentPdfPage = 1;
   let totalPdfPages = 0;
-  let currentScale = 1.0;
+  let currentScale = 1.5; // 提高默认缩放级别以改善清晰度
   const SCALE_STEP = 0.25;
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 3.0;
@@ -75,6 +75,22 @@
     // ✅ 新增：加载已保存的分数和反馈数据
     await loadSavedScoresAndFeedback();
 
+    // 额外检查：如果没有检测到finalized状态，再次尝试检查
+    if (!window.savedScoresData?.finalized) {
+      console.log('🔄 没有检测到finalized状态，进行额外检查...');
+      await checkFinalizedStatus();
+    }
+
+    console.log('📊 最终finalized状态:', window.savedScoresData?.finalized);
+    
+    if (window.savedScoresData?.finalized) {
+      console.log('✅ 检测到 finalized 状态，锁定所有输入');
+      lockAllInputs();
+      updatePageTitleForFinalized();
+    } else {
+      console.log('📝 未检测到 finalized 状态，保持可编辑状态');
+    }
+
     generateCriteriaHTML();
 
     setupDocumentNavigation();
@@ -109,6 +125,12 @@
       if (!response.ok) {
         if (response.status === 404) {
           console.log('未找到已保存的数据，使用默认值');
+          // 即使没有数据，也要初始化savedScoresData以避免undefined错误
+          window.savedScoresData = {
+            scores: {},
+            feedback: {},
+            finalized: false
+          };
           return;
         }
         throw new Error(`加载失败: ${response.status}`);
@@ -121,8 +143,20 @@
         ? data.baseline_scores
         : data.marker_scores;
 
+      // 即使没有分数数据，也要检查finalized状态
       if (!scoresData || scoresData.length === 0) {
-        console.log('没有已保存的分数数据');
+        console.log('没有已保存的分数数据，但仍需检查finalized状态');
+        // 检查是否有finalized状态信息
+        const finalizedStatus = currentUser.role === 'MARKER'
+          ? (data.marker_scores?.[0]?.finalized || false)
+          : (data.baseline_scores?.[0]?.finalized || false);
+        
+        window.savedScoresData = {
+          scores: {},
+          feedback: {},
+          finalized: finalizedStatus
+        };
+        console.log('✅ 设置的 finalized 状态 (无数据):', window.savedScoresData.finalized);
         return;
       }
 
@@ -576,7 +610,9 @@
           <div class="score-input-section">
             <div class="score-input-container">
               <label for="score-input-${criterionId}">Manual Score:</label>
-              <input type="number" id="score-input-${criterionId}" class="score-input" min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"/>
+              <input type="number" id="score-input-${criterionId}" class="score-input"
+                     min="0" max="${criterion.maxScore}" value="${initialScore}" step="0.1"
+                     ${window.savedScoresData?.finalized ? 'disabled' : ''}/>
               <span class="max-score">/ ${criterion.maxScore}</span>
             </div>
           </div>
@@ -591,13 +627,14 @@
           </div>
 
           <div class="feedback-section">
-            <button class="show-feedback-btn">+ Add Feedback</button>
+            <button class="show-feedback-btn" ${window.savedScoresData?.finalized ? 'style="display: none;"' : ''}>+ Add Feedback</button>
             <div class="criterion-feedback ${window.savedScoresData?.feedback?.[criterionId] ? '' : 'hidden'}">
               <div class="feedback-header">
                 <span>Criterion Feedback</span>
-                <button class="close-feedback">×</button>
+                ${!window.savedScoresData?.finalized ? '<button class="close-feedback">×</button>' : ''}
               </div>
-              <textarea placeholder="Please write your feedback on this criterion.">${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
+              <textarea placeholder="Please write your feedback on this criterion."
+                        ${window.savedScoresData?.finalized ? 'disabled' : ''}>${window.savedScoresData?.feedback?.[criterionId] || ''}</textarea>
             </div>
           </div>
 
@@ -1148,6 +1185,10 @@
 
   // Grade selection
   function setupGradeSelection() {
+    // 如果是 finalized 状态，不设置等级选择事件
+    if (window.savedScoresData?.finalized) {
+      return;
+    }
     const criteria = $$('.criterion');
 
     criteria.forEach(criterion => {
@@ -1252,6 +1293,10 @@
 
   // 当手动输入分数时，自动选择对应的等级
   function setupScoreInputs() {
+     // 如果是 finalized 状态，不设置分数输入事件
+     if (window.savedScoresData?.finalized) {
+       return;
+     }
     const scoreInputs = $$('.score-input');
 
     scoreInputs.forEach(input => {
@@ -1331,6 +1376,10 @@
 
   // Feedback functionality
   function setupFeedback() {
+    // 如果是 finalized 状态，不设置反馈事件
+    if (window.savedScoresData?.finalized) {
+        return;
+    }
     const showFeedbackBtns = $$('.show-feedback-btn');
     const closeButtons = $$('.close-feedback');
 
@@ -1408,6 +1457,8 @@
           lockAllInputs();
           // 提交后禁用按钮
           disableActionButtons();
+          // 更新页面标题
+          updatePageTitleForFinalized();
         } catch (error) {
           console.error('Error submitting marks:', error);
           showNotification('Failed to submit marks', 'error');
@@ -1432,6 +1483,82 @@
         <div class="finalized-message">Marks have been submitted.</div>
       `;
       updateTotalScoreDisplay();
+    }
+  }
+
+  // 更新页面标题为已提交状态
+  function updatePageTitleForFinalized() {
+    const pageTitle = $('#page-title');
+    if (pageTitle) {
+      pageTitle.textContent = 'View Marks';
+    }
+  }
+
+  // 额外检查finalized状态的函数
+  async function checkFinalizedStatus() {
+    try {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        console.warn('无法获取当前用户信息，跳过finalized状态检查');
+        return;
+      }
+
+      let response;
+      if (currentUser.role === 'COORDINATOR') {
+        response = await fetch(`${API_BASE_URL}/uploads/scoring/baseline/${ASSIGNMENT_ID}`);
+      } else if (currentUser.role === 'MARKER') {
+        response = await fetch(`${API_BASE_URL}/uploads/scoring/marker/${ASSIGNMENT_ID}/${currentUser.userId}`);
+      } else {
+        console.warn('未知用户角色，跳过finalized状态检查');
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 额外检查API响应数据:', data);
+        
+        const scoresData = currentUser.role === 'COORDINATOR'
+          ? data.baseline_scores
+          : data.marker_scores;
+
+        console.log('📊 分数数据:', scoresData);
+
+        if (scoresData && scoresData.length > 0) {
+          const finalizedStatus = scoresData[0].finalized || false;
+          console.log('📊 检测到的finalized状态:', finalizedStatus);
+          
+          if (finalizedStatus) {
+            // 确保savedScoresData存在
+            if (!window.savedScoresData) {
+              window.savedScoresData = {
+                scores: {},
+                feedback: {},
+                finalized: false
+              };
+            }
+            window.savedScoresData.finalized = true;
+            console.log('✅ 通过额外检查发现 finalized 状态为 true');
+          }
+        } else {
+          console.log('📊 没有找到分数数据，检查其他可能的finalized字段');
+          // 有时候finalized状态可能在其他字段中
+          if (data.finalized !== undefined) {
+            console.log('📊 在data.finalized中找到状态:', data.finalized);
+            if (!window.savedScoresData) {
+              window.savedScoresData = {
+                scores: {},
+                feedback: {},
+                finalized: false
+              };
+            }
+            window.savedScoresData.finalized = data.finalized;
+          }
+        }
+      } else {
+        console.log('额外检查finalized状态失败，状态码:', response.status);
+      }
+    } catch (error) {
+      console.error('检查finalized状态时出错:', error);
     }
   }
 
@@ -1826,9 +1953,32 @@
 
   // Initialize everything when DOM is loaded
   document.addEventListener('DOMContentLoaded', () => {
+    // 用户下拉菜单功能
+    const dropdown = document.querySelector('.dropdown');
+    const trigger = document.querySelector('.dropdown-trigger');
+    const menu = document.querySelector('.dropdown-menu');
+    let isOpen = false;
+
+    // 鼠标悬停显示下拉菜单
+    if (dropdown) {
+      dropdown.addEventListener('mouseenter', function() {
+        menu.style.display = 'block';
+      });
+
+      dropdown.addEventListener('mouseleave', function() {
+        menu.style.display = 'none';
+      });
+    }
+
     init();
     setupBackButton();
   });
+
+  // Logout函数
+  window.logout = function() {
+    localStorage.removeItem('user');
+    window.location.href = '/login.html';
+  };
 
   // Expose some functions for external use
   window.markingInterface = {

@@ -1,3 +1,42 @@
+// ========= dropdown and logout functionality =========
+document.addEventListener('DOMContentLoaded', function() {
+  // 用户下拉菜单功能
+  const dropdown = document.querySelector('.dropdown');
+  const trigger = document.querySelector('.dropdown-trigger');
+  const menu = document.querySelector('.dropdown-menu');
+  let isOpen = false;
+
+  // 显示用户名
+  try {
+    const rawUser = localStorage.getItem("user");
+    if (rawUser) {
+      const user = JSON.parse(rawUser);
+      if (user && user.name) {
+        document.getElementById("username").textContent = user.name;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load username:", err);
+  }
+
+  // 鼠标悬停显示下拉菜单
+  if (dropdown) {
+    dropdown.addEventListener('mouseenter', function() {
+      menu.style.display = 'block';
+    });
+
+    dropdown.addEventListener('mouseleave', function() {
+      menu.style.display = 'none';
+    });
+  }
+});
+
+// Logout函数
+window.logout = function() {
+  localStorage.removeItem('user');
+  window.location.href = '/login.html';
+};
+
 /* ===== dataset (aligned with your screenshots) ===== */
 const rows = [
     { criterion: "Introduction: Applies theoretical framework / 15", chair: 10.65, lower: 9.9,  upper: 11.4,  percent:71, markers:{A:10.2,  B:12,    C:10,   D:11.505, E:9.75,  F:11.25, G:10.5,  H:11.25, I:7.5,  J:11.25}, total: 69 },

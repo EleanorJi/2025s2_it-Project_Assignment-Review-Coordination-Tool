@@ -29,6 +29,45 @@
   let suggest = [];             // current suggestions
   let activeIdx = -1;           // dropdown highlight index
 
+  // ========= dropdown and logout functionality =========
+  document.addEventListener('DOMContentLoaded', function() {
+    // 用户下拉菜单功能
+    const dropdown = document.querySelector('.dropdown');
+    const trigger = document.querySelector('.dropdown-trigger');
+    const menu = document.querySelector('.dropdown-menu');
+    let isOpen = false;
+
+    // 显示用户名
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          document.getElementById("username").textContent = user.name;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load username:", err);
+    }
+
+    // 鼠标悬停显示下拉菜单
+    if (dropdown) {
+      dropdown.addEventListener('mouseenter', function() {
+        menu.style.display = 'block';
+      });
+
+      dropdown.addEventListener('mouseleave', function() {
+        menu.style.display = 'none';
+      });
+    }
+  });
+
+  // Logout函数
+  window.logout = function() {
+    localStorage.removeItem('user');
+    window.location.href = '/login.html';
+  };
+
   // ========= helpers =========
   function isValidEmail(e){
     if (!EMAIL_RE.test(e)) return false;

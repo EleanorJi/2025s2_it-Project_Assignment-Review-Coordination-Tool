@@ -2,21 +2,47 @@
 (function () {
     const $  = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
-    // ✅ 显示用户名
-    try {
-      const rawUser = localStorage.getItem("user");
-      if (rawUser) {
-        const user = JSON.parse(rawUser);
-        if (user && user.name) {
-          const usernameEl = document.getElementById("username");
-          if (usernameEl) {
-            usernameEl.textContent = user.name;
+    // ========= dropdown and logout functionality =========
+    document.addEventListener('DOMContentLoaded', function() {
+      // 用户下拉菜单功能
+      const dropdown = document.querySelector('.dropdown');
+      const trigger = document.querySelector('.dropdown-trigger');
+      const menu = document.querySelector('.dropdown-menu');
+      let isOpen = false;
+
+      // 显示用户名
+      try {
+        const rawUser = localStorage.getItem("user");
+        if (rawUser) {
+          const user = JSON.parse(rawUser);
+          if (user && user.name) {
+            const usernameEl = document.getElementById("username");
+            if (usernameEl) {
+              usernameEl.textContent = user.name;
+            }
           }
         }
+      } catch (err) {
+        console.error("Failed to load username:", err);
       }
-    } catch (err) {
-      console.error("Failed to load username:", err);
-    }
+
+      // 鼠标悬停显示下拉菜单
+      if (dropdown) {
+        dropdown.addEventListener('mouseenter', function() {
+          menu.style.display = 'block';
+        });
+
+        dropdown.addEventListener('mouseleave', function() {
+          menu.style.display = 'none';
+        });
+      }
+    });
+
+    // Logout函数
+    window.logout = function() {
+      localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    };
   
     // ===== Demo data（可替换为后端返回）=====
     // 结构：year, tasks[{title, description, status, assignments[], created_at}]

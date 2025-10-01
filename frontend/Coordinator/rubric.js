@@ -15,6 +15,54 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error("Failed to load username:", err);
     }
+    
+    // 初始化dropdown
+    const usernameEl = document.getElementById('username');
+    const dropdown = document.querySelector('.dropdown-menu');
+    const logoutBtn = document.querySelector('.dropdown-item');
+
+    if (usernameEl && dropdown) {
+      usernameEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+
+      // 点击其他地方关闭下拉菜单
+      document.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+      });
+    }
+
+    // 登出功能
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/login';
+          } else {
+            alert("Logout failed: " + data.message);
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        }
+      });
+    }
+    
     document.getElementById('backBtn')?.addEventListener('click', () => history.back());
     loadRubric();
   });
@@ -177,55 +225,30 @@ document.addEventListener('DOMContentLoaded', () => {
   function td(){ const e = document.createElement('td'); return e; }
   function esc(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
   function nl2br(s){ return s.replace(/\n/g,'<br>'); }
+  
+  // 全局logout函数
+  window.logout = async function() {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
 
-  /* ===== Demo data (接口未通时使用，不影响后续接入) ===== */
-  function demoRubric(){
-    return {
-      year: '2025',
-      semester: '1',
-      assignment: 'Assignment 1',
-      due: 'Tue Sep 16, 2025 10:00',
-      criteria: [
-        {
-          title:'Introduction: Applies theoretical framework/s to topic',
-          max: 15,
-          levels:{
-            hd:{points:15, desc:`Articulates a compelling justification for investigating the phenomenon.
-Provides a clear, comprehensive definition of all relevant key terms and constructs
-Applies highly relevant theoretical framework/s to provide an insightful explanation of the impacts of caregiving on development`, scoreRange:'(12 - 15 points)'},
-            d:{points:10.5, desc:`Articulates a strong justification for investigating the phenomenon.
-Provides a thorough definition of all relevant key terms and constructs.
-Applies relevant theoretical framework/s to explain the impacts of caregiving on development`, scoreRange:'(10.5 - 11.5 points)'},
-            c:{points:9, desc:`Articulates a justification for investigating the phenomenon.
-which indicates its relevance
-Provides definitions for most relevant key terms and constructs.
-Applies relevant theoretical framework/s to broadly explain the impacts of caregiving on development.`, scoreRange:'(9 - 10 points)'},
-            p:{points:7.5, desc:`Identifies the importance of the phenomenon.
-Provides broad definitions or defines some relevant key terms and constructs.
-Draws a connection between caregiving and the impact on development with reference to a theoretical framework.`, scoreRange:'(7.5 - 8.5 points)'},
-            f:{points:0, desc:`Provides a minimal justification for investigating the phenomenon.
-Provides limited or unclear definitions of key terms and constructs.
-Provides an incorrect explanation of the connection between caregiving and development with or without a reference to a theoretical framework.`, scoreRange:'(0 - 7 points)'}
-          }
-        },
-        {
-          title:'Introduction: Locates, synthesises and critically analyses literature',
-          max: 10,
-          levels:{
-            hd:{points:15, desc:`Locates most relevant, influential, contemporary, peer-reviewed papers.
-Concisely synthesizes the key findings relevant to the topic.
-Critically evaluates key strengths, weaknesses and gaps in the literature.`, scoreRange:''},
-            d:{points:10.5, desc:`Locates relevant, contemporary literature.
-Synthesises key findings relevant to the topic.`, scoreRange:''},
-            c:{points:9, desc:`Articulates a justification for investigating the phenomenon.
-which indicates its relevance
-Provides definitions for most relevant key terms and constructs.`, scoreRange:''},
-            p:{points:7.5, desc:`Identifies the importance of the phenomenon.
-Provides broad definitions or defines some relevant key terms and constructs.`, scoreRange:''},
-            f:{points:0, desc:`Provides a minimal justification for investigating the phenomenon.
-Provides limited or unclear definitions of key terms and constructs.`, scoreRange:''}
-          }
-        }
-      ]
-    };
-  }
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login';
+      } else {
+        alert("Logout failed: " + data.message);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location.href = '/login';
+    }
+  };
