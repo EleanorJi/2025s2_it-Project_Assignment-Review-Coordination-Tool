@@ -28,9 +28,9 @@
   let currentPdfPage = 1;
   let totalPdfPages = 0;
   let currentScale = 1.0;
-  const SCALE_STEP = 0.25;
-  const MIN_SCALE = 0.5;
-  const MAX_SCALE = 3.0;
+  const SCALE_STEP = 0.1;
+  const MIN_SCALE = 0.3;
+  const MAX_SCALE = 5.0;
 
   // Store all pages' canvas and dimensions
   let pageCanvases = [];
@@ -732,8 +732,6 @@
           // 5. Update page information
           updatePagination();
 
-          // 6. Update thumbnails
-          updateThumbnails();
 
           // 7. Set scroll listener
           setupScrollListener();
@@ -864,7 +862,6 @@
       if (newCurrentPage !== currentPdfPage) {
           currentPdfPage = newCurrentPage;
           updatePagination();
-          updateActiveThumbnail();
       }
   }
 
@@ -885,6 +882,18 @@
 
       pdfViewer.scrollTo({
           top: scrollPosition,
+          behavior: 'smooth'
+      });
+  }
+
+  // Scroll down function for scroll button
+  function scrollDown() {
+      const pdfViewer = document.getElementById('pdf-viewer');
+      const currentScroll = pdfViewer.scrollTop;
+      const scrollAmount = 200; // Scroll by 200px each time
+      
+      pdfViewer.scrollTo({
+          top: currentScroll + scrollAmount,
           behavior: 'smooth'
       });
   }
@@ -937,6 +946,12 @@
       // Download button
       document.querySelector('.download-btn').addEventListener('click', downloadPdf);
 
+      // Scroll button
+      const scrollBtn = document.getElementById('scroll-down-btn');
+      if (scrollBtn) {
+          scrollBtn.addEventListener('click', scrollDown);
+      }
+
       // Keyboard navigation
       document.addEventListener('keydown', handleKeyboardNavigation);
   }
@@ -960,26 +975,41 @@
 
   // Modify zoom function - re-render all pages
   async function updateZoom() {
-      document.getElementById('zoom-level').textContent = Math.round(currentScale * 100) + '%';
-      await renderAllPages();
-
-      // Scroll back to current page
-      setTimeout(() => {
-          scrollToPage(currentPdfPage);
-      }, 100);
+      const zoomLevelEl = document.getElementById('zoom-level');
+      if (zoomLevelEl) {
+          zoomLevelEl.textContent = Math.round(currentScale * 100) + '%';
+      }
+      
+      // Show loading state
+      showPdfLoading(true);
+      
+      try {
+          await renderAllPages();
+          
+          // Scroll back to current page after a short delay
+          setTimeout(() => {
+              scrollToPage(currentPdfPage);
+              showPdfLoading(false);
+          }, 200);
+      } catch (error) {
+          console.error('Error updating zoom:', error);
+          showPdfLoading(false);
+      }
   }
 
   // Zoom functions
   async function zoomIn() {
       if (currentScale < MAX_SCALE) {
-          currentScale += SCALE_STEP;
+          const newScale = Math.min(MAX_SCALE, currentScale + SCALE_STEP);
+          currentScale = Math.round(newScale * 10) / 10; // Round to 1 decimal place
           await updateZoom();
       }
   }
 
   async function zoomOut() {
       if (currentScale > MIN_SCALE) {
-          currentScale -= SCALE_STEP;
+          const newScale = Math.max(MIN_SCALE, currentScale - SCALE_STEP);
+          currentScale = Math.round(newScale * 10) / 10; // Round to 1 decimal place
           await updateZoom();
       }
   }
@@ -1026,73 +1056,6 @@
       document.getElementById('next-page').disabled = currentPdfPage >= totalPdfPages;
   }
 
-  // Update thumbnails
-  function updateThumbnails() {
-      const thumbnailsContainer = document.querySelector('.document-thumbnails');
-      thumbnailsContainer.innerHTML = '';
-
-      // 如果总页数超过10页，只显示当前页附近的10页
-      const maxVisiblePages = 10;
-      let startPage = 1;
-      let endPage = Math.min(totalPdfPages, maxVisiblePages);
-
-      if (totalPdfPages > maxVisiblePages) {
-          // 计算显示范围，确保当前页在中间
-          const halfVisible = Math.floor(maxVisiblePages / 2);
-          startPage = Math.max(1, currentPdfPage - halfVisible);
-          endPage = Math.min(totalPdfPages, startPage + maxVisiblePages - 1);
-
-          // 如果到达末尾，调整起始页
-          if (endPage === totalPdfPages) {
-              startPage = Math.max(1, endPage - maxVisiblePages + 1);
-          }
-      }
-
-      // 添加上翻页按钮（如果不在第一页）
-      if (startPage > 1) {
-          const prevBtn = document.createElement('div');
-          prevBtn.className = 'thumbnail-nav-btn';
-          prevBtn.innerHTML = '↑';
-          prevBtn.title = `Go to page ${Math.max(1, startPage - maxVisiblePages)}`;
-          prevBtn.addEventListener('click', () => {
-              const newStartPage = Math.max(1, startPage - maxVisiblePages);
-              goToPage(newStartPage);
-          });
-          thumbnailsContainer.appendChild(prevBtn);
-      }
-
-      // 添加页面缩略图
-      for (let i = startPage; i <= endPage; i++) {
-          const thumbnail = document.createElement('div');
-          thumbnail.className = `thumbnail ${i === currentPdfPage ? 'active' : ''}`;
-          thumbnail.dataset.page = i;
-          thumbnail.textContent = i;
-          thumbnail.addEventListener('click', () => goToPage(i));
-          thumbnailsContainer.appendChild(thumbnail);
-      }
-
-      // 添加下翻页按钮（如果不在最后一页）
-      if (endPage < totalPdfPages) {
-          const nextBtn = document.createElement('div');
-          nextBtn.className = 'thumbnail-nav-btn';
-          nextBtn.innerHTML = '↓';
-          nextBtn.title = `Go to page ${Math.min(totalPdfPages, endPage + 1)}`;
-          nextBtn.addEventListener('click', () => {
-              const newStartPage = Math.min(totalPdfPages - maxVisiblePages + 1, endPage + 1);
-              goToPage(newStartPage);
-          });
-          thumbnailsContainer.appendChild(nextBtn);
-      }
-  }
-
-  // Update active thumbnail
-  function updateActiveThumbnail() {
-      const thumbnails = document.querySelectorAll('.thumbnail');
-      thumbnails.forEach(thumb => {
-          const pageNum = parseInt(thumb.dataset.page);
-          thumb.classList.toggle('active', pageNum === currentPdfPage);
-      });
-  }
 
   // Keyboard navigation
   function handleKeyboardNavigation(e) {
@@ -1119,6 +1082,12 @@
               e.preventDefault();
               zoomOut();
               break;
+          case '0':
+              e.preventDefault();
+              // Reset zoom to 100%
+              currentScale = 1.0;
+              updateZoom();
+              break;
           case 'Home':
               e.preventDefault();
               goToPage(1);
@@ -1126,6 +1095,10 @@
           case 'End':
               e.preventDefault();
               goToPage(totalPdfPages);
+              break;
+          case ' ':
+              e.preventDefault();
+              scrollDown();
               break;
       }
   }
