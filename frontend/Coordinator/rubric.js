@@ -152,10 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (level.description) {
               cell.innerHTML += `<div>${nl2br(esc(level.description))}</div>`;
             }
-            // Display score range label
-            if (level.min_score !== undefined && level.max_score !== undefined) {
-              cell.innerHTML += `<div class="score-range">(${level.min_score} - ${level.max_score})</div>`;
-            }
           } else {
             cell.innerHTML = '<div style="color: var(--muted); font-style: italic;">Not defined</div>';
           }
