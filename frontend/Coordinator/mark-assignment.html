@@ -16,8 +16,11 @@
   <div class="brand">
     <div class="brand-title">HPS302 Assignment Moderation Tool</div>
   </div>
-  <div class="account">
-    <span id="username"></span><span class="caret">▾</span>
+  <div class="account dropdown">
+    <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
+    <div class="dropdown-menu">
+      <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+    </div>
   </div>
 </header>
 

@@ -529,12 +529,12 @@
   }
 
   // 初始化dropdown
-  const usernameEl = document.getElementById('username');
+  const accountEl = document.querySelector('.account');
   const dropdown = document.querySelector('.dropdown-menu');
   const logoutBtn = document.querySelector('.dropdown-item');
 
-  if (usernameEl && dropdown) {
-    usernameEl.addEventListener('click', (e) => {
+  if (accountEl && dropdown) {
+    accountEl.addEventListener('click', (e) => {
       e.stopPropagation();
       dropdown.classList.toggle('show');
     });
