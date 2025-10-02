@@ -8,6 +8,120 @@
     tasks: []
   };
 
+  // 展开状态管理
+  const EXPANDED_STATES_KEY = 'taskManagement_expandedStates';
+  
+  // 保存展开状态到localStorage
+  function saveExpandedStates() {
+    const expandedStates = {
+      tasks: {},
+      rubrics: {},
+      assignments: {}
+    };
+    
+    // 保存task sections的展开状态
+    $$('.tm-task-section').forEach(section => {
+      const taskId = section.dataset.taskId;
+      const content = section.querySelector('.tm-task-content');
+      if (content && content.classList.contains('expanded')) {
+        expandedStates.tasks[taskId] = true;
+      }
+    });
+    
+    // 保存rubric sections的展开状态
+    $$('.tm-rubric-section').forEach(section => {
+      const taskId = section.closest('.tm-task-section')?.dataset.taskId;
+      const actions = section.querySelector('.tm-rubric-actions');
+      if (taskId && actions && actions.classList.contains('expanded')) {
+        expandedStates.rubrics[taskId] = true;
+      }
+    });
+    
+    // 保存assignment sections的展开状态
+    $$('.tm-assignment-item').forEach(section => {
+      const taskId = section.closest('.tm-task-section')?.dataset.taskId;
+      const assignmentId = section.querySelector('.tm-assignment-title')?.textContent;
+      const actions = section.querySelector('.tm-assignment-actions');
+      if (taskId && assignmentId && actions && actions.classList.contains('expanded')) {
+        if (!expandedStates.assignments[taskId]) {
+          expandedStates.assignments[taskId] = {};
+        }
+        expandedStates.assignments[taskId][assignmentId] = true;
+      }
+    });
+    
+    localStorage.setItem(EXPANDED_STATES_KEY, JSON.stringify(expandedStates));
+  }
+  
+  // 从localStorage恢复展开状态
+  function restoreExpandedStates() {
+    try {
+      const savedStates = localStorage.getItem(EXPANDED_STATES_KEY);
+      if (!savedStates) return;
+      
+      const expandedStates = JSON.parse(savedStates);
+      
+      // 恢复task sections的展开状态
+      if (expandedStates.tasks) {
+        Object.keys(expandedStates.tasks).forEach(taskId => {
+          const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
+          if (section) {
+            const content = section.querySelector('.tm-task-content');
+            const chevron = section.querySelector('.tm-task-chevron');
+            if (content && chevron) {
+              content.classList.add('expanded');
+              chevron.classList.add('expanded');
+            }
+          }
+        });
+      }
+      
+      // 恢复rubric sections的展开状态
+      if (expandedStates.rubrics) {
+        Object.keys(expandedStates.rubrics).forEach(taskId => {
+          const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
+          if (section) {
+            const rubricSection = section.querySelector('.tm-rubric-section');
+            if (rubricSection) {
+              const actions = rubricSection.querySelector('.tm-rubric-actions');
+              const chevron = rubricSection.querySelector('.tm-rubric-chevron');
+              if (actions && chevron) {
+                actions.classList.add('expanded');
+                chevron.classList.add('expanded');
+              }
+            }
+          }
+        });
+      }
+      
+      // 恢复assignment sections的展开状态
+      if (expandedStates.assignments) {
+        Object.keys(expandedStates.assignments).forEach(taskId => {
+          const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
+          if (section) {
+            const assignmentStates = expandedStates.assignments[taskId];
+            Object.keys(assignmentStates).forEach(assignmentTitle => {
+              const assignmentSection = Array.from(section.querySelectorAll('.tm-assignment-item')).find(item => {
+                const title = item.querySelector('.tm-assignment-title');
+                return title && title.textContent === assignmentTitle;
+              });
+              if (assignmentSection) {
+                const actions = assignmentSection.querySelector('.tm-assignment-actions');
+                const chevron = assignmentSection.querySelector('.tm-assignment-chevron');
+                if (actions && chevron) {
+                  actions.classList.add('expanded');
+                  chevron.classList.add('expanded');
+                }
+              }
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to restore expanded states:', error);
+    }
+  }
+
   // API endpoints
   const API = {
     listProjects: '/api/uploads/projects',
@@ -197,6 +311,11 @@
       const taskSection = createTaskSection(task);
       taskSections.appendChild(taskSection);
     });
+    
+    // 渲染完成后恢复展开状态
+    setTimeout(() => {
+      restoreExpandedStates();
+    }, 100);
   }
 
   function createTaskSection(task) {
@@ -628,6 +747,9 @@
         chevron.classList.remove('expanded');
       });
     }
+    
+    // 保存展开状态
+    saveExpandedStates();
   }
 
   // Toggle rubric section expand/collapse
@@ -635,17 +757,12 @@
     const actions = section.querySelector('.tm-rubric-actions');
     const chevron = section.querySelector('.tm-rubric-chevron');
 
-    // Close all other rubric and assignment expanded states
-    $$('.tm-assignment-actions').forEach(otherActions => {
-      otherActions.classList.remove('expanded');
-    });
-    $$('.tm-assignment-chevron').forEach(otherChevron => {
-      otherChevron.classList.remove('expanded');
-    });
-
-    // Toggle current section
+    // Toggle current section only - no auto-close of other sections
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
+    
+    // 保存展开状态
+    saveExpandedStates();
   }
 
   // Toggle assignment section expand/collapse
@@ -653,27 +770,12 @@
     const actions = section.querySelector('.tm-assignment-actions');
     const chevron = section.querySelector('.tm-assignment-chevron');
 
-    // Close all other assignment and rubric expanded states
-    $$('.tm-assignment-actions').forEach(otherActions => {
-      if (otherActions !== actions) {
-        otherActions.classList.remove('expanded');
-      }
-    });
-    $$('.tm-assignment-chevron').forEach(otherChevron => {
-      if (otherChevron !== chevron) {
-        otherChevron.classList.remove('expanded');
-      }
-    });
-    $$('.tm-rubric-actions').forEach(otherActions => {
-      otherActions.classList.remove('expanded');
-    });
-    $$('.tm-rubric-chevron').forEach(otherChevron => {
-      otherChevron.classList.remove('expanded');
-    });
-
-    // Toggle current section
+    // Toggle current section only - no auto-close of other sections
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
+    
+    // 保存展开状态
+    saveExpandedStates();
   }
 
   // Publish assignment
@@ -1337,7 +1439,7 @@
         }
 
         const draft = await uploadDraftFile(file, 'assignment2');
-        await commitFile(draft.temp_name, 'assignment', 2, due, projectId);
+        await commitFile(draft.temp_name, 'assignment', 2, combinedDateTime, projectId);
 
         toast('Assignment 2 uploaded successfully!');
         closeModal();
