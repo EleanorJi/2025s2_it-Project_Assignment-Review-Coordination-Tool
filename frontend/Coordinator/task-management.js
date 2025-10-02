@@ -14,6 +14,7 @@
     createProject: '/api/uploads/project',
     uploadDraft: '/api/uploads/drafts',
     commit: '/api/uploads/commit',
+    updateProjectStatus: (id)=>`/api/uploads/project/${id}/status`,
   };
 
   async function uploadDraftFile(file, slot) {
@@ -64,6 +65,8 @@
 
         let assignment1Status = 'unpublished';
         let assignment2Status = 'unpublished';
+        let assignment1Finalized = false;
+        let assignment2Finalized = false;
 
         try {
           // 1. First get the latest assignment IDs for the project
@@ -82,6 +85,18 @@
               } else {
                 console.warn('⚠️ Failed to get assignment1 status');
               }
+
+              // 检查assignment1的评分是否已提交
+              try {
+                const finalizedResponse1 = await fetch(`/api/uploads/scoring/baseline/${latestIds.assignment1.assignment_id}`);
+                if (finalizedResponse1.ok) {
+                  const finalizedData1 = await finalizedResponse1.json();
+                  assignment1Finalized = finalizedData1.baseline_scores?.[0]?.finalized || false;
+                  console.log(`📄 Assignment1 评分状态: ${assignment1Finalized ? '已提交' : '未提交'}`);
+                }
+              } catch (error) {
+                console.log('📄 Assignment1 评分检查: 无数据或未评分');
+              }
             } else {
               console.log('📄 Assignment1: No data');
             }
@@ -94,7 +109,19 @@
                 assignment2Status = statusData2.assignment.is_published ? 'published' : 'unpublished';
                 console.log(`📄 Assignment2 publish status: ${statusData2.assignment.is_published}`);
               } else {
-                console.warn('⚠️ Failed to get assignment2 status');
+                console.warn('⚠️ 获取assignment2状态失败');
+              }
+
+              // 检查assignment2的评分是否已提交
+              try {
+                const finalizedResponse2 = await fetch(`/api/uploads/scoring/baseline/${latestIds.assignment2.assignment_id}`);
+                if (finalizedResponse2.ok) {
+                  const finalizedData2 = await finalizedResponse2.json();
+                  assignment2Finalized = finalizedData2.baseline_scores?.[0]?.finalized || false;
+                  console.log(`📄 Assignment2 评分状态: ${assignment2Finalized ? '已提交' : '未提交'}`);
+                }
+              } catch (error) {
+                console.log('📄 Assignment2 评分检查: 无数据或未评分');
               }
             } else {
               console.log('📄 Assignment2: No data');
@@ -106,10 +133,21 @@
           console.error('❌ Error occurred while getting assignment status:', error);
         }
 
-        // Determine task status: if any assignment is published, then active, otherwise draft
+        // Determine task status with priority:
+        // 1) archived -> filtered out (not shown in Task Management)
+        // 2) completed -> show Completed
+        // 3) active -> keep original dynamic rule (published => active, else draft)
+        if (project.status === 'archived') {
+          console.log('🗃️ Archived project filtered from Task Management');
+          continue; // do not render archived projects here
+        }
         let taskStatus = 'draft';
-        if (assignment1Status === 'published' || assignment2Status === 'published') {
-          taskStatus = 'active';
+        if (project.status === 'completed') {
+          taskStatus = 'completed';
+        } else {
+          if (assignment1Status === 'published' || assignment2Status === 'published') {
+            taskStatus = 'active';
+          }
         }
         console.log(`🏷️ Project status: ${taskStatus}`);
         console.log(`📊 Assignment1 status: ${assignment1Status}, Assignment2 status: ${assignment2Status}`);
@@ -126,12 +164,14 @@
             {
               id: 'assignment1',
               title: 'Assignment 1',
-              status: assignment1Status
+              status: assignment1Status,
+              finalized: assignment1Finalized
             },
             {
               id: 'assignment2',
               title: 'Assignment 2',
-              status: assignment2Status
+              status: assignment2Status,
+              finalized: assignment2Finalized
             }
           ]
         });
@@ -178,10 +218,71 @@
 
     const status = document.createElement('span');
     status.className = `tm-task-status ${task.status}`;
-    status.textContent = task.status === 'draft' ? 'Draft' : 'Active';
+    status.textContent = (task.status === 'draft')? 'Draft' : (task.status === 'active' ? 'Active' : (task.status === 'completed' ? 'Completed' : 'Archived'));
+
+    // Status dropdown
+    const statusWrap = document.createElement('div');
+    statusWrap.className = 'tm-status-dropdown';
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'tm-status-toggle';
+    toggleBtn.type = 'button';
+    toggleBtn.textContent = '▸';
+    const menu = document.createElement('div');
+    menu.className = 'tm-status-menu';
+
+    function addItem(label, value){
+      const it = document.createElement('div');
+      it.className = 'tm-status-item';
+      it.textContent = label;
+      it.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        await onChangeProjectStatus(task.project_id, value);
+        menu.classList.remove('show');
+      });
+      menu.appendChild(it);
+    }
+    
+    // Add items based on current status
+    console.log('Creating status menu for task:', task.title, 'status:', task.status);
+    if (task.status === 'active') {
+      addItem('Complete', 'completed');
+      addItem('Archive', 'archived');
+    } else if (task.status === 'completed') {
+      addItem('Archive', 'archived');
+    } else if (task.status === 'archived') {
+      addItem('Complete', 'completed');
+    }
+    // no Draft option
+    toggleBtn.addEventListener('click', (e)=>{ 
+      e.stopPropagation(); 
+      const rect = toggleBtn.getBoundingClientRect();
+      menu.style.top = `${Math.round(rect.bottom + window.scrollY + 4)}px`;
+      menu.style.left = `${Math.round(rect.left + window.scrollX)}px`;
+      menu.classList.toggle('show');
+      console.log('Menu toggled, show class:', menu.classList.contains('show'));
+      console.log('Menu position:', menu.style.top, menu.style.left);
+    });
+    document.addEventListener('click', ()=> menu.classList.remove('show'));
+
+    statusWrap.appendChild(toggleBtn);
+    statusWrap.appendChild(menu);
+    
+    // Ensure menu is attached to document body for proper positioning
+    document.body.appendChild(menu);
+
+    // Add delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'tm-delete-btn';
+    deleteBtn.innerHTML = `<svg fill="none" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><g fill="rgb(0,0,0)"><path clip-rule="evenodd" d="m10.3094 2.24998h3.3814c.2164-.00014.4049-.00026.5829.02817.7033.11231 1.3119.55096 1.6409 1.18265.0832.15989.1427.33877.211.5441l.1117.3349c.0189.05669.0243.07274.0288.08538.1752.48412.6292.81138 1.1438.82442.0136.00034.0301.0004.0902.0004h3c.4142 0 .75.33579.75.75s-.3358.75-.75-.75h-17.0001c-.41421 0-.75-.33579-.75-.75s.33579-.75.75-.75h3.00008c.06005 0 .07662-.00006.09015-.0004.51465-.01304.96868-.34028 1.14379-.8244.00461-.01272.0099-.02843.02889-.0854l.11161-.33487c.06829-.20532.12781-.38424.21107-.54413.32894-.63169.93754-1.07034 1.64084-1.18265.17802-.02843.36657-.02831.58297-.02817zm-1.30125 3.00002c.05151-.10102.09716-.206.13643-.31456.01192-.03296.02362-.06806.03864-.11314l.0998-.29941c.09117-.27351.11217-.3293.13299-.36929.10965-.21056.31252-.35678.54695-.39422.04454-.00711.10404-.00938.39234-.00938h3.2895c.2883 0 .3479.00227.3924.00938.2344.03744.4373.18366.547.39422.0208.03999.0418.09577.1329.36929l.0998.29923.0387.11334c.0393.10856.0849.21352.1364.31454z" fill-rule="evenodd"/><path d="m5.91509 8.45011c-.02755-.4133-.38493-.726-.79823-.69845-.41329.02755-.726.38493-.69845.79823l.46345 6.95171c.0855 1.2828.15456 2.3189.31653 3.132.1684.8453.45482 1.5514 1.04641 2.1048.5916.5535 1.31515.7923 2.1698.9041.82202.1075 1.8604.1075 3.146.1075h.8789c1.2856 0 2.324 0 3.1461-.1075.8546-.1118 1.5782-.3506 2.1698-.9041.5916-.5534.878-1.2595 1.0464-2.1048.162-.8131.231-1.8492.3165-3.132l.4635-6.95171c.0275-.4133-.2852-.77068-.6985-.79823s-.7707.28515-.7982.69845l-.46 6.89909c-.0898 1.3479-.1538 2.2857-.2944 2.9913-.1364.6845-.3267 1.0468-.6001 1.3026-.2734.2557-.6476.4216-1.3396.5121-.7134.0933-1.6534.0948-3.0042.0948h-.7734c-1.3508 0-2.29085-.0015-3.00425-.0948-.692-.0905-1.06616-.2564-1.33957-.5121-.27341-.2558-.46375-.6181-.6001-1.3026-.14056-.7056-.20459-1.6434-.29445-2.9913z"/><path d="m9.42546 10.2537c.41216-.0412.77974.2595.82094.6717l.5 5c.0412.4121-.2595.7797-.6717.8209-.41214.0412-.77967-.2595-.82089-.6717l-.5-5c-.04121-.4121.2595-.7797.67165-.8209z"/><path d="m14.5747 10.2537c.4122.0412.7129.4088.6717.8209l-.5 5c-.0412.4122-.4088.7129-.8209.6717-.4122-.0412-.7129-.4088-.6717-.8209l.5-5c.0412-.4122.4088-.7129.8209-.6717z"/></g></svg>`;
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showDeleteConfirmDialog(task.project_id, task.title);
+    });
 
     titleContainer.appendChild(title);
     titleContainer.appendChild(status);
+    titleContainer.appendChild(statusWrap);
+    titleContainer.appendChild(deleteBtn);
 
     const chevron = document.createElement('div');
     chevron.className = 'tm-task-chevron';
@@ -331,15 +432,16 @@
       }
     });
 
-    const viewBtn = createButton('View', () => {
-      location.href = `/dashboard/coordinator/view?project=${task.project_id}&assignment=${assignment.id}`;
-    });
 
     const publishBtn = createButton('Publish Assignment', () => {
       publishAssignment(task.project_id, assignment.id);
     });
 
     const markBtn = createButton('Mark Assignment', () => {
+      location.href = `/dashboard/coordinator/mark?project=${task.project_id}&assignment=${assignment.id}`;
+    });
+
+    const viewMarksBtn = createButton('View Marks', () => {
       location.href = `/dashboard/coordinator/mark?project=${task.project_id}&assignment=${assignment.id}`;
     });
 
@@ -352,18 +454,23 @@
     // Display different buttons based on assignment status
     if (assignment.status === 'published') {
 
-      // Published: Hide Upload button, display other buttons
-      actions.appendChild(viewBtn);
-      actions.appendChild(markBtn);
-      actions.appendChild(feedbackBtn);
-      console.log(`🔘 ${assignment.title} display buttons: View, Mark, Feedback (Published, hide Upload)`);
+      // 如果已提交评分，只显示View Marks按钮和Feedback按钮
+      if (assignment.finalized) {
+        actions.appendChild(viewMarksBtn);
+        actions.appendChild(feedbackBtn);
+        console.log(`🔘 ${assignment.title} 显示按钮: View Marks, Feedback (已发布且已提交评分)`);
+      } else {
+        // 未提交评分：显示Mark Assignment按钮和Feedback按钮
+        actions.appendChild(markBtn);
+        actions.appendChild(feedbackBtn);
+        console.log(`🔘 ${assignment.title} 显示按钮: Mark Assignment, Feedback (已发布但未提交评分)`);
+      }
     } else {
       // Unpublished: Display Upload button
       actions.appendChild(uploadBtn);
 
       // Only display View button and Publish button when assignment files exist
       if (task.file_counts?.assignment > 0) {
-        actions.appendChild(viewBtn);
         actions.appendChild(publishBtn);
         console.log(`🔘 ${assignment.title} display buttons: Upload, View, Publish`);
       } else {
@@ -384,6 +491,111 @@
     button.textContent = text;
     button.addEventListener('click', onClick);
     return button;
+  }
+
+  // Update project status
+  async function onChangeProjectStatus(projectId, next){
+    try{
+      const res = await fetch(API.updateProjectStatus(projectId), {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ status: next })
+      });
+      if(!res.ok){
+        const t = await res.text();
+        throw new Error(t || 'Update failed');
+      }
+      toast('Status updated');
+      await fetchProjects();
+    }catch(err){
+      console.error(err);
+      toast('Failed to update status');
+    }
+  }
+
+  // Show delete confirmation dialog
+  function showDeleteConfirmDialog(projectId, projectName) {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'tm-delete-modal';
+    
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'tm-delete-dialog';
+    
+    modal.innerHTML = `
+      <div class="tm-delete-header">
+        <h3>Confirm Deletion</h3>
+      </div>
+      <div class="tm-delete-body">
+        <p>Are you sure you want to delete <strong>${projectName}</strong>?</p>
+        <p>This action will permanently remove the project and all associated data including:</p>
+        <ul>
+          <li>Project information</li>
+          <li>All rubrics</li>
+          <li>All assignments</li>
+          <li>All uploaded files</li>
+        </ul>
+        <p><strong>This action cannot be undone.</strong></p>
+      </div>
+      <div class="tm-delete-footer">
+        <button class="btn tm-cancel-btn">Cancel</button>
+        <button class="btn tm-confirm-delete-btn">Delete Project</button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // Add event listeners
+    const cancelBtn = modal.querySelector('.tm-cancel-btn');
+    const confirmBtn = modal.querySelector('.tm-confirm-delete-btn');
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+    
+    confirmBtn.addEventListener('click', async () => {
+      try {
+        console.log('🗑️ Starting delete process for project:', projectId);
+        await deleteProject(projectId);
+        document.body.removeChild(overlay);
+        toast('Project deleted successfully');
+        await fetchProjects();
+      } catch (error) {
+        console.error('🗑️ Delete failed:', error);
+        toast(`Failed to delete project: ${error.message}`);
+      }
+    });
+    
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    });
+  }
+
+  // Delete project API call
+  async function deleteProject(projectId) {
+    console.log('🗑️ Attempting to delete project:', projectId);
+    
+    const res = await fetch(`/api/uploads/project/${encodeURIComponent(projectId)}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    
+    console.log('🗑️ Delete response status:', res.status);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('🗑️ Delete failed:', errorText);
+      throw new Error(errorText || 'Delete failed');
+    }
+    
+    const result = await res.json();
+    console.log('🗑️ Delete successful:', result);
+    return result;
   }
 
   // ---------- Interactive Functions ----------
@@ -662,22 +874,100 @@
     setTimeout(()=>{ el.style.opacity=0; el.style.transform='translateY(6px)'; setTimeout(()=> el.remove(), 200); }, ms);
   }
 
-  // Initialization
-  // Display username
-  try {
-  const rawUser = localStorage.getItem("user");
-  if (rawUser) {
-    const user = JSON.parse(rawUser);
-    if (user && user.name) {
-      document.getElementById("username").textContent = user.name;
+  // 初始化
+  document.addEventListener('DOMContentLoaded', function() {
+    // 显示用户名
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        if (user && user.name) {
+          document.getElementById("username").textContent = user.name;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load username:", err);
     }
-  }
-  } catch (err) {
-  console.error("Failed to load username:", err);
-  }
-  fetchProjects();
 
-  // Change Add New Assignment button to open project creation modal
+    // 初始化dropdown和logout功能
+    const accountEl = document.querySelector('.account');
+    const dropdown = document.querySelector('.dropdown-menu');
+    const logoutBtn = document.querySelector('.dropdown-item');
+
+    if (accountEl && dropdown) {
+      accountEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+
+      // 点击其他地方关闭下拉菜单
+      document.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+      });
+    }
+
+    // 登出功能
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/login';
+          } else {
+            alert("Logout failed: " + data.message);
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        }
+      });
+    }
+
+    // 加载项目数据
+    fetchProjects();
+  });
+
+  // 全局logout函数
+  window.logout = async function() {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login';
+      } else {
+        alert("Logout failed: " + data.message);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location.href = '/login';
+    }
+  };
+
+  // 将 Add New Assignment 按钮改为打开项目创建弹窗
   const btnAdd = $('#btnAdd');
   if (btnAdd) {
       btnAdd.addEventListener('click', openProjectModal);
@@ -827,6 +1117,7 @@
     const closeBtn = $('#assignment1Close');
     const submitBtn = $('#assignment1Submit');
     const dueInput = $('#assignment1Due');
+    const timeInput = $('#assignment1Time');
     const fileInput = $('#assignment1File');
     const dropArea = $('#assignment1Drop');
     const textDisplay = $('#assignment1Text');
@@ -877,6 +1168,7 @@
     // Submit
     submitBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
+      const time = timeInput.value.trim();
       const file = fileInput.files[0];
 
       // Form validation
@@ -893,21 +1185,31 @@
         return;
       }
 
-      // Validate date is not in the past
-      const selectedDate = new Date(due);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      // 组合日期和时间
+      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`; // 如果没有选择时间，默认为当天23:59:59
+      const selectedDateTime = new Date(dueDateTime);
+      const now = new Date();
 
-      if (selectedDate < today) {
+      // 验证日期时间不能是过去的
+      if (selectedDateTime < now) {
         errLine.style.display = 'block';
         errLine.textContent = 'Due date cannot be in the past.';
         return;
       }
 
       try {
+        // 组合日期和时间
+        let combinedDateTime;
+        if (time) {
+          // 如果有选择时间，组合日期和时间
+          combinedDateTime = `${due}T${time}:00`;
+        } else {
+          // 如果没有选择时间，设置为当天的23:59:59
+          combinedDateTime = `${due}T23:59:59`;
+        }
 
         const draft = await uploadDraftFile(file, 'assignment1');
-        await commitFile(draft.temp_name, 'assignment', 1, due, projectId);
+        await commitFile(draft.temp_name, 'assignment', 1, combinedDateTime, projectId);
 
         toast('Assignment 1 uploaded successfully!');
         closeModal();
@@ -943,6 +1245,7 @@
     const closeBtn = $('#assignment2Close');
     const submitBtn = $('#assignment2Submit');
     const dueInput = $('#assignment2Due');
+    const timeInput = $('#assignment2Time');
     const fileInput = $('#assignment2File');
     const dropArea = $('#assignment2Drop');
     const textDisplay = $('#assignment2Text');
@@ -993,6 +1296,7 @@
     // Submit
     submitBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
+      const time = timeInput.value.trim();
       const file = fileInput.files[0];
 
       // Form validation
@@ -1009,18 +1313,29 @@
         return;
       }
 
-      // Validate date is not in the past
-      const selectedDate = new Date(due);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      // 组合日期和时间
+      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`; // 如果没有选择时间，默认为当天23:59:59
+      const selectedDateTime = new Date(dueDateTime);
+      const now = new Date();
 
-      if (selectedDate < today) {
+      // 验证日期时间不能是过去的
+      if (selectedDateTime < now) {
         errLine.style.display = 'block';
         errLine.textContent = 'Due date cannot be in the past.';
         return;
       }
 
       try {
+        // 组合日期和时间
+        let combinedDateTime;
+        if (time) {
+          // 如果有选择时间，组合日期和时间
+          combinedDateTime = `${due}T${time}:00`;
+        } else {
+          // 如果没有选择时间，设置为当天的23:59:59
+          combinedDateTime = `${due}T23:59:59`;
+        }
+
         const draft = await uploadDraftFile(file, 'assignment2');
         await commitFile(draft.temp_name, 'assignment', 2, due, projectId);
 

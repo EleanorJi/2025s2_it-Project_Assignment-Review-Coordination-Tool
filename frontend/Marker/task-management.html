@@ -17,8 +17,11 @@
     <div class="brand">
       <div class="brand-title">HPS302 Assignment Moderation Tool</div>
     </div>
-    <div class="account">
-      <span id="username"></span><span class="caret">▾</span>
+    <div class="account dropdown">
+      <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
+      <div class="dropdown-menu">
+        <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+      </div>
     </div>
   </header>
 
@@ -28,7 +31,6 @@
       <nav class="nav">
         <a class="nav-item" href="/dashboard/marker">Overview</a>
         <a class="nav-item active" aria-current="page" href="/dashboard/marker/taskManagement">Task Management</a>
-        <a class="nav-item" href="/dashboard/marker/past-task">Past Task</a>
       </nav>
     </aside>
 

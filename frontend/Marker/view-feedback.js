@@ -62,14 +62,21 @@ async function fetchFeedbackData() {
 
         // 获取项目信息
         const projectData = await fetchProjectData(assignmentData.project_id);
+        console.log('projectData:', projectData);
+        const projectInfo = projectData.project || {};
+        // 获取rubric信息
+        const rubricData = await fetchRubricDetails(projectData.rubric.rubric_id);
+        console.log('rubricData:', rubricData);
+
 
         // 转换数据格式为前端需要的格式
         const transformedData = transformData(
             assignmentData,
-            projectData,
+            projectInfo,
             baselineData,
             markerData,
-            feedbackData
+            feedbackData,
+            rubricData
         );
 
         console.log('Transformed feedback data:', transformedData);
@@ -80,6 +87,14 @@ async function fetchFeedbackData() {
         // 接口出错时使用demo数据兜底
         return demoFeedback();
     }
+}
+
+// 获取rubric详情
+async function fetchRubricDetails(rubricId) {
+    const res = await fetch(`/api/uploads/rubric/${rubricId}/details`);
+    if (!res.ok) throw new Error('Failed to fetch rubric details');
+    const data = await res.json();
+    return data.criteria || [];
 }
 
 // 获取assignment信息
@@ -95,7 +110,7 @@ async function fetchProjectData(projectId) {
     const res = await fetch(`/api/uploads/project/${projectId}/status`);
     if (!res.ok) throw new Error('Failed to fetch project data');
     const data = await res.json();
-    return data.project;
+    return data;
 }
 
 // 获取baseline分数
@@ -135,37 +150,35 @@ async function fetchFeedbackContent(assignmentId, markerId) {
 }
 
 // 数据转换函数
-function transformData(assignmentData, projectData, baselineData, markerData, feedbackData) {
-    // 构建assignment显示名称
-    const projectName = projectData?.name || 'Unknown Project';
-    const assignmentDisplayName = `${projectName} - Moderation ${assignmentData.round || 0}`;
+function transformData(assignmentData, projectData, baselineData, markerData, feedbackData, rubricData) {
+  const projectName = projectData?.name || 'Unknown Project';
+  const assignmentDisplayName = `${projectName} - Moderation ${assignmentData.round || 0}`;
 
-    // 转换criteria数据
-    const criteria = baselineData.map((baseline, index) => {
-        const markerScore = markerData.find(m => m.criterion_id === baseline.criterion_id);
-
-        return {
-            title: baseline.criterion_title || `Criterion ${index + 1}`,
-            subtitle: baseline.matched_level?.description || '',
-            max: baseline.criterion_max_score || 0,
-            markerScore: markerScore?.score || 0,
-            coordinatorScore: baseline.score || 0,
-            coordinatorFeedback: baseline.comment || 'No feedback provided',
-            markerComments: markerScore?.comment || 'No comments provided'
-        };
-    });
-
-    // 获取最新的feedback内容
-    const latestFeedback = feedbackData.length > 0 ? feedbackData[0] : null;
+  // 以 rubricData 为基准构建每条 criterion（更稳健）
+  const criteria = (rubricData || []).map((r, index) => {
+    const baseline = (baselineData || []).find(b => b.criterion_id === r.criterion_id);
+    const marker = (markerData || []).find(m => m.criterion_id === r.criterion_id);
 
     return {
-        assignment: assignmentDisplayName,
-        due: formatDate(assignmentData.due_at) || 'Not set',
-        feedbackDate: formatDate(new Date()),
-        criteria,
-        coordinatorFeedback: latestFeedback?.content || 'No detailed feedback provided.',
-        markerComments: 'nnnnnnnnnnn' // 这个可以从marker数据中汇总或单独存储
+      criterion_id: r.criterion_id,
+      title: baseline?.criterion_title || r.title || `Criterion ${index + 1}`,
+      subtitle: r.description || '',
+      max: r.max_score || baseline?.criterion_max_score || 0,
+      // 用 null 表示缺失（便于后续判断），存在则为 number
+      markerScore: typeof marker?.score === 'number' ? marker.score : null,
+      coordinatorScore: typeof baseline?.score === 'number' ? baseline.score : null,
+      coordinatorFeedback: baseline?.comment || '',
+      markerComments: marker?.comment || ''
     };
+  });
+
+  return {
+    assignment: assignmentDisplayName,
+    due: formatDate(assignmentData.due_at) || 'Not set',
+    feedbackDate: formatDate(new Date()),
+    criteria,
+    allFeedback: feedbackData || []
+  };
 }
 
 
@@ -201,39 +214,44 @@ async function loadFeedback(data){
     </div>
   `;
 
-  // 计算总分
-  const markerTotal = data.criteria.reduce((sum, c) => sum + (c.markerScore || 0), 0);
-  const coordinatorTotal = data.criteria.reduce((sum, c) => sum + (c.coordinatorScore || 0), 0);
+  // --- 计算总分（只把真实存在的 number 加入总和） ---
+  const markerTotal = data.criteria.reduce((sum, c) => sum + (typeof c.markerScore === 'number' ? c.markerScore : 0), 0);
+  const coordinatorTotal = data.criteria.reduce((sum, c) => sum + (typeof c.coordinatorScore === 'number' ? c.coordinatorScore : 0), 0);
   const totalMax = data.criteria.reduce((sum, c) => sum + (c.max || 0), 0);
-  const difference = coordinatorTotal - markerTotal;
 
-  // 更新总分显示
+  // 是否至少有一个 baseline 存在（用于决定顶部 coordinator 总分是否显示）
+  const hasAnyBaseline = data.criteria.some(c => typeof c.coordinatorScore === 'number');
+
+  // 更新顶部总分显示
   markerScoreEl.textContent = `${markerTotal}/${totalMax}`;
-  coordinatorScoreEl.textContent = `${coordinatorTotal}/${totalMax}`;
-  
-  // 更新分差显示
-  scoreDifferenceEl.textContent = difference > 0 ? `+${difference}` : `${difference}`;
-  scoreDifferenceEl.className = 'difference-value';
-  
-  if (Math.abs(difference) > 5) {
-    scoreDifferenceEl.classList.add('large-diff');
-  } else if (difference > 0) {
-    scoreDifferenceEl.classList.add('positive');
-  } else if (difference < 0) {
-    scoreDifferenceEl.classList.add('negative');
+  coordinatorScoreEl.textContent = hasAnyBaseline ? `${coordinatorTotal}/${totalMax}` : "-";
+
+  // 更新总体分差显示（只有在存在 baseline 时才计算差值）
+  if (hasAnyBaseline) {
+    const difference = coordinatorTotal - markerTotal;
+    scoreDifferenceEl.textContent = difference > 0 ? `+${difference}` : `${difference}`;
+    scoreDifferenceEl.className = 'difference-value';
+    scoreDifferenceEl.classList.remove('difference-large','positive','negative','neutral');
+    if (Math.abs(difference) > 5) {
+      scoreDifferenceEl.classList.add('large-diff');
+    } else if (difference > 0) {
+      scoreDifferenceEl.classList.add('positive');
+    } else if (difference < 0) {
+      scoreDifferenceEl.classList.add('negative');
+    } else {
+      scoreDifferenceEl.classList.add('neutral');
+    }
   } else {
-    scoreDifferenceEl.classList.add('neutral');
+    scoreDifferenceEl.textContent = "-";
+    scoreDifferenceEl.className = "difference-value difference-neutral";
   }
 
-  // 渲染表格
+  // --- 渲染表格行 ---
   tbody.innerHTML = '';
   data.criteria.forEach((c, idx) => {
     const tr = document.createElement('tr');
-    const markerScore = c.markerScore || 0;
-    const coordinatorScore = c.coordinatorScore || 0;
-    const diff = coordinatorScore - markerScore;
 
-    // 左侧 criteria
+    // 左侧 criteria 描述
     const td0 = td();
     td0.innerHTML = `
       <div class="criterion-title">${idx+1}. ${esc(c.title)}</div>
@@ -242,26 +260,34 @@ async function loadFeedback(data){
     `;
     tr.appendChild(td0);
 
-    // Marker Score
+    // Marker 分数显示（如果缺失显示 "-/max"）
     const td1 = td();
     td1.className = 'score-cell score-marker';
-    td1.innerHTML = `${markerScore}/${c.max || 0}`;
+    const markerDisplay = (typeof c.markerScore === 'number') ? `${c.markerScore}/${c.max || 0}` : `-/${c.max || 0}`;
+    td1.textContent = markerDisplay;
     tr.appendChild(td1);
 
-    // Coordinator Score
+    // Coordinator (baseline) 分数显示（缺失则 "-/max"）
     const td2 = td();
     td2.className = 'score-cell score-coordinator';
-    td2.innerHTML = `${coordinatorScore}/${c.max || 0}`;
+    const coordinatorDisplay = (typeof c.coordinatorScore === 'number') ? `${c.coordinatorScore}/${c.max || 0}` : `-/${c.max || 0}`;
+    td2.textContent = coordinatorDisplay;
     tr.appendChild(td2);
 
-    // Difference
+    // Difference 列：只有当 coordinator 存在时才计算差值，否则显示 "-"
     const td3 = td();
     td3.className = 'difference-cell';
-    const diffText = diff > 0 ? `+${diff}` : `${diff}`;
-    td3.innerHTML = `<span class="${getDifferenceClass(diff)}">${diffText}</span>`;
+    if (typeof c.coordinatorScore !== 'number') {
+      td3.innerHTML = `<span class="difference-neutral">-</span>`;
+    } else {
+      const markerValForDiff = (typeof c.markerScore === 'number') ? c.markerScore : 0;
+      const diff = c.coordinatorScore - markerValForDiff;
+      const diffText = diff > 0 ? `+${diff}` : `${diff}`;
+      td3.innerHTML = `<span class="${getDifferenceClass(diff)}">${diffText}</span>`;
+    }
     tr.appendChild(td3);
 
-    // Feedback
+    // Feedback 列（保持原样）
     const td4 = td();
     td4.className = 'feedback-text-cell';
     td4.innerHTML = `
@@ -279,17 +305,24 @@ async function loadFeedback(data){
     tbody.appendChild(tr);
   });
 
-  // 更新文本反馈
-  coordinatorFeedbackEl.textContent = data.coordinatorFeedback || 'No detailed feedback provided.';
-  if (!data.coordinatorFeedback) {
-    coordinatorFeedbackEl.classList.add('empty');
-  }
-
-  markerCommentsEl.textContent = data.markerComments || 'No comments provided.';
-  if (!data.markerComments) {
-    markerCommentsEl.classList.add('empty');
+  // 更新文本反馈区（保持原逻辑）
+  coordinatorFeedbackEl.innerHTML = '';
+  if (data.allFeedback && data.allFeedback.length > 0) {
+      data.allFeedback.forEach((fb, idx) => {
+          const div = document.createElement('div');
+          div.className = 'feedback-block';
+          div.innerHTML = `
+              <div class="feedback-date">${idx+1} • ${formatDate(fb.created_at || new Date())}</div>
+              <div class="feedback-content">${esc(fb.content || 'No feedback provided')}</div>
+          `;
+          coordinatorFeedbackEl.appendChild(div);
+      });
+  } else {
+      coordinatorFeedbackEl.textContent = 'No detailed feedback provided.';
+      coordinatorFeedbackEl.classList.add('empty');
   }
 }
+
 
 function getDifferenceClass(diff) {
   if (Math.abs(diff) > 5) {
@@ -400,3 +433,80 @@ function demoFeedback(){
     markerComments: 'I found this assignment challenging but rewarding to mark. The student demonstrated good understanding of the theoretical concepts and applied them effectively. The writing was clear and well-structured throughout.'
   };
 }
+
+// 初始化dropdown和logout功能
+document.addEventListener('DOMContentLoaded', () => {
+  // 初始化dropdown
+  const accountEl = document.querySelector('.account');
+  const dropdown = document.querySelector('.dropdown-menu');
+  const logoutBtn = document.querySelector('.dropdown-item');
+
+  if (accountEl && dropdown) {
+    accountEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('show');
+    });
+
+    // 点击其他地方关闭下拉菜单
+    document.addEventListener('click', () => {
+      dropdown.classList.remove('show');
+    });
+  }
+
+  // 登出功能
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        } else {
+          alert("Logout failed: " + data.message);
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login';
+      }
+    });
+  }
+
+  // 全局logout函数
+  window.logout = async function() {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login';
+      } else {
+        alert("Logout failed: " + data.message);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location.href = '/login';
+    }
+  };
+});

@@ -11,8 +11,11 @@
     <div class="brand">
       <div class="brand-title">HPS302 Assignment Moderation Tool</div>
     </div>
-    <div class="account">
-      <span id="username"></span><span class="caret">▾</span>
+    <div class="account dropdown">
+      <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
+      <div class="dropdown-menu">
+        <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+      </div>
     </div>
   </header>
 
@@ -98,7 +101,7 @@
           <div class="card">
             <div class="sub-title">Past assignments</div>
             <div class="muted">2024 — Assignment 1, Assignment 2 (archived)</div>
-            <a href="#" class="link">Open archive</a>
+            <a href="/dashboard/coordinator/past-assignment.html" class="link">Open archive</a>
           </div>
         </div>
       </section>
@@ -106,47 +109,5 @@
   </div>
 
   <script src="/Coordinator/coordinator.js"></script>
-  <!-- Temporarily added at the end of body TODO: Delete logout button-->
-  <div style="position: fixed; bottom: 10px; right: 10px; z-index: 1000;">
-    <button onclick="logout()" style="background: red; color: white; padding: 5px 10px; border: none; border-radius: 3px;">
-      Logout (Test)
-    </button>
-  </div>
-
-  <script>
-    async function logout() {
-      try {
-        // Call backend logout API
-        const response = await fetch('/api/auth/logout', {
-          method: 'POST',
-          credentials: 'include' // Important: carry Cookie
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // Clear frontend storage
-          localStorage.removeItem('user');
-          localStorage.removeItem('userRole');
-
-          // Force clear Cookie (frontend backup)
-          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-
-          alert("Logged out successfully!");
-          window.location.href = '/login';
-        } else {
-          alert("Logout failed: " + data.message);
-        }
-      } catch (error) {
-        console.error('Logout error:', error);
-        // Even if backend fails, force frontend cleanup
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        alert("Logged out (frontend only)");
-        window.location.href = '/login';
-      }
-    }
-  </script>
 </body>
 </html>

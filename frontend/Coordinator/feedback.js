@@ -382,4 +382,78 @@ const rows = [
   renderAlignment('all');
   renderAllDifferences(true);
   generateAllMarkersSummary();
+
+  // 初始化dropdown和logout功能
+  const accountEl = document.querySelector('.account');
+  const dropdown = document.querySelector('.dropdown-menu');
+  const logoutBtn = document.querySelector('.dropdown-item');
+
+  if (accountEl && dropdown) {
+    accountEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('show');
+    });
+
+    // 点击其他地方关闭下拉菜单
+    document.addEventListener('click', () => {
+      dropdown.classList.remove('show');
+    });
+  }
+
+  // 登出功能
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        } else {
+          alert("Logout failed: " + data.message);
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login';
+      }
+    });
+  }
+
+  // 全局logout函数
+  window.logout = async function() {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login';
+      } else {
+        alert("Logout failed: " + data.message);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location.href = '/login';
+    }
+  };
   
