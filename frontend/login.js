@@ -76,7 +76,7 @@
         }
 
         status.classList.add('ok');
-        status.textContent = 'Login successful! Redirecting...';
+        status.textContent = 'Login successful!';
 
         // Redirect to the corresponding dashboard based on role
         setTimeout(() => {
