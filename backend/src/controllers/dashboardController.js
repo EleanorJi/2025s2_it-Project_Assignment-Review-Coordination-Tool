@@ -2,76 +2,76 @@
 const path = require('path');
 
 exports.getCoordinatorDashboard = (req, res) => {
-  // Additional role permission check
+  // 额外检查角色权限
   if (req.user.role !== 'COORDINATOR') {
     return res.redirect('/login');
   }
-  // Send corresponding HTML file
+  // 发送对应的HTML文件
   res.sendFile(path.join(__dirname, '../../frontend/Coordinator/coordinator-dashboard.html'));
 };
 
 exports.getCoordinatorInvitePage = (req, res) => {
-  // Check role permissions
+  // 检查角色权限
   if (req.user.role !== 'COORDINATOR') {
     return res.redirect('/login?error=access_denied');
   }
 
-  // Send corresponding HTML file
+  // 发送对应的HTML文件
   res.sendFile(path.join(__dirname, '../../frontend/Coordinator/invite.html'));
 };
 
 exports.getCoordinatorFeedbackPage = (req, res) => {
-    // Check role permissions
+    // 检查角色权限
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
-    // Send corresponding HTML file
+    // 发送对应的HTML文件
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/feedback.html'));
 }
 
 exports.getCoordinatorTaskManagementPage = (req, res) => {
-    // Check role permissions
+    // 检查角色权限
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
 
-    // Send corresponding HTML file
+    // 发送对应的HTML文件
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/task-management.html'));
 }
 exports.getCoordinatorViewRubricPage = (req, res) => {
-    // Check role permissions
+    // 检查角色权限
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
-    // Send corresponding HTML file
+    // 发送对应的HTML文件
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/rubric.html'));
 }
 
 exports.getCoordinatorMarkPage = (req, res) => {
-    // Check role permissions
+    // 检查角色权限
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
-    // Send corresponding HTML file
+    // 发送对应的HTML文件
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/mark-assignment.html'));
 }
 
 exports.getCoordinatorAnalysisPage = (req, res) => {
-    // Check role permissions
+    // 检查角色权限
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
-    // Send corresponding HTML file
+    // 发送对应的HTML文件
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/feedback.html'));
 }
 
 exports.getCoordinatorPastPage = (req, res) => {
-    // Check role permissions
+    // 检查角色权限
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
 
-    // Send corresponding HTML file
+    // 发送对应的HTML文件
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/past-assignment.html'));
 }
 

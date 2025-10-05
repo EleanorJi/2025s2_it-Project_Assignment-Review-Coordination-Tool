@@ -11,7 +11,7 @@ class EmailService {
   static async sendInvitationEmail(to, token, coordinatorName) {
     try {
       const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
-      const signupUrl = `${websiteUrl}/signup.html?token=${token}`;
+      const signupUrl = `${websiteUrl}/signup?token=${token}`;
 
       // Render HTML template
       const html = await TemplateUtils.renderTemplate('./emailTemplates/invitation-email.html', {
@@ -72,7 +72,7 @@ class EmailService {
     static async sendPasswordResetEmail(to, token, userName) {
       try {
         const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
-        const resetUrl = `${websiteUrl}/reset-password.html?token=${token}`;
+        const resetUrl = `${websiteUrl}/reset-password?token=${token}`;
 
         // 渲染重置密码邮件模板
         const html = await TemplateUtils.renderTemplate('./emailTemplates/reset-password-email.html', {
