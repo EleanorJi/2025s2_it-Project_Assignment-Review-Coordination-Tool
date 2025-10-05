@@ -1721,7 +1721,7 @@
       font-size: 14px;
       line-height: 1.5;
     `;
-    content.innerHTML = 'Are you sure you want to go back?<br>Your progress will be saved.';
+    content.innerHTML = 'Are you sure you want to go back?<br>Your progress will not be saved.';
 
     // Create button area
     const buttonArea = document.createElement('div');
