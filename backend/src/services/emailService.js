@@ -63,6 +63,40 @@ class EmailService {
       }
     }
 
+  /**
+     * Send password reset email
+     * @param {string} to Recipient email address
+     * @param {string} token Password reset token
+     * @param {string} userName User name
+     */
+    static async sendPasswordResetEmail(to, token, userName) {
+      try {
+        const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
+        const resetUrl = `${websiteUrl}/reset-password.html?token=${token}`;
+
+        // 渲染重置密码邮件模板
+        const html = await TemplateUtils.renderTemplate('./emailTemplates/reset-password-email.html', {
+          userName,
+          resetUrl,
+          currentYear: new Date().getFullYear()
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: to,
+          subject: 'Reset Your Password - Assignment Moderation Tool',
+          html: html
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`Password reset email sent to: ${to}, Message ID: ${info.messageId}`);
+        return true;
+      } catch (error) {
+        console.error('Failed to send password reset email:', error);
+        throw new Error('Failed to send password reset email');
+      }
+    }
+
 }
 
 module.exports = EmailService;
