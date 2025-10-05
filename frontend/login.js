@@ -106,7 +106,7 @@
   if (forgotLink) {
     forgotLink.onclick = (e) => {
       e.preventDefault();
-      alert('Please contact the coordinator to reset your password.');
+      window.location.href = '/forgot-password';
     };
   }
 
