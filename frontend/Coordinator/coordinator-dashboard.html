@@ -36,72 +36,96 @@
       <section class="panel" aria-labelledby="title-overview">
         <h1 id="title-overview">Overview</h1>
 
-        <!-- KPI -->
+        <!-- KPI Cards -->
         <div class="kpi-row">
           <div class="kpi card">
-            <div class="muted">Active assignments</div>
-            <div class="kpi-num">2</div>
-            <div class="hint">Round 1 &amp; Round 2</div>
+            <div class="muted">Active Projects</div>
+            <div class="kpi-num" id="active-projects-count">-</div>
+            <div class="kpi-hint">Currently running</div>
           </div>
           <div class="kpi card">
-            <div class="muted">Markers</div>
-            <div class="kpi-num">10</div>
-            <div class="hint">Accepted 7 · Pending 2 · Expired 1</div>
+            <div class="muted">Total Markers</div>
+            <div class="kpi-num" id="total-markers-count">-</div>
+            <div class="kpi-hint">Registered markers</div>
           </div>
           <div class="kpi card">
-            <div class="muted">Completion (Round 1)</div>
-            <div class="progress"><span style="width:70%"></span></div>
-            <div class="hint">7/10 markers submitted</div>
+            <div class="muted">Pending Invitations</div>
+            <div class="kpi-num" id="pending-invitations-count">-</div>
+            <div class="kpi-hint">Awaiting response</div>
+          </div>
+          <div class="kpi card">
+            <div class="muted">Completed Assignments</div>
+            <div class="kpi-num" id="completed-assignments-count">-</div>
+            <div class="kpi-hint">Finished marking</div>
           </div>
         </div>
 
-        <!-- Assignments -->
-        <div class="group">
-          <div class="group-title">Assignments</div>
-          <div class="cards-2">
-            <div class="assign card">
-              <div class="assign-title">Assignment 1</div>
-              <div class="assign-sub muted">Moderation 1 • Due Mar 10</div>
-              <div class="assign-sub muted">Pending 2 / 10</div>
-              <button class="btn primary">Manage</button>
+        <!-- Main Content Grid -->
+        <div class="dashboard-grid">
+          <!-- Recent Assignments -->
+          <div class="panel inner">
+            <div class="section-header">
+              <div class="group-title">Recent Assignments</div>
+              <a href="/dashboard/coordinator/taskManagement" class="view-all-link">View All</a>
             </div>
-            <div class="assign card">
-              <div class="assign-title">Assignment 2</div>
-              <div class="assign-sub muted">Moderation 1 • Due Mar 20</div>
-              <div class="assign-sub muted">Locked</div>
-              <button class="btn primary">Manage</button>
+            <div id="recent-assignments-list" class="assignment-list">
+              <div class="loading-state">Loading assignments...</div>
             </div>
           </div>
-        </div>
 
-        <!-- Feedback & Monitoring -->
-        <div class="group">
-          <div class="group-title">Feedback &amp; Monitoring</div>
-          <div class="cards-2">
-            <div class="card">
-              <div class="sub-title">Outliers (&gt;5%)</div>
-              <ul class="list">
-                <li><span class="dot warn"></span> Marker B • A1 • +7%</li>
-                <li><span class="dot bad"></span> Marker D • A2 • −6%</li>
-              </ul>
-              <a class="link" href="#">View details</a>
+          <!-- Monitoring & Feedback -->
+          <div class="panel inner">
+            <div class="section-header">
+              <div class="group-title">Monitoring & Feedback</div>
+              <a href="/dashboard/coordinator/feedback" class="view-all-link">View All</a>
             </div>
-            <div class="card">
-              <div class="sub-title">Pending markers</div>
-              <div class="muted" style="margin-top:4px">3 markers pending</div>
-              <div class="right">
-                <button class="btn primary">Send reminder</button>
+            <div id="outliers-list" class="outliers-list">
+              <div class="loading-state">Loading data...</div>
+            </div>
+          </div>
+
+          <!-- Marker Management -->
+          <div class="panel inner">
+            <div class="section-header">
+              <div class="group-title">Marker Management</div>
+              <a href="/dashboard/coordinator/invite" class="view-all-link">Manage</a>
+            </div>
+            <div class="marker-stats">
+              <div class="stat-item">
+                <div class="stat-label">Pending Invitations</div>
+                <div class="stat-value" id="pending-invitations-stat">-</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Active Markers</div>
+                <div class="stat-value" id="active-markers-stat">-</div>
               </div>
             </div>
+            <div class="quick-actions">
+              <button class="btn primary" onclick="window.location.href='/dashboard/coordinator/invite'">Send Invitations</button>
+            </div>
           </div>
-        </div>
 
-        <!-- Past assignments -->
-        <div class="group">
-          <div class="card">
-            <div class="sub-title">Past assignments</div>
-            <div class="muted">2024 — Assignment 1, Assignment 2 (archived)</div>
-            <a href="/dashboard/coordinator/past-assignment.html" class="link">Open archive</a>
+          <!-- Quick Actions -->
+          <div class="panel inner">
+            <div class="group-title">Quick Actions</div>
+            <div class="quick-actions-grid">
+              <a href="/dashboard/coordinator/taskManagement" class="action-card">
+                <div class="action-title">Task Management</div>
+                <div class="action-desc">Manage assignments</div>
+              </a>
+              <a href="/dashboard/coordinator/invite" class="action-card">
+                <div class="action-title">Invite Markers</div>
+                <div class="action-desc">Send invitations</div>
+              </a>
+              <a href="/dashboard/coordinator/feedback" class="action-card">
+                <div class="action-title">View Analytics</div>
+                <div class="action-desc">Check feedback</div>
+              </a>
+              <a href="/dashboard/coordinator/past" class="action-card">
+                <div class="action-title">Past Tasks</div>
+                <div class="action-desc">View archive</div>
+              </a>
+            </div>
           </div>
         </div>
       </section>

@@ -34,112 +34,73 @@
       <section class="panel" aria-labelledby="title-overview">
         <h1 id="title-overview">Overview</h1>
 
-        <!-- KPI -->
+        <!-- KPI Cards -->
         <div class="kpi-row">
           <div class="kpi card">
-            <div class="muted">Pending tasks</div>
-            <div class="kpi-num">2</div>
+            <div class="muted">Pending Tasks</div>
+            <div class="kpi-num" id="pending-tasks-count">-</div>
+            <div class="kpi-hint">Active assignments</div>
           </div>
           <div class="kpi card">
             <div class="muted">Completed</div>
-            <div class="kpi-num">1</div>
+            <div class="kpi-num" id="completed-tasks-count">-</div>
+            <div class="kpi-hint">Finished marking</div>
           </div>
           <div class="kpi card">
-            <div class="muted">Latest feedback</div>
-            <div class="kpi-num">2 notes</div>
+            <div class="muted">Recent Feedback</div>
+            <div class="kpi-num" id="recent-feedback-count">-</div>
+            <div class="kpi-hint">Last 7 days</div>
           </div>
         </div>
 
-        <!-- Tasks & Profile grid -->
-        <div class="grid-2-1">
-          <!-- Tasks -->
+        <!-- Main Content Grid -->
+        <div class="dashboard-grid">
+          <!-- Pending Tasks -->
           <div class="panel inner">
-            <div class="group-title">Tasks</div>
-
-            <div class="tabs">
-              <button class="tab active" data-tab="pending">Pending</button>
-              <button class="tab" data-tab="completed">Completed</button>
+            <div class="section-header">
+              <div class="group-title">Pending Tasks</div>
+              <a href="/dashboard/marker/taskManagement" class="view-all-link">View All</a>
             </div>
-
-            <!-- Pending list -->
-            <div id="list-pending">
-              <div class="task card row">
-                <div class="task-meta">
-                  <div class="task-title">Assignment 1</div>
-                  <div class="muted">Moderation 1 • Due Mar 10</div>
-                </div>
-                <div class="row-actions">
-                  <button class="btn primary sm">Mark</button>
-                  <a class="link" href="#">Rubric</a>
-                </div>
-              </div>
-
-              <div class="task card row">
-                <div class="task-meta">
-                  <div class="task-title">Assignment 2</div>
-                  <div class="muted">Locked</div>
-                </div>
-                <div class="row-actions">
-                  <a class="link" href="#">Rubric</a>
-                </div>
-              </div>
-            </div>
-
-            <!-- Completed list -->
-            <div id="list-completed" class="hidden">
-              <div class="task card row">
-                <div class="task-meta">
-                  <div class="task-title">Assignment 0</div>
-                  <div class="muted">Submitted Mar 01 • Round 1</div>
-                </div>
-                <div class="row-actions">
-                  <a class="link" href="#">View</a>
-                </div>
-              </div>
+            <div id="pending-tasks-list" class="task-list">
+              <div class="loading-state">Loading tasks...</div>
             </div>
           </div>
 
-          <!-- Profile & Settings -->
+          <!-- Completed Tasks -->
           <div class="panel inner">
-            <div class="group-title">Profile &amp; Settings</div>
-            <div class="profile">
-              <div class="profile-name">Marker A</div>
-              <div class="muted">a@deakin.edu.au</div>
+            <div class="section-header">
+              <div class="group-title">Completed Tasks</div>
+              <a href="/dashboard/marker/taskManagement" class="view-all-link">View All</a>
             </div>
-
-            <div class="control-row">
-              <span>Email notifications</span>
-              <button class="control" data-setting="email">
-                <span class="control-label">On</span><span class="chev">→</span>
-              </button>
-            </div>
-
-            <div class="control-row">
-              <span>Remember me (7 days)</span>
-              <button class="control" data-setting="remember">
-                <span class="control-label">On</span><span class="chev">→</span>
-              </button>
+            <div id="completed-tasks-list" class="task-list">
+              <div class="loading-state">Loading tasks...</div>
             </div>
           </div>
-        </div>
 
-        <!-- Feedback panel -->
-        <div class="panel inner">
-          <div class="group-title">Feedback</div>
-          <div class="note card">
-            <div class="note-title">Assignment 1</div>
-            <div class="muted">
-              Coordinator: Scores differ on criterion 3 (+7%). Please review.
+          <!-- Recent Feedback -->
+          <div class="panel inner">
+            <div class="section-header">
+              <div class="group-title">Recent Feedback</div>
+              <a href="/dashboard/marker/feedback" class="view-all-link">View All</a>
+            </div>
+            <div id="recent-feedback-list" class="feedback-list">
+              <div class="loading-state">Loading feedback...</div>
             </div>
           </div>
-        </div>
 
-        <!-- Past assignments -->
-        <div class="panel inner">
-          <div class="group-title">Past assignments</div>
-          <div class="muted">
-            2024 — Assignment 1, Assignment 2 (archived)
-            <a href="#" class="link">Open archive</a>
+          <!-- Quick Actions -->
+          <div class="panel inner">
+            <div class="group-title">Quick Actions</div>
+            <div class="quick-actions">
+              <a href="/dashboard/marker/taskManagement" class="action-card">
+                <div class="action-title">Task Management</div>
+                <div class="action-desc">Manage your assignments</div>
+              </a>
+              <a href="/dashboard/marker/feedback" class="action-card">
+                <div class="action-title">View Feedback</div>
+                <div class="action-desc">Check coordinator feedback</div>
+              </a>
+            </div>
           </div>
         </div>
       </section>

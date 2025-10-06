@@ -62,12 +62,66 @@
   .card{
     background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;
   }
-  .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
-  .kpi .kpi-num{font-size:28px;font-weight:900;margin-top:2px}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .kpi .kpi-num{font-size:28px;font-weight:900;margin-top:4px}
+  .kpi-hint{font-size:12px;color:var(--muted);margin-top:4px}
   .hint{font-size:12px;color:var(--muted)}
   .progress{height:8px;background:#EEF2F7;border-radius:999px;margin:8px 0 6px;overflow:hidden}
   .progress>span{display:block;height:100%;background:var(--primary)}
   
+  /* Dashboard Grid */
+  .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .dashboard-grid .panel.inner{margin-top:0}
+
+  /* Section Headers */
+  .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .view-all-link{color:#2563EB;font-weight:600;text-decoration:none;font-size:14px}
+  .view-all-link:hover{text-decoration:underline}
+
+  /* Assignment Lists */
+  .assignment-list{display:flex;flex-direction:column;gap:8px}
+  .assignment-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid var(--border);border-radius:8px;background:#fff}
+  .assignment-item:hover{background:#f8f9fa}
+  .assignment-meta{flex:1}
+  .assignment-title{font-weight:700;margin-bottom:4px}
+  .assignment-subtitle{color:var(--muted);font-size:13px}
+  .assignment-actions{display:flex;gap:8px;align-items:center}
+  .assignment-status{font-size:12px;padding:2px 8px;border-radius:12px;font-weight:600}
+  .assignment-status.active{background:#d1fae5;color:#059669}
+  .assignment-status.draft{background:#fef3c7;color:#d97706}
+  .assignment-status.completed{background:#dbeafe;color:#2563eb}
+
+  /* Outliers List */
+  .outliers-list{display:flex;flex-direction:column;gap:8px}
+  .outlier-item{padding:12px;border:1px solid var(--border);border-radius:8px;background:#fff}
+  .outlier-title{font-weight:700;margin-bottom:4px}
+  .outlier-content{color:var(--muted);font-size:13px;margin-bottom:4px}
+  .outlier-meta{color:var(--muted);font-size:12px}
+  .outlier-deviation{font-weight:700}
+  .outlier-deviation.positive{color:#059669}
+  .outlier-deviation.negative{color:#dc2626}
+
+  /* Marker Stats */
+  .marker-stats{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .stat-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f8f9fa;border-radius:6px}
+  .stat-label{font-size:13px;color:var(--muted)}
+  .stat-value{font-weight:700;font-size:16px}
+
+  /* Quick Actions Grid */
+  .quick-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .action-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;background:#fff;text-decoration:none;color:var(--text);transition:background-color 0.2s}
+  .action-card:hover{background:#f8f9fa;text-decoration:none;color:var(--text)}
+  .action-icon{font-size:20px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:#f1f5f9;border-radius:6px}
+  .action-title{font-weight:700;margin-bottom:2px}
+  .action-desc{color:var(--muted);font-size:12px}
+
+  /* Loading State */
+  .loading-state{text-align:center;color:var(--muted);padding:20px;font-style:italic}
+
+  /* Empty State */
+  .empty-state{text-align:center;color:var(--muted);padding:20px}
+  .empty-state-icon{font-size:32px;margin-bottom:8px;opacity:0.5}
+
   .cards-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .assign .assign-title{font-weight:800}
 
@@ -94,7 +148,14 @@
   @media (max-width: 1100px){
     .app{grid-template-columns:1fr}
     .sidebar{height:auto}
+    .kpi-row{grid-template-columns:repeat(2,1fr)}
+    .dashboard-grid{grid-template-columns:1fr}
+    .quick-actions-grid{grid-template-columns:1fr}
     .cards-2, .kpi-row{grid-template-columns:1fr}
     .assign .btn{position:static;margin-top:10px}
+  }
+  
+  @media (max-width: 768px){
+    .kpi-row{grid-template-columns:1fr}
   }
   
