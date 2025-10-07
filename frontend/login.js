@@ -76,7 +76,7 @@
         }
 
         status.classList.add('ok');
-        status.textContent = 'Login successful! Redirecting...';
+        status.textContent = 'Login successful!';
 
         // Redirect to the corresponding dashboard based on role
         setTimeout(() => {
@@ -106,7 +106,7 @@
   if (forgotLink) {
     forgotLink.onclick = (e) => {
       e.preventDefault();
-      alert('Please contact the coordinator to reset your password.');
+      window.location.href = '/forgot-password';
     };
   }
 
