@@ -137,12 +137,13 @@ h1{font-size:28px;margin:0 0 14px 0}
 }
 .table tbody td{padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle}
 .pill{
-  display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; font-weight:700;
-  border:1px solid transparent;
+  display:inline-flex; align-items:center; padding:3px 8px; border-radius:12px; font-weight:600;
+  border:1px solid transparent; text-transform:uppercase; letter-spacing:0.3px; font-size:10px;
+  box-shadow:0 1px 2px rgba(0,0,0,0.08);
 }
-.pill.accept{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-.pill.pending{background:#fffbeb;border-color:#fde68a;color:#92400e}
-.pill.expired{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.pill.accept{background:#e8f5e8;border-color:#c3e6c3;color:#28a745}
+.pill.pending{background:#fff3cd;border-color:#ffeaa7;color:#856404}
+.pill.expired{background:#f8d7da;border-color:#f5c6cb;color:#721c24}
 .table a{color:#1d4ed8; font-weight:600; text-decoration:none}
 
 /* Status / messages */

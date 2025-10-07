@@ -1,237 +1,281 @@
-  /* Design System (shared) */
-  :root{
+/* ======================
+   Design System (shared)
+   ====================== */
+   :root {
     --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
     --primary:#0F172A; --warn:#F59E0B; --bad:#DC2626; --good:#16a34a;
     --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
   }
-  *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif
+  
+  * { box-sizing:border-box }
+  
+  body {
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
   }
-
-  /* Top bar */
-  .topbar{
+  
+  /* ======================
+     Top bar
+     ====================== */
+  .topbar {
     height:64px; display:flex; align-items:center; justify-content:space-between;
     padding:0 18px; background:#fff; border-bottom:1px solid var(--border);
   }
-  .brand{display:flex; align-items:center; gap:12px}
-  .brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
-  .brand-title{font-weight:800}
-  .brand-sub{font-size:12px;color:var(--muted)}
-  .account{color:var(--text);font-weight:600;position:relative;cursor:pointer;display:flex;align-items:center;padding:4px 8px;border-radius:4px;transition:background-color 0.2s}
-  .account:hover{background-color:#f5f5f5}
-  .caret{margin-left:4px;color:var(--muted)}
-  .dropdown-trigger{cursor:pointer}
-
-  .dropdown-menu{
-    position:absolute;top:100%;right:0;background:#fff;border:1px solid var(--border);
-    border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);
-    min-width:120px;z-index:1000;display:none;
+  .brand { display:flex; align-items:center; gap:12px }
+  .brand img { width:32px; height:32px; border-radius:50%; border:1px solid var(--text); background:#fff }
+  .brand-title { font-weight:800 }
+  .brand-sub { font-size:12px; color:var(--muted) }
+  .account {
+    color:var(--text); font-weight:600; position:relative; cursor:pointer;
+    display:flex; align-items:center; padding:4px 8px; border-radius:4px;
+    transition:background-color 0.2s;
   }
-  .dropdown-menu.show{display:block}
-  .dropdown-item{
-    display:block;padding:10px 16px;color:var(--text);text-decoration:none;
-    font-weight:600;transition:background-color 0.2s;
+  .account:hover { background-color:#f5f5f5 }
+  .caret { margin-left:4px; color:var(--muted) }
+  
+  .dropdown-menu {
+    position:absolute; top:100%; right:0; background:#fff; border:1px solid var(--border);
+    border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    min-width:120px; z-index:1000; display:none;
   }
-  .dropdown-item:hover{background-color:#f5f5f5;text-decoration:none}
-
-  /* Sidebar & layout */
-  .sidebar{
-    background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;
-    height:calc(100vh - 96px);
+  .dropdown-menu.show { display:block }
+  .dropdown-item {
+    display:block; padding:10px 16px; color:var(--text); text-decoration:none;
+    font-weight:600; transition:background-color 0.2s;
   }
-  .nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-  .nav-item{
-    width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
-    background:#fff;color:var(--text);font-weight:600;cursor:pointer;text-decoration:none;
+  .dropdown-item:hover { background-color:#f5f5f5; text-decoration:none }
+  
+  /* ======================
+     Sidebar & layout
+     ====================== */
+  .sidebar {
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+    padding:12px; height:calc(100vh - 96px);
   }
-  .nav-item.active,[aria-current="page"].nav-item{background:var(--primary);color:#fff;border-color:var(--primary)}
-
-  .main{padding-right:16px}
-  .panel{
-    background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
-    padding:18px 18px 22px;
+  .nav { display:flex; flex-direction:column; gap:10px; margin-top:6px }
+  .nav-item {
+    width:100%; text-align:left; padding:12px 14px; border-radius:12px;
+    border:1px solid var(--border); background:#fff; color:var(--text);
+    font-weight:600; cursor:pointer; text-decoration:none;
   }
-  h1{font-size:28px;margin:0 0 14px 0}
-
-  /* Buttons */
-  .btn{
-    height:36px;padding:0 16px;border-radius:10px;border:1px solid var(--border);
-    background:#fff;color:var(--text);font-weight:600;cursor:pointer;font-size:14px;
+  .nav-item.active,[aria-current="page"].nav-item {
+    background:var(--primary); color:#fff; border-color:var(--primary);
+  }
+  
+  .main { padding-right:16px }
+  .panel {
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px 18px 22px;
+  }
+  h1 { font-size:28px; margin:0 0 14px 0 }
+  
+  /* ======================
+     Buttons
+     ====================== */
+  .btn {
+    height:36px; padding:0 16px; border-radius:10px; border:1px solid var(--border);
+    background:#fff; color:var(--text); font-weight:600; cursor:pointer; font-size:14px;
     transition:all 0.2s ease;
   }
-  .btn:hover{background:#f8fafc;border-color:#cbd5e1}
-  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-  .btn.primary:hover{background:#1e293b;border-color:#1e293b}
-
-  /* ===== Upload page ===== */
-  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px}
-  .card h3{margin:0 0 8px 0}
-  .card-footer{display:flex;justify-content:flex-end;margin-top:12px}
-
-  .label{font-size:12px;color:var(--muted);margin:0 0 6px 2px}
-  .date{height:36px;width:100%;border:1px solid var(--border);border-radius:10px;padding:0 12px;font-weight:600}
-
-  .drop{
-    border:2px dashed #dbe3f0;border-radius:12px;min-height:140px;
-    display:grid;place-items:center;text-align:center;color:#9aa3b2;background:#fafcff;
-    cursor:pointer;transition:.15s;padding:8px
-  }
-  .drop.dragging{background:#f3f7ff;border-color:#c5d7ff}
-  .drop .helper{font-size:12px;color:#9aa3b2;margin-top:4px}
-  .drop .drop-title{font-weight:600}
-
-  .valid{margin-top:16px;border:1px solid var(--border);border-radius:12px;padding:12px}
-  .valid .line{padding:6px 2px}
-
-  /* Toast & modal (common for upload/other pages) */
-  .toast{
-    position:fixed;right:16px;bottom:16px;background:#0F172A;color:#fff;
-    padding:10px 12px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.2);
-    opacity:0;transform:translateY(6px);transition:.2s;z-index:10000;font-weight:700
-  }
-  .toast.show{opacity:1;transform:none}
-  .toast.error{background:#b91c1c}
-
-  .ui-modal{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;place-items:center;padding:16px;z-index:9999}
-  .ui-modal.show{display:grid}
-  .ui-modal .modal-card{
-    max-width:820px;width:100%;background:#fff;border:1px solid var(--border);
-    border-radius:16px;box-shadow:0 20px 60px rgba(2,6,23,.15);overflow:hidden
-  }
-  .ui-modal .modal-head{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:12px 16px;border-bottom:1px solid var(--border)
-  }
-  .ui-modal .modal-body{padding:16px}
-  .ui-modal .progress{height:10px;background:#EEF2F7;border-radius:999px;overflow:hidden}
-  .ui-modal .progress span{display:block;height:100%;width:0%;background:#2563eb}
-
-  /* ===== Task Management ===== */
-  .tm-shell{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
-  .tm-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 18px 26px}
-
-  /* Header with title and button */
-  .tm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-  .tm-header h1{margin:0;font-size:28px;font-weight:800;color:var(--text)}
-
-  /* Task sections container */
-  .tm-sections{display:flex;flex-direction:column;gap:16px}
-
-  /* Individual task section */
-  .tm-task-section{border:1px solid var(--border);border-radius:14px;background:#fff;overflow:hidden}
-  .tm-task-header{background:#f8fafc;border-bottom:1px solid var(--border);padding:16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background-color 0.2s}
-  .tm-task-header:hover{background:#f1f5f9}
-  .tm-task-title{font-weight:800;color:var(--text);font-size:16px}
-  .tm-task-status{display:inline-flex;align-items:center;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:600;margin-left:8px}
-  .tm-task-status.draft{background:#f3f4f6;color:#6b7280}
-  .tm-task-status.active{background:#ecfdf5;color:#065f46}
-  .tm-task-status.completed{background:#e0e7ff;color:#3730a3}
-  .tm-task-status.archived{background:#f3f4f6;color:#374151}
-  .tm-status-dropdown{position:relative;margin-left:8px}
-  .tm-status-toggle{background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:800}
-  .tm-status-menu{position:fixed;top:0;left:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);display:none;min-width:140px;z-index:10000}
-  .tm-status-menu.show{display:block}
-  .tm-status-item{padding:8px 10px;cursor:pointer;font-weight:600}
-  .tm-status-item:hover{background:#f8fafc}
-  .tm-delete-btn{background:transparent;border:none;color:#dc2626;cursor:pointer;padding:4px;margin-left:8px;border-radius:4px;transition:background-color 0.2s}
-  .tm-delete-btn:hover{background:#fef2f2}
-  .tm-task-chevron{color:#6b7280;cursor:pointer;transition:transform 0.2s}
-  .tm-task-chevron.expanded{transform:rotate(180deg)}
+  .btn:hover { background:#f8fafc; border-color:#cbd5e1 }
+  .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary) }
+  .btn.primary:hover { background:#1e293b; border-color:#1e293b }
   
-  /* Delete confirmation modal */
-  .tm-delete-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px}
-  .tm-delete-dialog{background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:500px;width:100%;overflow:hidden}
-  .tm-delete-header{padding:20px 24px 0;border-bottom:1px solid var(--border)}
-  .tm-delete-header h3{margin:0;font-size:18px;font-weight:800;color:var(--text)}
-  .tm-delete-body{padding:20px 24px;color:var(--text)}
-  .tm-delete-body p{margin:0 0 12px 0;line-height:1.5}
-  .tm-delete-body ul{margin:8px 0;padding-left:20px}
-  .tm-delete-body li{margin:4px 0}
-  .tm-delete-footer{padding:16px 24px 20px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid var(--border)}
-  .tm-cancel-btn{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
-  .tm-cancel-btn:hover{background:#e5e7eb}
-  .tm-confirm-delete-btn{background:#dc2626;color:#fff;border:1px solid #dc2626}
-  .tm-confirm-delete-btn:hover{background:#b91c1c}
-
-  /* Task content (collapsible) */
-  .tm-task-content{padding:16px;display:none}
-  .tm-task-content.expanded{display:block}
-
-  /* Assignment items */
-  .tm-assignment-item{border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff}
-  .tm-assignment-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:pointer;transition:background-color 0.2s;padding:4px;border-radius:8px}
-  .tm-assignment-header:hover{background:#f8fafc}
-  .tm-assignment-title{font-weight:700;color:var(--text);font-size:15px}
-  .tm-assignment-status{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;margin-left:8px}
+  /* ======================
+     Task Management
+     ====================== */
+  .tm-shell { display:grid; grid-template-columns:280px 1fr; gap:16px; padding:16px }
+  .tm-panel {
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px 18px 26px;
+  }
+  
+  /* Header */
+  .tm-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:20px;
+  }
+  .tm-header h1 { margin:0; font-size:28px; font-weight:800; color:var(--text) }
+  
+  /* Task sections */
+  .tm-sections { display:flex; flex-direction:column; gap:16px }
+  .tm-task-section {
+    border:1px solid var(--border); border-radius:14px; background:#fff; overflow:hidden;
+  }
+  
+  /* ======================
+     Task Header (关键修改)
+     ====================== */
+  .tm-task-header {
+    background:#f8fafc; border-bottom:1px solid var(--border); padding:16px;
+    display:flex; align-items:center; justify-content:flex-start; gap:8px;
+    cursor:pointer; transition:background-color 0.2s;
+  }
+  .tm-task-header:hover { background:#f1f5f9 }
+  
+  /* 左侧标题区域占满中间空间 */
+  .tm-task-header > :first-child {
+    flex:1 1 auto;
+    min-width:0;
+  }
+  
+  .tm-task-title { font-weight:800; color:var(--text); font-size:16px }
+  .tm-task-status {
+    display:inline-flex; align-items:center; padding:3px 8px; border-radius:12px;
+    font-size:10px; font-weight:600; margin-left:8px; text-transform:uppercase;
+    letter-spacing:0.3px; box-shadow:0 1px 2px rgba(0,0,0,0.08);
+  }
+  .tm-task-status.draft{background:#f8f9fa;color:#6c757d;border:1px solid #e9ecef}
+  .tm-task-status.active{background:#e8f5e8;color:#28a745;border:1px solid #c3e6c3}
+  .tm-task-status.completed{background:#e3f2fd;color:#1976d2;border:1px solid #bbdefb}
+  .tm-task-status.archived{background:#f5f5f5;color:#757575;border:1px solid #e0e0e0}
+  
+  /* ======================
+     Status Dropdown
+     ====================== */
+  .tm-status-dropdown { position:relative; margin-left:8px }
+  .tm-status-toggle {
+    background:transparent; border:none; color:#6b7280; cursor:pointer; font-weight:800;
+    padding:2px 4px; border-radius:4px; transition:background-color 0.2s;
+  }
+  .tm-status-toggle:hover { background:#f3f4f6 }
+  .tm-status-menu {
+    position:fixed; top:0; left:0; background:#fff; border:1px solid var(--border);
+    border-radius:8px; box-shadow:var(--shadow); display:none; min-width:140px; z-index:10000;
+  }
+  .tm-status-menu.show { display:block }
+  .tm-status-item {
+    padding:8px 10px; cursor:pointer; font-weight:600; transition:background-color 0.2s;
+  }
+  .tm-status-item:hover { background:#f8fafc }
+  
+  /* ======================
+     Delete icon & Chevron
+     ====================== */
+  .tm-task-header .tm-delete-btn {
+    order:2; margin-left:auto; margin-right:0;
+    background:transparent; border:none; color:#dc2626; cursor:pointer;
+    padding:6px; border-radius:50%; transition:all .2s ease;
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 4px rgba(220,38,38,.1);
+  }
+  .tm-task-header .tm-delete-btn:hover {
+    background:linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%);
+    transform:scale(1.1); box-shadow:0 4px 8px rgba(220,38,38,.2);
+  }
+  
+  .tm-task-header .tm-task-chevron {
+    order:3; margin-left:6px;
+    color:#6b7280; cursor:pointer; transition:transform .2s;
+  }
+  .tm-task-header .tm-task-chevron.expanded { transform:rotate(180deg) }
+  
+  .tm-task-header button, .tm-task-header svg { vertical-align:middle }
+  
+  /* ======================
+     Delete confirmation modal
+     ====================== */
+  .tm-delete-modal {
+    position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    display:flex; align-items:center; justify-content:center;
+    z-index:10000; padding:16px;
+  }
+  .tm-delete-dialog {
+    background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+    max-width:500px; width:100%; overflow:hidden;
+  }
+  .tm-delete-header {
+    padding:20px 24px 0; border-bottom:1px solid var(--border);
+  }
+  .tm-delete-header h3 {
+    margin:0; font-size:18px; font-weight:800; color:var(--text);
+  }
+  .tm-delete-body {
+    padding:20px 24px; color:var(--text);
+  }
+  .tm-delete-body p { margin:0 0 12px 0; line-height:1.5 }
+  .tm-delete-body ul { margin:8px 0; padding-left:20px }
+  .tm-delete-body li { margin:4px 0 }
+  .tm-delete-footer {
+    padding:16px 24px 20px; display:flex; gap:12px;
+    justify-content:flex-end; border-top:1px solid var(--border);
+  }
+  .tm-cancel-btn {
+    background:#f3f4f6; color:#374151; border:1px solid #d1d5db;
+    border-radius:10px; padding:8px 14px; font-weight:600; cursor:pointer;
+    transition:background-color 0.2s ease;
+  }
+  .tm-cancel-btn:hover { background:#e5e7eb }
+  .tm-confirm-delete-btn {
+    background:#dc2626; color:#fff; border:1px solid #dc2626;
+    border-radius:10px; padding:8px 14px; font-weight:600; cursor:pointer;
+    transition:background-color 0.2s ease;
+  }
+  .tm-confirm-delete-btn:hover { background:#b91c1c }
+  
+  /* ======================
+     Task Content
+     ====================== */
+  .tm-task-content { padding:16px; display:none }
+  .tm-task-content.expanded { display:block }
+  
+  /* ======================
+     Assignment Items
+     ====================== */
+  .tm-assignment-item {
+    border:1px solid var(--border); border-radius:12px;
+    padding:16px; margin-bottom:12px; background:#fff;
+  }
+  .tm-assignment-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px; cursor:pointer; transition:background-color 0.2s;
+    padding:4px; border-radius:8px;
+  }
+  .tm-assignment-header:hover { background:#f8fafc }
+  .tm-assignment-title { font-weight:700; color:var(--text); font-size:15px }
+  .tm-assignment-status {
+    display:inline-flex; align-items:center; padding:2px 6px;
+    border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;
+  }
   .tm-assignment-status.unpublished{background:#fef3c7;color:#92400e}
   .tm-assignment-status.published{background:#d1fae5;color:#065f46}
-  .tm-assignment-chevron{color:#9ca3af;cursor:pointer;transition:transform 0.2s}
-  .tm-assignment-chevron.expanded{transform:rotate(180deg)}
-
-  /* Assignment actions (collapsible) */
-  .tm-assignment-actions{display:none;gap:8px;flex-wrap:wrap}
-  .tm-assignment-actions.expanded{display:flex}
-
-  /* Rubric section */
-  .tm-rubric-section{border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff}
-  .tm-rubric-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:pointer;transition:background-color 0.2s;padding:4px;border-radius:8px}
-  .tm-rubric-header:hover{background:#f8fafc}
-  .tm-rubric-title{font-weight:700;color:var(--text);font-size:15px}
-  .tm-rubric-chevron{color:#9ca3af;cursor:pointer;transition:transform 0.2s}
-  .tm-rubric-chevron.expanded{transform:rotate(180deg)}
-
-  /* Rubric actions (collapsible) */
-  .tm-rubric-actions{display:none;gap:8px;flex-wrap:wrap}
-  .tm-rubric-actions.expanded{display:flex}
-
-
-  /* Task modal (create assignment) */
-  .tm-modal{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;place-items:center;padding:16px;z-index:1000}
-  .tm-modal.show{display:grid}
-  .tm-dialog{width:min(920px,96vw);background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 30px 90px rgba(2,6,23,.20);overflow:hidden}
-  .tm-dialog-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
-  .tm-dialog-hd h3{margin:0;font-size:18px}
-  .tm-dialog-bd{padding:14px}
-  .tm-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .tm-card{border:1px solid var(--border);border-radius:12px;padding:12px}
-  .tm-card h4{margin:0 0 6px 0;font-size:16px}
-  .tm-label{font-size:12px;color:var(--muted);margin:10px 0 6px 2px}
-  .tm-input{height:36px;width:100%;border:1px solid var(--border);border-radius:10px;padding:0 12px;background:#fff;color:var(--text);font-weight:600}
-  .tm-input[type="date"]{position:relative;cursor:pointer}
-  .tm-input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;opacity:0.7}
-  .tm-input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
-  .tm-drop{border:2px dashed #dbe3f0;border-radius:12px;min-height:140px;display:grid;place-items:center;text-align:center;color:#9aa3b2;background:#fafcff;cursor:pointer;transition:.15s}
-  .tm-drop.drag{background:#f3f7ff;border-color:#c5d7ff}
-  .tm-drop .tm-help{font-size:12px;color:#9aa3b2;margin-top:4px}
-  .tm-dialog-ft{padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:center}
-  .tm-err{color:#dc2626;font-weight:600;margin-left:8px}
-  .tm-muted{color:var(--muted)}
-
-  .pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-weight:700;border:1px solid transparent}
-  .pill.active{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-  .pill.pending{background:#fffbeb;border-color:#fde68a;color:#92400e}
-  .pill.expired{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-  .pill.close{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
-
-  /* Responsive */
+  .tm-assignment-chevron { color:#9ca3af; cursor:pointer; transition:transform 0.2s }
+  .tm-assignment-chevron.expanded { transform:rotate(180deg) }
+  
+  /* ======================
+     Rubric Section
+     ====================== */
+  .tm-rubric-section {
+    border:1px solid var(--border); border-radius:12px;
+    padding:16px; margin-bottom:12px; background:#fff;
+  }
+  .tm-rubric-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px; cursor:pointer; transition:background-color 0.2s;
+    padding:4px; border-radius:8px;
+  }
+  .tm-rubric-header:hover { background:#f8fafc }
+  .tm-rubric-title { font-weight:700; color:var(--text); font-size:15px }
+  .tm-rubric-chevron { color:#9ca3af; cursor:pointer; transition:transform 0.2s }
+  .tm-rubric-chevron.expanded { transform:rotate(180deg) }
+  
+  /* ======================
+     Responsive
+     ====================== */
   @media (max-width:1100px){
     .sidebar{height:auto}
     .tm-shell{grid-template-columns:1fr;gap:12px;padding:12px}
     .tm-header{flex-direction:column;align-items:stretch;gap:12px}
     .tm-header h1{font-size:24px}
     .tm-task-header{padding:12px}
-    .tm-assignment-actions, .tm-rubric-actions{gap:6px}
     .btn{font-size:13px;padding:0 12px;height:32px}
   }
-
   @media (max-width:768px){
     .tm-shell{padding:8px}
     .tm-panel{padding:14px}
     .tm-header h1{font-size:20px}
-    .tm-task-title, .tm-assignment-title, .tm-rubric-title{font-size:14px}
-    .tm-assignment-actions{flex-direction:column}
-    .tm-rubric-actions{flex-direction:column}
+    .tm-task-title,.tm-assignment-title,.tm-rubric-title{font-size:14px}
   }
+  

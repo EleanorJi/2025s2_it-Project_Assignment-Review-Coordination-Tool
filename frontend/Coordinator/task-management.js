@@ -401,7 +401,6 @@
     titleContainer.appendChild(title);
     titleContainer.appendChild(status);
     titleContainer.appendChild(statusWrap);
-    titleContainer.appendChild(deleteBtn);
 
     const chevron = document.createElement('div');
     chevron.className = 'tm-task-chevron';
@@ -411,6 +410,7 @@
     header.addEventListener('click', () => toggleTaskSection(section));
 
     header.appendChild(titleContainer);
+    header.appendChild(deleteBtn);
     header.appendChild(chevron);
 
     // Task content

@@ -185,11 +185,11 @@
   .tm-err{color:#dc2626;font-weight:600;margin-left:8px}
   .tm-muted{color:var(--muted)}
 
-  .pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-weight:700;border:1px solid transparent}
-  .pill.active{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-  .pill.pending{background:#fffbeb;border-color:#fde68a;color:#92400e}
-  .pill.expired{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-  .pill.close{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
+  .pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:12px;font-weight:600;border:1px solid transparent;font-size:10px;text-transform:uppercase;letter-spacing:0.3px}
+  .pill.active{background:#e8f5e8;border-color:#c3e6c3;color:#28a745}
+  .pill.pending{background:#fff3cd;border-color:#ffeaa7;color:#856404}
+  .pill.expired{background:#f8d7da;border-color:#f5c6cb;color:#721c24}
+  .pill.close{background:#f5f5f5;border-color:#e0e0e0;color:#757575}
 
   /* Responsive */
   @media (max-width:1100px){
