@@ -924,7 +924,17 @@
           }
       });
 
-      $('#pm-form', projectModal).addEventListener('submit', onCreateProjectSubmit);
+      $('#pm-form', projectModal).addEventListener('submit', (e) => {
+          console.log('Create Task form submitted');
+          onCreateProjectSubmit(e);
+      });
+      
+      // Also bind click event to the Create Task button as backup
+      $('#pm-create', projectModal).addEventListener('click', (e) => {
+          console.log('Create Task button clicked directly');
+          e.preventDefault();
+          onCreateProjectSubmit(e);
+      });
   }
 
   function openProjectModal() {
@@ -950,11 +960,21 @@
   }
 
   async function onCreateProjectSubmit(e) {
+      console.log('onCreateProjectSubmit called');
       e.preventDefault();
       const name = (projectInput.value || '').trim();
       const description = (descriptionInput.value || '').trim();
 
+      console.log('Project name:', name, 'Description:', description);
+
+      if (!name) {
+          console.log('No project name provided');
+          setProjectMsg('Please enter a project name');
+          return;
+      }
+
       try {
+          console.log('Creating project...');
           setProjectMsg('Creating…', true);
           const res = await fetch(API.createProject, {
               method: 'POST',
@@ -964,7 +984,10 @@
                   description: description
               }),
           });
+          console.log('Response status:', res.status);
           const data = await res.json();
+          console.log('Response data:', data);
+          
           if (!res.ok) throw new Error(data.error || 'Create failed');
 
           setProjectMsg('Created', true);
@@ -974,6 +997,7 @@
               fetchProjects(); // Refresh project list
           }, 250);
       } catch (err) {
+          console.error('Error creating project:', err);
           setProjectMsg(err.message || 'Create failed');
       }
   }
@@ -1090,7 +1114,14 @@
   // 将 Add New Assignment 按钮改为打开项目创建弹窗
   const btnAdd = $('#btnAdd');
   if (btnAdd) {
-      btnAdd.addEventListener('click', openProjectModal);
+      console.log('Add New Task button found, binding event listener');
+      btnAdd.addEventListener('click', (e) => {
+          console.log('Add New Task button clicked');
+          e.preventDefault();
+          openProjectModal();
+      });
+  } else {
+      console.error('Add New Task button not found!');
   }
 
   // ---------- Date Processing Functions ----------

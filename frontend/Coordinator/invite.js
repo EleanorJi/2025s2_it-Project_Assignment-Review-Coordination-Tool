@@ -203,7 +203,7 @@
   // Update data overview statistics
   function updateDataOverview(items) {
     const stats = {
-      total: items.length,
+      total: 0, // Total registered markers (only active ones)
       active: 0,
       pending: 0,
       closed: 0
@@ -215,6 +215,7 @@
         case 'active':
         case 'accepted':
           stats.active++;
+          stats.total++; // Only count active markers as total
           break;
         case 'pending':
           stats.pending++;
@@ -231,6 +232,31 @@
     if (activeMarkersEl) activeMarkersEl.textContent = stats.active;
     if (pendingMarkersEl) pendingMarkersEl.textContent = stats.pending;
     if (closedMarkersEl) closedMarkersEl.textContent = stats.closed;
+    
+    // Fetch total markers from coordinator dashboard API to get accurate count
+    fetchTotalMarkersFromDashboard();
+  }
+
+  // Fetch total markers count from coordinator dashboard API
+  async function fetchTotalMarkersFromDashboard() {
+    try {
+      const response = await fetch('/dashboard/api/coordinator/data', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.kpi && data.kpi.totalMarkers !== undefined) {
+          // Update total markers with accurate count from database
+          if (totalMarkersEl) {
+            totalMarkersEl.textContent = data.kpi.totalMarkers;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch total markers from dashboard:', error);
+      // Keep the current count if API call fails
+    }
   }
 
   function renderTable(items){
