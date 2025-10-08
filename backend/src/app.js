@@ -40,10 +40,6 @@ app.use(cookieParser());
 
 app.use('/static', express.static(path.join(__dirname, '../../uploads')));
 
-// === Feedback routes ===
-const feedbackRoutes = require('./routes/feedback1');
-app.use('/api/feedback', feedbackRoutes);
-
 // Routes
 app.use('/api', apiRoutes);
 app.use('/', pageRoutes);
