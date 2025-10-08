@@ -743,10 +743,11 @@ body {
   .tm-rubric-actions {
     display:none; margin-top:12px;
     padding-top:12px; border-top:1px solid var(--border);
+    gap:12px; flex-wrap:wrap;
   }
   .tm-assignment-actions.expanded,
   .tm-rubric-actions.expanded {
-    display:block;
+    display:flex;
   }
   
   /* ======================
