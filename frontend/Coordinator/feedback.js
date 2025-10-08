@@ -4,6 +4,68 @@ let markerKeys = [];
 let markersInfo = [];
 let rubricDescriptions = {}; // 新增：保存 rubric description
 
+/* ===== 辅助函数 ===== */
+// 获取当前assignment ID
+function getCurrentAssignmentId() {
+  // 从URL参数获取assignment ID
+  const urlParams = new URLSearchParams(window.location.search);
+  const assignmentId = urlParams.get('assignment_id');
+  
+  if (assignmentId) {
+    return parseInt(assignmentId);
+  }
+  
+  // 或者从全局变量获取
+  if (window.currentAssignmentId) {
+    return window.currentAssignmentId;
+  }
+  
+  // 或者从localStorage获取
+  const stored = localStorage.getItem('currentAssignmentId');
+  if (stored) {
+    return parseInt(stored);
+  }
+  
+  return null;
+}
+
+// 调试函数：显示当前状态
+function debugCurrentState() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const projectId = urlParams.get('project');
+  const assignmentKey = urlParams.get('assignment');
+  const assignmentId = getCurrentAssignmentId();
+  
+  console.log('🔍 Debug - Current State:');
+  console.log('  Project ID:', projectId);
+  console.log('  Assignment Key:', assignmentKey);
+  console.log('  Assignment ID:', assignmentId);
+  console.log('  Window currentAssignmentId:', window.currentAssignmentId);
+  console.log('  LocalStorage currentAssignmentId:', localStorage.getItem('currentAssignmentId'));
+}
+
+
+// 获取当前用户ID
+function getCurrentUserId() {
+  // 从localStorage获取用户信息
+  const userInfo = localStorage.getItem('userInfo');
+  if (userInfo) {
+    try {
+      const user = JSON.parse(userInfo);
+      return user.user_id || user.id;
+    } catch (e) {
+      console.error('Error parsing user info:', e);
+    }
+  }
+  
+  // 或者从全局变量获取
+  if (window.currentUserId) {
+    return window.currentUserId;
+  }
+  
+  return null;
+}
+
 // DOM 元素
 const alignBody   = document.querySelector('#alignmentTable tbody');
 const alignHeader = document.getElementById('alignHeader');
@@ -57,8 +119,13 @@ async function loadModerationReport(assignmentId) {
 
     rows = data.criteria.map(c => {
       const markersObj = {};
+      const markerCommentsObj = {}; // 添加marker comments存储
       (c.marker_scores || []).forEach(ms => {
         markersObj[ms.marker_id] = ms.score;
+        // 存储marker的comment
+        if (ms.comment) {
+          markerCommentsObj[ms.marker_id] = ms.comment;
+        }
       });
       return {
         criterion: `${c.title} / ${c.max_score}`,
@@ -68,6 +135,7 @@ async function loadModerationReport(assignmentId) {
         upper: c.range_upper,
         percent: c.baseline_percentage,
         markers: markersObj,
+        markerComments: markerCommentsObj, // 添加marker comments
         description: rubricDescriptions[c.title] || "",
         total: null
       };
@@ -86,6 +154,7 @@ async function loadModerationReport(assignmentId) {
       upper: totals.range_upper,
       percent: totals.baseline_percentage,
       markers: totalMarkersObj,
+      markerComments: {}, // 总分行没有comments
       description: "",
       total: null
     });
@@ -112,6 +181,7 @@ function renderAlignment(selected='all'){
     headers.push(m ? m.name : `Marker ${selected}`);
   }
   headers.push('Total');
+  headers.push('Comment'); // 添加Comment列
   alignHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
   alignBody.innerHTML='';
@@ -134,6 +204,26 @@ function renderAlignment(selected='all'){
       else tds.push(`<td class="${isOut(v,r.lower,r.upper)?'bad-cell':''}">${fmt(v)}</td>`);
     }
     tds.push(`<td>${r.total==null?'<span class="muted">—</span>':fmt(r.total)}</td>`);
+    
+    // 添加Comment列 - 显示该criteria的comment
+    let comment = '';
+    if (selected === 'all') {
+      // 对于"All Markers"视图，显示所有markers的comments汇总
+      const allComments = [];
+      markerKeys.forEach(id => {
+        const markerComment = r.markerComments?.[id];
+        if (markerComment && markerComment.trim() !== '') {
+          const markerName = markersInfo.find(mi => mi.id === id)?.name || `Marker ${id}`;
+          allComments.push(`${markerName}: ${markerComment}`);
+        }
+      });
+      comment = allComments.join(' | ');
+    } else {
+      // 对于单个marker视图，显示该marker的comment
+      comment = r.markerComments?.[selected] || '';
+    }
+    tds.push(`<td style="text-align:left;max-width:200px;word-wrap:break-word;">${comment ? escapeHtml(comment) : '<span class="muted">—</span>'}</td>`);
+    
     const tr=document.createElement('tr'); tr.innerHTML=tds.join(''); alignBody.appendChild(tr);
   });
 }
@@ -181,6 +271,7 @@ function renderDifferences(selected='all'){
       const v = r.markers?.[selected];
       const d = (v!=null && r.percent!=null) ? Number((v - r.percent).toFixed(2)) : null;
       const out = (v!=null) && isOut(v, r.lower, r.upper);
+      
       const cells = [
         `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
         `<td>${fmt(r.percent)}</td>`,
@@ -234,6 +325,14 @@ function updateMarkerSelectors(){
       return;
     }
 
+    // 将assignment ID存储到全局变量和localStorage中，供feedback功能使用
+    window.currentAssignmentId = assignmentId;
+    localStorage.setItem('currentAssignmentId', assignmentId.toString());
+    console.log(`✅ Assignment ID stored: ${assignmentId}`);
+
+    // 调试当前状态
+    debugCurrentState();
+
     loadModerationReport(assignmentId);
   } catch (err) {
     console.error("初始化失败:", err);
@@ -260,12 +359,14 @@ document.getElementById('markerSelect').addEventListener('change', e => {
   currentMarkerId = selected !== 'all' ? selected : null;
 
   if (currentMarkerId) {
+    console.log(`✅ Marker selected: ${currentMarkerId}`);
     document.getElementById('feedback').classList.remove('hidden');
     document.getElementById('diffSection').classList.remove('hidden');
     document.getElementById('allDiffSection').classList.add('hidden');
     document.getElementById('allFeedback').classList.add('hidden');
     document.getElementById('fbTitle').textContent = `Feedback for Marker ${currentMarkerId}`;
   } else {
+    console.log('📋 Showing all markers view');
     document.getElementById('feedback').classList.add('hidden');
     document.getElementById('diffSection').classList.add('hidden');
     document.getElementById('allDiffSection').classList.remove('hidden');
@@ -283,15 +384,43 @@ fbSend.addEventListener('click', async () => {
   fbHint.textContent = 'Sending...';
 
   try {
-    // ⚡ 这里你可以替换成真实后端 API，例如:
-    // await fetch(`/api/feedback/${currentMarkerId}`, { method: 'POST', body: JSON.stringify({ content }), headers: {'Content-Type':'application/json'} });
-    console.log(`✅ Feedback sent for Marker ${currentMarkerId}:`, content);
+    // 获取当前assignment ID (从URL或全局变量)
+    const assignmentId = getCurrentAssignmentId();
+    if (!assignmentId) {
+      throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
+    }
+
+    // 发送feedback到后端API
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        assignment_id: assignmentId,
+        marker_id: currentMarkerId,
+        content: content,
+        title: `Feedback for Marker ${currentMarkerId}`,
+        created_by: getCurrentUserId() // 假设你有这个函数获取当前用户ID
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send feedback');
+    }
+
+    const result = await response.json();
+    console.log(`✅ Feedback sent successfully:`, result);
 
     fbHint.textContent = '✅ Feedback sent successfully!';
+    fbTextarea.value = ''; // 清空输入框
     setTimeout(() => (fbHint.textContent = ''), 3000);
   } catch (err) {
     console.error('❌ Failed to send feedback:', err);
-    fbHint.textContent = '❌ Failed to send feedback';
+    console.log('🔍 Debug info:');
+    debugCurrentState();
+    fbHint.textContent = `❌ Failed to send feedback: ${err.message}`;
   } finally {
     fbSend.disabled = false;
   }
@@ -313,15 +442,43 @@ allFbSend.addEventListener('click', async () => {
   allFbHint.textContent = 'Sending...';
 
   try {
-    // ⚡ 同样，这里替换为你后端的实际接口
-    // await fetch(`/api/feedback/${markerId}`, { method: 'POST', body: JSON.stringify({ content }), headers: {'Content-Type':'application/json'} });
-    console.log(`✅ Feedback sent for Marker ${markerId}:`, content);
+    // 获取当前assignment ID
+    const assignmentId = getCurrentAssignmentId();
+    if (!assignmentId) {
+      throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
+    }
+
+    // 发送feedback到后端API
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        assignment_id: assignmentId,
+        marker_id: markerId,
+        content: content,
+        title: `Feedback for Marker ${markerId}`,
+        created_by: getCurrentUserId()
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send feedback');
+    }
+
+    const result = await response.json();
+    console.log(`✅ Feedback sent successfully:`, result);
 
     allFbHint.textContent = '✅ Feedback sent successfully!';
+    allFbTextarea.value = ''; // 清空输入框
     setTimeout(() => (allFbHint.textContent = ''), 3000);
   } catch (err) {
     console.error('❌ Failed to send feedback:', err);
-    allFbHint.textContent = '❌ Failed to send feedback';
+    console.log('🔍 Debug info:');
+    debugCurrentState();
+    allFbHint.textContent = `❌ Failed to send feedback: ${err.message}`;
   } finally {
     allFbSend.disabled = false;
   }
