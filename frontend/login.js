@@ -137,23 +137,4 @@
 
   // Run the check on page load
   checkAlreadyLoggedIn();
-
-  // Password toggle functionality
-  const passwordToggle = document.getElementById('passwordToggle');
-  const passwordInput = document.getElementById('password');
-  const eyeIcon = document.querySelector('.eye-icon');
-
-  if (passwordToggle && passwordInput && eyeIcon) {
-    passwordToggle.addEventListener('click', function() {
-      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-      passwordInput.setAttribute('type', type);
-      
-      // Toggle eye icon state
-      if (type === 'text') {
-        eyeIcon.classList.add('eye-open');
-      } else {
-        eyeIcon.classList.remove('eye-open');
-      }
-    });
-  }
 })();

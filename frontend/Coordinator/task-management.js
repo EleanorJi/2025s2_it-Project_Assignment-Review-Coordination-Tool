@@ -374,20 +374,13 @@
     // no Draft option
     toggleBtn.addEventListener('click', (e)=>{ 
       e.stopPropagation(); 
-      const rect = toggleBtn.getBoundingClientRect();
-      menu.style.top = `${Math.round(rect.bottom + window.scrollY + 4)}px`;
-      menu.style.left = `${Math.round(rect.left + window.scrollX)}px`;
       menu.classList.toggle('show');
       console.log('Menu toggled, show class:', menu.classList.contains('show'));
-      console.log('Menu position:', menu.style.top, menu.style.left);
     });
     document.addEventListener('click', ()=> menu.classList.remove('show'));
 
     statusWrap.appendChild(toggleBtn);
     statusWrap.appendChild(menu);
-    
-    // Ensure menu is attached to document body for proper positioning
-    document.body.appendChild(menu);
 
     // Add delete button
     const deleteBtn = document.createElement('button');
