@@ -40,8 +40,23 @@
   <main class="main">
     <section class="tm-panel">
       <div class="tm-header">
-        <h1>Task Management</h1>
-        <button id="btnAdd" class="btn primary">Add New Task</button>
+        <div class="tm-header-content">
+          <h1>Task Management</h1>
+          <p class="tm-header-subtitle">Manage assignments, rubrics, and marking tasks</p>
+          <div class="tm-header-stats" id="headerStats" style="display:none;">
+            <div class="tm-stat">
+              <span class="tm-stat-value" id="statTotal">0</span>
+              <span class="tm-stat-label">Total Tasks</span>
+            </div>
+            <div class="tm-stat">
+              <span class="tm-stat-value" id="statActive">0</span>
+              <span class="tm-stat-label">Active</span>
+            </div>
+          </div>
+        </div>
+        <button id="btnAdd" class="btn primary">
+          <span>Add New Task</span>
+        </button>
       </div>
 
       <!-- Task Sections Container -->

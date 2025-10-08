@@ -23,7 +23,12 @@
 
         <div class="row">
           <label for="password">Password</label>
-          <input id="password" type="password" class="input" placeholder="At least 8 characters" autocomplete="current-password" />
+          <div class="password-container">
+            <input id="password" type="password" class="input password-input" placeholder="At least 8 characters" autocomplete="current-password" />
+            <button type="button" class="password-toggle" id="passwordToggle">
+              <span class="eye-icon"></span>
+            </button>
+          </div>
           <div class="help">At least 8 characters</div>
         </div>
 

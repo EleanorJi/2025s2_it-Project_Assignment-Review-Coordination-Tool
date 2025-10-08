@@ -194,5 +194,98 @@ function initCommonNav() {
   // 在页面加载时初始化dropdown和logout功能
   document.addEventListener('DOMContentLoaded', () => {
     initDropdownAndLogout();
+    // Load dashboard data if on dashboard page
+    if (window.location.pathname.includes('/dashboard/coordinator') && !window.location.pathname.includes('/invite') && !window.location.pathname.includes('/taskManagement') && !window.location.pathname.includes('/feedback') && !window.location.pathname.includes('/past')) {
+      loadDashboardData();
+    }
   });
+
+  // Dashboard data loading function
+  async function loadDashboardData() {
+    try {
+      console.log('🔄 Loading coordinator dashboard data...');
+      const response = await fetch('/dashboard/api/coordinator/data', {
+        credentials: 'include'
+      });
+
+      console.log('📡 Response status:', response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
+        throw new Error(`Failed to fetch dashboard data: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Dashboard data loaded:', data);
+      
+      // Update KPI counters
+      document.getElementById('active-projects-count').textContent = data.kpi.activeProjects || 0;
+      document.getElementById('total-markers-count').textContent = data.kpi.totalMarkers || 0;
+      document.getElementById('pending-invitations-count').textContent = data.kpi.pendingInvitations || 0;
+      document.getElementById('completed-assignments-count').textContent = data.kpi.completedAssignments || 0;
+
+      // Update marker stats
+      document.getElementById('pending-invitations-stat').textContent = data.kpi.pendingInvitations || 0;
+      document.getElementById('active-markers-stat').textContent = (data.kpi.totalMarkers - data.kpi.pendingInvitations) || 0;
+
+      // Update recent assignments list
+      const recentAssignmentsList = document.getElementById('recent-assignments-list');
+      if (data.recentAssignments && data.recentAssignments.length > 0) {
+        recentAssignmentsList.innerHTML = data.recentAssignments.map(assignment => `
+          <div class="assignment-item">
+            <div class="assignment-meta">
+              <div class="assignment-title">${assignment.name}</div>
+              <div class="assignment-subtitle">${assignment.project_name} • Round ${assignment.round} • Due ${formatDate(assignment.due_at)}</div>
+            </div>
+            <div class="assignment-actions">
+              <span class="assignment-status ${assignment.is_published ? 'active' : 'draft'}">${getStatusText(assignment.is_published)}</span>
+              <button class="btn primary sm" onclick="window.location.href='/dashboard/coordinator/taskManagement'">Manage</button>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        recentAssignmentsList.innerHTML = '<div class="empty-state">No recent assignments</div>';
+      }
+
+      // Update outliers list
+      const outliersList = document.getElementById('outliers-list');
+      if (data.outliers && data.outliers.length > 0) {
+        outliersList.innerHTML = data.outliers.map(outlier => `
+          <div class="outlier-item">
+            <div class="outlier-title">${outlier.marker_name} • ${outlier.assignment_name}</div>
+            <div class="outlier-content">${outlier.criterion_name}: ${outlier.score}/${outlier.max_score}</div>
+            <div class="outlier-meta">
+              Deviation: <span class="outlier-deviation ${outlier.deviation_percent > 0 ? 'positive' : 'negative'}">
+                ${outlier.deviation_percent > 0 ? '+' : ''}${outlier.deviation_percent}%
+              </span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        outliersList.innerHTML = '<div class="empty-state">No outliers detected</div>';
+      }
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      
+      // Show error states
+      document.getElementById('recent-assignments-list').innerHTML = '<div class="empty-state">Error loading assignments</div>';
+      document.getElementById('outliers-list').innerHTML = '<div class="empty-state">Error loading data</div>';
+    }
+  }
+
+  // Helper functions
+  function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-AU', { 
+      day: 'numeric', 
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  function getStatusText(isPublished) {
+    return isPublished ? 'Published' : 'Draft';
+  }
 })();

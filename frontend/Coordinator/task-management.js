@@ -401,7 +401,6 @@
     titleContainer.appendChild(title);
     titleContainer.appendChild(status);
     titleContainer.appendChild(statusWrap);
-    titleContainer.appendChild(deleteBtn);
 
     const chevron = document.createElement('div');
     chevron.className = 'tm-task-chevron';
@@ -411,6 +410,7 @@
     header.addEventListener('click', () => toggleTaskSection(section));
 
     header.appendChild(titleContainer);
+    header.appendChild(deleteBtn);
     header.appendChild(chevron);
 
     // Task content
@@ -857,36 +857,60 @@
 
       projectModal = document.createElement('div');
       projectModal.id = 'project-modal';
-      projectModal.style.position = 'fixed';
-      projectModal.style.inset = '0';
-      projectModal.style.display = 'none';
-      projectModal.style.placeItems = 'center';
-      projectModal.style.background = 'rgba(15,23,42,.38)';
-      projectModal.style.padding = '16px';
-      projectModal.style.zIndex = '10000';
+      projectModal.className = 'tm-modal';
       projectModal.setAttribute('aria-hidden', 'true');
 
       projectModal.innerHTML = `
-          <div role="dialog" aria-modal="true" aria-labelledby="pm-title"
-              style="width:min(520px,92vw);background:#fff;border:1px solid #E6EAF2;border-radius:16px;box-shadow:0 6px 24px rgba(2,6,23,0.06);overflow:hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E6EAF2">
-              <h3 id="pm-title" style="margin:0;font-weight:800">Create New Project</h3>
-              <button id="pm-close" class="btn" style="background:transparent;border-color:transparent;color:#6B7280">✕</button>
-          </div>
-          <form id="pm-form" style="padding:14px;display:flex;flex-direction:column;gap:12px">
-              <label class="label" for="project-name">Project name</label>
-              <input id="project-name" class="input" placeholder="e.g., 2025 · Semester 1" autocomplete="off" />
-
-              <label class="label" for="project-description">Task description</label>
-              <textarea id="project-description" class="input" placeholder="Enter task description (optional)"
-                  style="height:80px;padding:10px;resize:vertical" autocomplete="off"></textarea>
-
-              <div style="display:flex;gap:10px;justify-content:flex-end">
-              <button type="button" class="btn" id="pm-cancel">Cancel</button>
-              <button type="submit" class="btn primary" id="pm-create">Create</button>
+          <div class="tm-dialog tm-project-dialog" role="dialog" aria-modal="true" aria-labelledby="pm-title">
+              <div class="tm-dialog-hd">
+                  <h3 id="pm-title">Add New Task</h3>
+                  <button id="pm-close" class="btn tm-close-btn" type="button">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                  </button>
               </div>
-              <div class="msg" id="pm-msg"></div>
-          </form>
+              
+              <form id="pm-form" class="tm-dialog-bd">
+                  <div class="tm-form-group">
+                      <label class="tm-label" for="project-name">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:text-bottom;margin-right:6px">
+                              <path d="M9 2L3 8V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V8L15 2H9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M9 2V8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          Task Name
+                      </label>
+                      <input id="project-name" class="tm-input tm-input-enhanced" type="text" 
+                             placeholder="e.g., HPS302 Assignment - Semester 1, 2025" 
+                             autocomplete="off" required />
+                  </div>
+
+                  <div class="tm-form-group">
+                      <label class="tm-label" for="project-description">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:text-bottom;margin-right:6px">
+                              <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          Task Description
+                          <span style="color:var(--muted);font-weight:500;font-size:11px;margin-left:6px">(Optional)</span>
+                      </label>
+                      <textarea id="project-description" class="tm-input tm-textarea-enhanced" 
+                                placeholder="Add a brief description of this task..." 
+                                autocomplete="off" rows="4"></textarea>
+                  </div>
+
+                  <div id="pm-msg" class="tm-form-msg"></div>
+              </form>
+              
+              <div class="tm-dialog-ft">
+                  <button type="button" class="btn tm-btn-cancel" id="pm-cancel">Cancel</button>
+                  <button type="submit" class="btn primary tm-btn-submit" id="pm-create">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right:6px">
+                          <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Create Task
+                  </button>
+              </div>
           </div>
       `;
       document.body.appendChild(projectModal);
@@ -902,7 +926,7 @@
           if (e.target === projectModal) closeProjectModal();
       });
       document.addEventListener('keydown', (e) => {
-          if (projectModal.style.display !== 'none' && e.key === 'Escape') {
+          if (projectModal.classList.contains('show') && e.key === 'Escape') {
               closeProjectModal();
           }
       });
@@ -916,15 +940,15 @@
       projectInput.value = '';
       descriptionInput.value = '';
       setProjectMsg('');
-      projectModal.style.display = 'grid';
+      projectModal.classList.add('show');
       projectModal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
-      setTimeout(() => projectInput.focus(), 0);
+      setTimeout(() => projectInput.focus(), 100);
   }
 
   function closeProjectModal() {
       if (!projectModal) return;
-      projectModal.style.display = 'none';
+      projectModal.classList.remove('show');
       projectModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
       if (lastFocusEl && typeof lastFocusEl.focus === 'function') {
@@ -964,7 +988,8 @@
   function setProjectMsg(text, ok) {
       if (!projectMsg) return;
       projectMsg.textContent = text || '';
-      projectMsg.className = 'msg' + (text ? (ok ? ' ok' : ' err') : '');
+      projectMsg.className = 'tm-form-msg' + (text ? (ok ? ' tm-msg-success' : ' tm-msg-error') : '');
+      projectMsg.style.display = text ? 'block' : 'none';
   }
 
   // ---------- toast ----------

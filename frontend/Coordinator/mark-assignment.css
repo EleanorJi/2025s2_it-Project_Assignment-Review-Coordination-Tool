@@ -7,8 +7,9 @@
   --primary: #0F172A;
   --warn: #F59E0B;
   --bad: #DC2626;
-  --radius: 4px;
-  --shadow: 0 2px 8px rgba(2,6,23,0.08);
+  --good: #16a34a;
+  --radius: 16px;
+  --shadow: 0 6px 24px rgba(2,6,23,0.06);
   --grade-high-distinction: #4caf50;  /* Green */
   --grade-distinction: #8bc34a;       /* Light green */
   --grade-credit: #ffc107;            /* Yellow */
@@ -28,95 +29,37 @@ body {
 }
 
 /* Top bar */
-.topbar {
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 18px;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
+.topbar{
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;background:#fff;border-bottom:1px solid var(--border);
 }
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
+.brand-title{font-weight:800}
+.brand-sub{font-size:12px;color:var(--muted)}
+.account{color:var(--text);font-weight:600;position:relative;cursor:pointer;display:flex;align-items:center;padding:4px 8px;border-radius:4px;transition:background-color 0.2s}
+.account:hover{background-color:#f5f5f5}
+.caret{margin-left:4px;color:var(--muted)}
+.dropdown-trigger{cursor:pointer}
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.dropdown-menu{
+  position:absolute;top:100%;right:0;background:#fff;border:1px solid var(--border);
+  border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  min-width:120px;z-index:1000;display:none;
 }
-
-.brand img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--text);
-  background: #fff;
+.dropdown-menu.show{display:block}
+.dropdown-item{
+  display:block;padding:10px 16px;color:var(--text);text-decoration:none;
+  font-weight:600;transition:background-color 0.2s;
 }
-
-.brand-title {
-  font-weight: 800;
-  font-size: 18px;
-}
-
-.brand-sub {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.account {
-  color: var(--text);
-  font-weight: 600;
-  position: relative;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-.account:hover {
-  background-color: #f5f5f5;
-}
-
-.caret {
-  margin-left: 4px;
-  color: var(--muted);
-}
-
-.dropdown-trigger {
-  cursor: pointer;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  min-width: 120px;
-  z-index: 1000;
-  display: none;
-}
-.dropdown-menu.show {
-  display: block;
-}
-.dropdown-item {
-  display: block;
-  padding: 10px 16px;
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 600;
-  transition: background-color 0.2s;
-}
-.dropdown-item:hover {
-  background-color: #f5f5f5;
-  text-decoration: none;
-}
+.dropdown-item:hover{background-color:#f5f5f5;text-decoration:none}
 
 /* Layout */
 .app {
-  padding: 0;
+  padding: 16px;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 /* Title row with Back button */
@@ -127,33 +70,33 @@ body {
   margin: 20px 0 0px 20px;
 }
 
-.title-row h1 {
-  font-size: 28px;
-  margin: 0;
-  font-weight: 800;
-}
+  .title-row h1 {
+    font-size: 28px;
+    margin: 0;
+    font-weight: 800;
+  }
 
-.back-btn {
-  background: #fff;
-  color: var(--text);
-  border: 1px solid var(--border);
-  font-weight: 600;
-  cursor: pointer;
-  padding: 10px 20px;
-  font-size: 16px;
-  border-radius: var(--radius);
-  transition: all 0.2s;
-  min-width: 80px;
-}
+  .back-btn {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: var(--radius);
+    transition: all 0.2s;
+    min-width: 80px;
+  }
 
-.back-btn:hover {
-  background: var(--bg);
-  color: var(--text);
-  border-color: var(--primary);
-}
+  .back-btn:hover {
+    background: var(--bg);
+    color: var(--text);
+    border-color: var(--primary);
+  }
 
 .main-content {
-  padding: 0 18px 18px;
+  padding: 18px;
 }
 
 /* Assignment details */

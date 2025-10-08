@@ -436,21 +436,26 @@ exports.revokeInvite = async (req, res) => {
 // Close user
 // Close user permissions
 exports.closeUser = async (req, res) => {
-  const { userId } = req.params;
+  const { email } = req.body;
   const currentUserId = req.user.id; // From authenticate middleware user.id
 
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
   try {
-    // Check if the user to be operated exists and was invited by current user
+    // Find user by email and check if they were invited by current coordinator
     const userCheck = await db.query(
-      `SELECT id FROM app_user
-       WHERE id = $1 AND invited_by = $2 AND role = 'MARKER'`,
-      [userId, currentUserId]
+      `SELECT u.user_id FROM app_user u
+       JOIN invitations i ON u.email = i.email
+       WHERE u.email = $1 AND u.role = 'MARKER' AND i.created_by = $2`,
+      [email, currentUserId]
     );
 
     if (userCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在或没有操作权限'
+        message: 'User not found or no permission to operate'
       });
     }
 
@@ -458,10 +463,12 @@ exports.closeUser = async (req, res) => {
     const result = await db.query(
       `UPDATE app_user
        SET is_active = false, updated_at = NOW()
-       WHERE id = $1
-       RETURNING id, email, is_active as status`,
-      [userId]
+       WHERE email = $1 AND role = 'MARKER'
+       RETURNING user_id as id, email, is_active as status`,
+      [email]
     );
+
+    console.log(`Coordinator ${req.user.name} closed user ${email}`);
 
     res.json({
       success: true,
@@ -470,6 +477,86 @@ exports.closeUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Close user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Reopen user
+exports.reopenUser = async (req, res) => {
+  const { email } = req.body;
+  const currentUserId = req.user.id;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  try {
+    // Find user by email and check if they were invited by current coordinator
+    const userCheck = await db.query(
+      `SELECT u.user_id FROM app_user u
+       JOIN invitations i ON u.email = i.email
+       WHERE u.email = $1 AND u.role = 'MARKER' AND i.created_by = $2`,
+      [email, currentUserId]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found or no permission to operate'
+      });
+    }
+
+    // Update user status to active
+    const result = await db.query(
+      `UPDATE app_user
+       SET is_active = true, updated_at = NOW()
+       WHERE email = $1 AND role = 'MARKER'
+       RETURNING user_id as id, email, is_active as status`,
+      [email]
+    );
+
+    console.log(`Coordinator ${req.user.name} reopened user ${email}`);
+
+    res.json({
+      success: true,
+      message: 'User permissions have been reopened',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Reopen user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Get marker email suggestions
+exports.getMarkerSuggestions = async (req, res) => {
+  const { q } = req.query;
+  const createdBy = req.user.id;
+
+  if (!q || q.length < 2) {
+    return res.json({ emails: [] });
+  }
+
+  try {
+    // Search in existing markers from this coordinator's invitations
+    const result = await db.query(
+      `SELECT DISTINCT email FROM (
+        SELECT email FROM app_user WHERE role = 'MARKER' AND email ILIKE $1
+        UNION
+        SELECT email FROM invitations WHERE created_by = $2 AND email ILIKE $1
+      ) suggestions
+      WHERE email NOT IN (
+        SELECT email FROM app_user WHERE email = suggestions.email AND role != 'MARKER'
+      )
+      ORDER BY email
+      LIMIT 10`,
+      [`%${q}%`, createdBy]
+    );
+
+    const emails = result.rows.map(row => row.email);
+    res.json({ emails });
+  } catch (error) {
+    console.error('Marker suggestions error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

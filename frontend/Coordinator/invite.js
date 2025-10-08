@@ -13,6 +13,12 @@
   const btnSend   = document.getElementById('btnSend');
   const statusEl  = document.getElementById('status');
   const tbody     = document.getElementById('inviteTbody');
+  
+  // Data overview elements
+  const totalMarkersEl = document.getElementById('totalMarkers');
+  const activeMarkersEl = document.getElementById('activeMarkers');
+  const pendingMarkersEl = document.getElementById('pendingMarkers');
+  const closedMarkersEl = document.getElementById('closedMarkers');
 
   // --- ensure pill styles for new statuses (safe if CSS already defines them) ---
   (function ensurePillStyles(){
@@ -28,6 +34,7 @@
   let history = loadHistory();  // local history
   let suggest = [];             // current suggestions
   let activeIdx = -1;           // dropdown highlight index
+  let currentData = { items: [] }; // current invitation data
 
   // ========= helpers =========
   function isValidEmail(e){
@@ -93,12 +100,43 @@
   inputEl.addEventListener('input', async ()=>{
     const q = inputEl.value.trim().toLowerCase();
     if (!q){ closeSuggest(); return; }
-    let local = history.filter(e=> e.startsWith(q) && !emails.includes(e));
+    
+    // Enhanced email recognition - detect partial emails and suggest completions
+    let local = history.filter(e=> e.toLowerCase().includes(q) && !emails.includes(e));
+    
+    // Auto-complete common email patterns
+    if (q.includes('@')) {
+      // If user typed @, suggest common domains
+      const domain = q.split('@')[1];
+      if (domain && domain.length > 0) {
+        const commonDomains = ['deakin.edu.au', 'gmail.com', 'outlook.com', 'yahoo.com'];
+        const matchingDomains = commonDomains.filter(d => d.startsWith(domain));
+        matchingDomains.forEach(d => {
+          const fullEmail = q.split('@')[0] + '@' + d;
+          if (!local.includes(fullEmail) && !emails.includes(fullEmail)) {
+            local.push(fullEmail);
+          }
+        });
+      }
+    } else if (q.length >= 2) {
+      // Suggest common email prefixes with @deakin.edu.au
+      const commonPrefixes = ['john', 'jane', 'alex', 'sarah', 'mike', 'emma', 'david', 'lisa'];
+      commonPrefixes.forEach(prefix => {
+        if (prefix.startsWith(q)) {
+          const email = prefix + '@deakin.edu.au';
+          if (!local.includes(email) && !emails.includes(email)) {
+            local.push(email);
+          }
+        }
+      });
+    }
+    
     let remote = [];
     try{
-      const res = await fetch(`/api/markers/suggest?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/invitations/suggest?q=${encodeURIComponent(q)}`);
       if (res.ok){ const data = await res.json(); remote = (data.emails || []).map(String); }
     }catch{}
+    
     const merged = unique([...local, ...remote]).filter(e=> !emails.includes(e));
     showSuggest(merged.slice(0,8));
     bindSuggestClicks();
@@ -139,7 +177,11 @@
     try{
       const res = await fetch('/api/invitations');
       let data;
-      if (res.ok){ data = await res.json(); }
+      if (res.ok){ 
+        data = await res.json(); 
+        currentData = data; // Store current data for stats
+        updateDataOverview(data.items || []);
+      }
       else{
         // demo data (with new statuses)
         data = { items: [
@@ -148,9 +190,47 @@
           {email:'eric@deakin.edu.au',  status:'expired', sent_at:'Jun 3, 2025'},
           {email:'alex@deakin.edu.au',  status:'close',   sent_at:'Jun 4, 2025'},
         ]};
+        currentData = data;
+        updateDataOverview(data.items || []);
       }
       renderTable(data.items || []);
-    }catch{ renderTable([]); }
+    }catch{ 
+      renderTable([]); 
+      updateDataOverview([]);
+    }
+  }
+
+  // Update data overview statistics
+  function updateDataOverview(items) {
+    const stats = {
+      total: items.length,
+      active: 0,
+      pending: 0,
+      closed: 0
+    };
+
+    items.forEach(item => {
+      const status = (item.status || '').toLowerCase();
+      switch(status) {
+        case 'active':
+        case 'accepted':
+          stats.active++;
+          break;
+        case 'pending':
+          stats.pending++;
+          break;
+        case 'close':
+        case 'closed':
+          stats.closed++;
+          break;
+      }
+    });
+
+    // Update DOM elements
+    if (totalMarkersEl) totalMarkersEl.textContent = stats.total;
+    if (activeMarkersEl) activeMarkersEl.textContent = stats.active;
+    if (pendingMarkersEl) pendingMarkersEl.textContent = stats.pending;
+    if (closedMarkersEl) closedMarkersEl.textContent = stats.closed;
   }
 
   function renderTable(items){
@@ -220,46 +300,85 @@
     catch{ setStatus('Failed to close ' + email, 'err'); }
   }
   async function reopenInvite(email){
-    try{ const r = await fetch('/api/invitations/reopen', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Reopened ' + email, 'ok'); await refreshTable(); }
+    try{ 
+      const r = await fetch('/api/invitations/reopen', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) throw new Error('Failed'); 
+      setStatus('Reopened ' + email, 'ok'); 
+      await refreshTable(); 
+    }
     catch{ setStatus('Failed to reopen ' + email, 'err'); }
   }
 
-  // init
-    try {
-      const rawUser = localStorage.getItem("user");
-      if (rawUser) {
-        const user = JSON.parse(rawUser);
-        if (user && user.name) {
-          document.getElementById("username").textContent = user.name;
+  // ========= initialization =========
+  function initCommonNav() {
+    // Get user info from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const usernameEl = document.getElementById('username');
+        if (usernameEl && user.name) {
+          usernameEl.textContent = user.name || user.email || 'User';
         }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
       }
-    } catch (err) {
-      console.error("Failed to load username:", err);
     }
-  renderChips();
-  refreshTable();
-
-  // 初始化dropdown和logout功能
-  const accountEl = document.querySelector('.account');
-  const dropdown = document.querySelector('.dropdown-menu');
-  const logoutBtn = document.querySelector('.dropdown-item');
-
-  if (accountEl && dropdown) {
-    accountEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle('show');
-    });
-
-    // 点击其他地方关闭下拉菜单
-    document.addEventListener('click', () => {
-      dropdown.classList.remove('show');
-    });
   }
 
-  // 登出功能
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
+  function initDropdownAndLogout() {
+    const accountEl = document.querySelector('.account');
+    const dropdown = document.querySelector('.dropdown-menu');
+    const logoutBtn = document.querySelector('.dropdown-item');
+
+    if (accountEl && dropdown) {
+      accountEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+
+      // 点击其他地方关闭下拉菜单
+      document.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+      });
+    }
+
+    // 登出功能
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/login';
+          } else {
+            alert("Logout failed: " + data.message);
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        }
+      });
+    }
+
+    // 全局logout函数
+    window.logout = async function() {
       try {
         const response = await fetch('/api/auth/logout', {
           method: 'POST',
@@ -283,33 +402,14 @@
         document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         window.location.href = '/login';
       }
-    });
+    };
   }
 
-  // 全局logout函数
-  window.logout = async function() {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        window.location.href = '/login';
-      } else {
-        alert("Logout failed: " + data.message);
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      localStorage.removeItem('user');
-      localStorage.removeItem('userRole');
-      document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      window.location.href = '/login';
-    }
-  };
+  // Initialize everything when DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    initCommonNav();
+    initDropdownAndLogout();
+    renderChips();
+    refreshTable();
+  });
 })();
