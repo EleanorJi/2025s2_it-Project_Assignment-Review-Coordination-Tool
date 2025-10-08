@@ -133,7 +133,9 @@
     
     let remote = [];
     try{
-      const res = await fetch(`/api/invitations/suggest?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/invitations/suggest?q=${encodeURIComponent(q)}`, {
+        credentials: 'include'
+      });
       if (res.ok){ const data = await res.json(); remote = (data.emails || []).map(String); }
     }catch{}
     
@@ -157,11 +159,25 @@
     saveHistory();
     setStatus('Sending invites…');
     try{
-      let res = await fetch('/api/invitations/batch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emails }) });
-      if (!res.ok){ // fallback: per-email
+      let res = await fetch('/api/invitations/batch', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ emails }) 
+      });
+      if (!res.ok){ 
+        // fallback: per-email
         for (const email of emails){
-          const r = await fetch('/api/invitations', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
-          if (!r.ok) throw new Error('Invite failed for ' + email);
+          const r = await fetch('/api/invitations', { 
+            method:'POST', 
+            headers:{'Content-Type':'application/json'}, 
+            credentials: 'include',
+            body: JSON.stringify({ email }) 
+          });
+          if (!r.ok) {
+            const data = await r.json().catch(() => ({}));
+            throw new Error(data.message || 'Invite failed for ' + email);
+          }
         }
       }
       setStatus('Invites sent.', 'ok');
@@ -175,7 +191,9 @@
   // ========= table =========
   async function refreshTable(){
     try{
-      const res = await fetch('/api/invitations');
+      const res = await fetch('/api/invitations', {
+        credentials: 'include'
+      });
       let data;
       if (res.ok){ 
         data = await res.json(); 
@@ -314,29 +332,72 @@
   function spacer(){ return document.createTextNode('  '); }
 
   async function resend(email){
-    try{ const r = await fetch('/api/invitations/resend', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Resent to ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to resend to ' + email, 'err'); }
+    try{ 
+      const r = await fetch('/api/invitations/resend', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to resend');
+      }
+      setStatus('Resent to ' + email, 'ok'); 
+      await refreshTable(); 
+    }
+    catch(err){ setStatus(err.message || 'Failed to resend to ' + email, 'err'); }
   }
   async function revoke(email){
-    try{ const r = await fetch('/api/invitations/revoke', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Revoked ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to revoke ' + email, 'err'); }
+    try{ 
+      const r = await fetch('/api/invitations/revoke', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to revoke');
+      }
+      setStatus('Revoked ' + email, 'ok'); 
+      await refreshTable(); 
+    }
+    catch(err){ setStatus(err.message || 'Failed to revoke ' + email, 'err'); }
   }
   async function closeInvite(email){
-    try{ const r = await fetch('/api/invitations/close', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Closed ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to close ' + email, 'err'); }
+    try{ 
+      const r = await fetch('/api/invitations/close', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to close');
+      }
+      setStatus('Closed ' + email, 'ok'); 
+      await refreshTable(); 
+    }
+    catch(err){ setStatus(err.message || 'Failed to close ' + email, 'err'); }
   }
   async function reopenInvite(email){
     try{ 
       const r = await fetch('/api/invitations/reopen', { 
         method:'POST', 
         headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
         body: JSON.stringify({ email }) 
       }); 
-      if (!r.ok) throw new Error('Failed'); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to reopen');
+      }
       setStatus('Reopened ' + email, 'ok'); 
       await refreshTable(); 
     }
-    catch{ setStatus('Failed to reopen ' + email, 'err'); }
+    catch(err){ setStatus(err.message || 'Failed to reopen ' + email, 'err'); }
   }
 
   // ========= initialization =========
