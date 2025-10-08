@@ -9,33 +9,12 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const port = process.env.PORT || 3000;
-//新增
-const coordinatorPath = path.join(process.cwd(), 'frontend/Coordinator');
-console.log("📂 Serving /Coordinator from:", coordinatorPath);
-
-app.use('/Coordinator', express.static(coordinatorPath));
-
-app.get('/test-static', (req, res) => {
-  const filePath = path.join(process.cwd(), 'frontend/Coordinator/feedback.html');
-  console.log("📂 Sending file:", filePath);
-  res.sendFile(filePath);
-});
-
-
-
-app.get('/dashboard/coordinator/feedback', (req, res) => {
-  const filePath = path.join(process.cwd(), 'frontend/Coordinator/feedback.html');
-  console.log("📂 Sending file (dashboard route):", filePath);
-  res.sendFile(filePath);
-});
-
-//
 
 app.use(express.json());
 app.use(cookieParser());
 
 // Static file service
-//app.use(express.static(path.join(__dirname, '../../frontend'))); // Frontend static files
+app.use(express.static(path.join(__dirname, '../../frontend'))); // Frontend static files
 // Serve frontend static files新增
 
 app.use('/static', express.static(path.join(__dirname, '../../uploads')));

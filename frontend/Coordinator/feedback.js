@@ -357,7 +357,7 @@ function initUserInfo() {
 // Logout function
 function logout() {
   localStorage.clear();
-  window.location.href = '/login.html';
+  window.location.href = '/login';
 }
 
 /* ===== 保存和恢复滚动位置 ===== */
