@@ -4,6 +4,8 @@ let markerKeys = [];
 let markersInfo = [];
 let rubricDescriptions = {}; // 新增：保存 rubric description
 
+console.log('📊 Feedback.js v2.1 loaded - Difference calculation updated');
+
 /* ===== 辅助函数 ===== */
 // 获取当前assignment ID
 function getCurrentAssignmentId() {
@@ -130,11 +132,12 @@ async function loadModerationReport(assignmentId) {
       return {
         criterion: `${c.title} / ${c.max_score}`,
         title: c.title,
-        chair: c.baseline_score,
+        chair: c.baseline_score, // ⚡ Coordinator的分数，从后端baseline_score提取
         chairComment: c.baseline_comment || '', // 添加baseline comment
         lower: c.range_lower,
         upper: c.range_upper,
         percent: c.baseline_percentage,
+        maxScore: c.max_score, // 保存criterion的总分
         markers: markersObj,
         markerComments: markerCommentsObj, // 添加marker comments
         description: rubricDescriptions[c.title] || "",
@@ -150,10 +153,11 @@ async function loadModerationReport(assignmentId) {
     });
     rows.push({
       criterion: "Total / " + totals.max_total_score,
-      chair: totals.baseline_total,
+      chair: totals.baseline_total, // ⚡ Coordinator的总分，从后端baseline_total提取
       lower: totals.range_lower,
       upper: totals.range_upper,
       percent: totals.baseline_percentage,
+      maxScore: totals.max_total_score, // 保存总分
       markers: totalMarkersObj,
       markerComments: {}, // 总分行没有comments
       description: "",
@@ -163,6 +167,9 @@ async function loadModerationReport(assignmentId) {
     renderAlignment('all');
     renderDifferences('all');
     updateMarkerSelectors();
+    
+    // 恢复滚动位置（在所有内容加载完成后）
+    setTimeout(restoreScrollPosition, 100);
 
   } catch (err) {
     console.error("获取 moderation report 出错:", err);
@@ -224,10 +231,11 @@ function renderDifferences(selected='all'){
 
   if (selected === 'all') {
     allDiffSection.classList.remove('hidden');
-    const headers = ['Criterion','Percent'];
+    const headers = ['Criterion','Unit Chair'];
     markerKeys.forEach(id=>{
       const m = markersInfo.find(mi=>mi.id===id);
       headers.push(m ? m.name : `Marker ${id}`);
+      headers.push('Percent');
       headers.push('Difference');
     });
     allDiffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
@@ -235,14 +243,23 @@ function renderDifferences(selected='all'){
     rows.forEach(r=>{
       const cells = [
         `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
-        `<td>${fmt(r.percent)}</td>`
+        `<td>${fmt(r.chair)}</td>`
       ];
       markerKeys.forEach(id=>{
-        const v = r.markers?.[id];
-        const d = (v!=null && r.percent!=null) ? Number((v - r.percent).toFixed(2)) : null;
+        const v = r.markers?.[id]; // marker的分数
+        const coordinatorScore = r.chair; // coordinator的分数（从后端baseline_score提取）
+        const maxScore = r.maxScore; // criterion的总分
+        
+        // Percent = marker的分数 / criterion的总分 * 100
+        const percent = (v!=null && maxScore!=null && maxScore > 0) ? Number(((v / maxScore) * 100).toFixed(2)) : null;
+        
+        // Difference = (marker的分数 / coordinator的分数) * 100
+        const diff = (v!=null && coordinatorScore!=null && coordinatorScore > 0) ? Number(((v / coordinatorScore) * 100).toFixed(2)) : null;
+        
         const out = (v!=null) && isOut(v, r.lower, r.upper);
         cells.push(`<td class="${out?'bad-cell':''}">${v==null?'—':fmt(v)}</td>`);
-        cells.push(`<td class="${out?'bad-cell':''}">${d==null?'—':(d>0?`+${fmt(d)}`:fmt(d))}</td>`);
+        cells.push(`<td class="${out?'bad-cell':''}">${percent==null?'—':fmt(percent)+'%'}</td>`);
+        cells.push(`<td class="${out?'bad-cell':''}">${diff==null?'—':fmt(diff)+'%'}</td>`);
       });
       const tr = document.createElement('tr');
       tr.innerHTML = cells.join('');
@@ -251,19 +268,28 @@ function renderDifferences(selected='all'){
   } else {
     diffSection.classList.remove('hidden');
     const m = markersInfo.find(mi=>mi.id==selected);
-    const headers = ['Criterion','Percent', m ? m.name : `Marker ${selected}`,'Difference'];
+    const headers = ['Criterion','Unit Chair', m ? m.name : `Marker ${selected}`,'Percent','Difference'];
     diffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
     rows.forEach(r=>{
-      const v = r.markers?.[selected];
-      const d = (v!=null && r.percent!=null) ? Number((v - r.percent).toFixed(2)) : null;
+      const v = r.markers?.[selected]; // marker的分数
+      const coordinatorScore = r.chair; // coordinator的分数（从后端baseline_score提取）
+      const maxScore = r.maxScore; // criterion的总分
+      
+      // Percent = marker的分数 / criterion的总分 * 100
+      const percent = (v!=null && maxScore!=null && maxScore > 0) ? Number(((v / maxScore) * 100).toFixed(2)) : null;
+      
+      // Difference = (marker的分数 / coordinator的分数) * 100
+      const diff = (v!=null && coordinatorScore!=null && coordinatorScore > 0) ? Number(((v / coordinatorScore) * 100).toFixed(2)) : null;
+      
       const out = (v!=null) && isOut(v, r.lower, r.upper);
 
       const cells = [
         `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
-        `<td>${fmt(r.percent)}</td>`,
+        `<td>${fmt(coordinatorScore)}</td>`,
         `<td class="${out?'bad-cell':''}">${v==null?'—':fmt(v)}</td>`,
-        `<td class="${out?'bad-cell':''}">${d==null?'—':(d>0?`+${fmt(d)}`:fmt(d))}</td>`
+        `<td class="${out?'bad-cell':''}">${percent==null?'—':fmt(percent)+'%'}</td>`,
+        `<td class="${out?'bad-cell':''}">${diff==null?'—':fmt(diff)+'%'}</td>`
       ];
       const tr = document.createElement('tr');
       tr.innerHTML = cells.join('');
@@ -278,13 +304,83 @@ function updateMarkerSelectors(){
   sel.innerHTML = `<option value="all">All Markers</option>`;
   markersInfo.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
 
+  // 恢复之前选择的marker（如果有）
+  const savedMarker = sessionStorage.getItem('selectedMarker');
+  if (savedMarker && savedMarker !== 'all') {
+    // 检查这个marker是否还存在
+    const markerExists = markersInfo.some(m => m.id.toString() === savedMarker);
+    if (markerExists) {
+      sel.value = savedMarker;
+      // 触发change事件来更新显示
+      const event = new Event('change');
+      sel.dispatchEvent(event);
+    }
+  }
+
   const allSel = document.getElementById("allFbSelect");
   allSel.innerHTML = "";
   markersInfo.forEach(m => allSel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
 }
 
+/* ===== 用户名显示和下拉菜单 ===== */
+function initUserInfo() {
+  // Get user info from localStorage
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      const usernameEl = document.getElementById('username');
+      if (usernameEl && user.name) {
+        usernameEl.textContent = user.name || user.email || 'User';
+      }
+    } catch (e) {
+      console.error('Error parsing user data:', e);
+    }
+  }
+
+  // Dropdown toggle
+  const dropdown = document.querySelector('.account.dropdown');
+  const dropdownMenu = document.querySelector('.dropdown-menu');
+  if (dropdown && dropdownMenu) {
+    dropdown.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('show');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      dropdownMenu.classList.remove('show');
+    });
+  }
+}
+
+// Logout function
+function logout() {
+  localStorage.clear();
+  window.location.href = '/login.html';
+}
+
+/* ===== 保存和恢复滚动位置 ===== */
+// 页面卸载前保存滚动位置
+window.addEventListener('beforeunload', () => {
+  sessionStorage.setItem('scrollPosition', window.scrollY || window.pageYOffset);
+});
+
+// 恢复滚动位置
+function restoreScrollPosition() {
+  const savedPosition = sessionStorage.getItem('scrollPosition');
+  if (savedPosition) {
+    window.scrollTo(0, parseInt(savedPosition));
+    // 清除保存的位置（可选）
+    // sessionStorage.removeItem('scrollPosition');
+  }
+}
+
 /* ===== 初始化 ===== */
 (async function init() {
+  // Initialize user info display
+  initUserInfo();
+
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get("project");
   const assignmentKey = urlParams.get("assignment"); // assignment1 / assignment2
@@ -326,12 +422,43 @@ function updateMarkerSelectors(){
   }
 })();
 
-/* ===== Marker切换事件 ===== */
-markerSelect.addEventListener('change', e=>{
-  const selected = e.target.value;
-  renderAlignment(selected);
-  renderDifferences(selected);
+/* ===== Back按钮和Export CSV按钮 ===== */
+document.getElementById('backBtn')?.addEventListener('click', () => {
+  window.history.back();
 });
+
+document.getElementById('exportCsv')?.addEventListener('click', () => {
+  // Generate CSV from current data
+  let csv = '';
+  const headers = ['Criterion', 'Unit Chair', 'Lower', 'Upper'];
+  markerKeys.forEach(id => {
+    const m = markersInfo.find(mi => mi.id === id);
+    headers.push(m ? m.name : `Marker ${id}`);
+  });
+  csv += headers.join(',') + '\n';
+
+  rows.forEach(r => {
+    const row = [
+      `"${r.criterion}"`,
+      fmt(r.chair),
+      fmt(r.lower),
+      fmt(r.upper)
+    ];
+    markerKeys.forEach(id => {
+      const v = r.markers?.[id];
+      row.push(v == null ? '' : fmt(v));
+    });
+    csv += row.join(',') + '\n';
+  });
+
+  // Download CSV
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `feedback_report_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+});
+
 /* ===== 单 marker Feedback 事件绑定 ===== */
 const fbTextarea = document.getElementById('fbTextarea');
 const fbSend = document.getElementById('fbSend');
@@ -340,11 +467,22 @@ const fbHint = document.getElementById('fbHint');
 // 保存当前选中的 marker ID
 let currentMarkerId = null;
 
-// 当用户选择单个 marker 时，更新 currentMarkerId 并显示 feedback 区域
-document.getElementById('markerSelect').addEventListener('change', e => {
+/* ===== Marker切换事件（合并版本，避免重复监听） ===== */
+markerSelect.addEventListener('change', e=>{
   const selected = e.target.value;
   currentMarkerId = selected !== 'all' ? selected : null;
-
+  
+  // 保存当前滚动位置
+  const scrollPosition = window.scrollY || window.pageYOffset;
+  
+  // 保存选择状态到sessionStorage，刷新后保持选择
+  sessionStorage.setItem('selectedMarker', selected);
+  
+  // 渲染表格
+  renderAlignment(selected);
+  renderDifferences(selected);
+  
+  // 显示/隐藏feedback区域
   if (currentMarkerId) {
     console.log(`✅ Marker selected: ${currentMarkerId}`);
     document.getElementById('feedback').classList.remove('hidden');
@@ -359,6 +497,11 @@ document.getElementById('markerSelect').addEventListener('change', e => {
     document.getElementById('allDiffSection').classList.remove('hidden');
     document.getElementById('allFeedback').classList.remove('hidden');
   }
+  
+  // 恢复滚动位置，防止页面跳转
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollPosition);
+  });
 });
 
 // 点击 Send Feedback 按钮
