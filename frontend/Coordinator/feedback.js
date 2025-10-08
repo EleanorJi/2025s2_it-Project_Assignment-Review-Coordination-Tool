@@ -131,6 +131,7 @@ async function loadModerationReport(assignmentId) {
         criterion: `${c.title} / ${c.max_score}`,
         title: c.title,
         chair: c.baseline_score,
+        chairComment: c.baseline_comment || '', // 添加baseline comment
         lower: c.range_lower,
         upper: c.range_upper,
         percent: c.baseline_percentage,
@@ -176,12 +177,13 @@ function renderAlignment(selected='all'){
       const m = markersInfo.find(mi=>mi.id===id);
       return m ? m.name : `Marker ${id}`;
     }));
+    // All Markers视图：不添加Total和Comment列
   } else {
     const m = markersInfo.find(mi=>mi.id==selected);
     headers.push(m ? m.name : `Marker ${selected}`);
+    // 单个marker视图：只添加Comment列，不添加Total列
+    headers.push('Comment');
   }
-  headers.push('Total');
-  headers.push('Comment'); // 添加Comment列
   alignHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
   alignBody.innerHTML='';
@@ -198,31 +200,16 @@ function renderAlignment(selected='all'){
         if(v==null) tds.push('<td class="muted">–</td>');
         else tds.push(`<td class="${isOut(v,r.lower,r.upper)?'bad-cell':''}">${fmt(v)}</td>`);
       });
+      // All Markers视图：不添加Total和Comment列
     } else {
       const v=r.markers?.[selected];
       if(v==null) tds.push('<td class="muted">–</td>');
       else tds.push(`<td class="${isOut(v,r.lower,r.upper)?'bad-cell':''}">${fmt(v)}</td>`);
+      
+      // 单个marker视图：只添加Comment列，不添加Total列
+      const comment = r.markerComments?.[selected] || '';
+      tds.push(`<td style="text-align:left;max-width:200px;word-wrap:break-word;">${comment ? escapeHtml(comment) : '<span class="muted">—</span>'}</td>`);
     }
-    tds.push(`<td>${r.total==null?'<span class="muted">—</span>':fmt(r.total)}</td>`);
-    
-    // 添加Comment列 - 显示该criteria的comment
-    let comment = '';
-    if (selected === 'all') {
-      // 对于"All Markers"视图，显示所有markers的comments汇总
-      const allComments = [];
-      markerKeys.forEach(id => {
-        const markerComment = r.markerComments?.[id];
-        if (markerComment && markerComment.trim() !== '') {
-          const markerName = markersInfo.find(mi => mi.id === id)?.name || `Marker ${id}`;
-          allComments.push(`${markerName}: ${markerComment}`);
-        }
-      });
-      comment = allComments.join(' | ');
-    } else {
-      // 对于单个marker视图，显示该marker的comment
-      comment = r.markerComments?.[selected] || '';
-    }
-    tds.push(`<td style="text-align:left;max-width:200px;word-wrap:break-word;">${comment ? escapeHtml(comment) : '<span class="muted">—</span>'}</td>`);
     
     const tr=document.createElement('tr'); tr.innerHTML=tds.join(''); alignBody.appendChild(tr);
   });

@@ -2471,9 +2471,11 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         rc.max_score as criterion_max_score,
         rc.seq_no,
         bs.score as baseline_score,
+        bs.comment as baseline_comment,
         ms.marker_id,
         u.name as marker_name,
-        ms.score as marker_score
+        ms.score as marker_score,
+        ms.comment as marker_comment
       FROM baseline_score bs
       JOIN rubric_criterion rc ON bs.criterion_id = rc.criterion_id  
       LEFT JOIN marker_score ms ON bs.assignment_id = ms.assignment_id 
@@ -2512,6 +2514,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           max_score: maxScore,
           seq_no: row.seq_no,
           baseline_score: baselineScore,
+          baseline_comment: row.baseline_comment || null,
           baseline_percentage: baselinePercentage, // Current score/maximum score percentage
           range_lower: Math.round(baselineScore * 0.95 * 100) / 100, // ±5%
           range_upper: Math.round(baselineScore * 1.05 * 100) / 100,
@@ -2534,6 +2537,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           marker_id: markerId,
           marker_name: row.marker_name,
           score: markerScore,
+          comment: row.marker_comment || null,
           percentage: markerPercentage, // Current score/maximum score percentage
           percentage_difference: percentageDifference, // Percentage difference from baseline, can be positive or negative
           within_range: withinRange
