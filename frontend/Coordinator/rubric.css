@@ -1,6 +1,7 @@
 :root{
-    --bg:#f8f9fa; --panel:#fff; --border:#dee2e6; --text:#212529; --muted:#6c757d;
-    --primary:#2d3748; --radius:4px; --shadow:0 2px 4px rgba(0,0,0,0.1);
+    --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
+    --primary:#0F172A; --warn:#F59E0B; --bad:#DC2626; --good:#16a34a;
+    --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
   }
   
   *{box-sizing:border-box}
@@ -44,7 +45,10 @@
   
   /* Layout */
   .app {
-    padding: 0;
+    padding: 16px;
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
   }
 
   /* Title row with Back button */
@@ -79,7 +83,7 @@
   }
 
   .main-content {
-    padding: 0 18px 18px;
+    padding: 18px;
   }
 
   /* Assignment details */
@@ -99,8 +103,8 @@
   }
 
   .panel{
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
-    box-shadow:var(--shadow); padding:12px;
+    background:#fff; border-radius:var(--radius);
+    padding:12px;
   }
   
   /* Table */
