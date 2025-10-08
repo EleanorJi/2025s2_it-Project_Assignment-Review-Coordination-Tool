@@ -1,311 +1,473 @@
-// Invite Markers – chips + history + suggest + batch invite (updated: statuses active/close/pending; focused on active markers)
-(function(){
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
-  const LIMIT_DOMAIN = false; // set true to restrict to ALLOWED_DOMAINS
-  const ALLOWED_DOMAINS = ['deakin.edu.au'];
+/* ===== 全局变量 ===== */
+let rows = [];
+let markerKeys = [];
+let markersInfo = [];
+let rubricDescriptions = {}; // 新增：保存 rubric description
 
-  // --- DOM refs ---
-  const chipsEl   = document.getElementById('chips');
-  const listEl    = document.getElementById('chipsList');
-  const inputEl   = document.getElementById('chipsInput');
-  const suggestEl = document.getElementById('suggest');
-  const btnClear  = document.getElementById('btnClear');
-  const btnSend   = document.getElementById('btnSend');
-  const statusEl  = document.getElementById('status');
-  const tbody     = document.getElementById('inviteTbody');
+/* ===== 辅助函数 ===== */
+// 获取当前assignment ID
+function getCurrentAssignmentId() {
+  // 从URL参数获取assignment ID
+  const urlParams = new URLSearchParams(window.location.search);
+  const assignmentId = urlParams.get('assignment_id');
 
-  // --- ensure pill styles for new statuses (safe if CSS already defines them) ---
-  (function ensurePillStyles(){
-    const css = `
-      .pill.active{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-      .pill.close{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
-    `;
-    const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
-  })();
+  if (assignmentId) {
+    return parseInt(assignmentId);
+  }
 
-  // ========= state =========
-  let emails = [];              // selected
-  let history = loadHistory();  // local history
-  let suggest = [];             // current suggestions
-  let activeIdx = -1;           // dropdown highlight index
+  // 或者从全局变量获取
+  if (window.currentAssignmentId) {
+    return window.currentAssignmentId;
+  }
 
-  // ========= dropdown and logout functionality =========
-  document.addEventListener('DOMContentLoaded', function() {
-    // 用户下拉菜单功能
-    const dropdown = document.querySelector('.dropdown');
-    const trigger = document.querySelector('.dropdown-trigger');
-    const menu = document.querySelector('.dropdown-menu');
-    let isOpen = false;
+  // 或者从localStorage获取
+  const stored = localStorage.getItem('currentAssignmentId');
+  if (stored) {
+    return parseInt(stored);
+  }
 
-    // 显示用户名
+  return null;
+}
+
+// 调试函数：显示当前状态
+function debugCurrentState() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const projectId = urlParams.get('project');
+  const assignmentKey = urlParams.get('assignment');
+  const assignmentId = getCurrentAssignmentId();
+
+  console.log('🔍 Debug - Current State:');
+  console.log('  Project ID:', projectId);
+  console.log('  Assignment Key:', assignmentKey);
+  console.log('  Assignment ID:', assignmentId);
+  console.log('  Window currentAssignmentId:', window.currentAssignmentId);
+  console.log('  LocalStorage currentAssignmentId:', localStorage.getItem('currentAssignmentId'));
+}
+
+
+// 获取当前用户ID
+function getCurrentUserId() {
+  // 从localStorage获取用户信息
+  const userInfo = localStorage.getItem('userInfo');
+  if (userInfo) {
     try {
-      const rawUser = localStorage.getItem("user");
-      if (rawUser) {
-        const user = JSON.parse(rawUser);
-        if (user && user.name) {
-          document.getElementById("username").textContent = user.name;
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load username:", err);
+      const user = JSON.parse(userInfo);
+      return user.user_id || user.id;
+    } catch (e) {
+      console.error('Error parsing user info:', e);
     }
+  }
 
-    // 鼠标悬停显示下拉菜单
-    if (dropdown) {
-      dropdown.addEventListener('mouseenter', function() {
-        menu.style.display = 'block';
+  // 或者从全局变量获取
+  if (window.currentUserId) {
+    return window.currentUserId;
+  }
+
+  return null;
+}
+
+// DOM 元素
+const alignBody   = document.querySelector('#alignmentTable tbody');
+const alignHeader = document.getElementById('alignHeader');
+const diffSection = document.getElementById('diffSection');
+const diffBody    = document.querySelector('#differenceTable tbody');
+const diffHeader  = document.getElementById('diffHeader');
+const markerSelect= document.getElementById('markerSelect');
+const allDiffSection = document.getElementById('allDiffSection');
+const allDiffHeader  = document.getElementById('allDiffHeader');
+const allDiffBody    = document.querySelector('#allDifferenceTable tbody');
+
+/* ===== 工具函数 ===== */
+function fmt(n){ const v=Number(n); if(Number.isNaN(v)) return ''; return (v%1===0)? v.toString() : v.toFixed(2); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function isOut(v, lo, hi){ return v<lo || v>hi; }
+
+/* ===== 从后端加载 Rubric 描述 ===== */
+async function loadRubricDescriptions(projectId) {
+  try {
+    const res = await fetch(`/api/uploads/project/${projectId}/status`);
+    const data = await res.json();
+    if (data?.rubric?.rubric_id) {
+      const rubricRes = await fetch(`/api/uploads/rubric/${data.rubric.rubric_id}/details`);
+      const rubricData = await rubricRes.json();
+      rubricDescriptions = {};
+      (rubricData.criteria || []).forEach(c => {
+        rubricDescriptions[c.title] = c.description || "";
       });
-
-      dropdown.addEventListener('mouseleave', function() {
-        menu.style.display = 'none';
-      });
+      console.log("✅ Rubric descriptions loaded:", rubricDescriptions);
     }
-  });
+  } catch (e) {
+    console.error("加载 rubric 描述失败:", e);
+  }
+}
 
-  // Logout函数
-  window.logout = function() {
-    localStorage.removeItem('user');
-    window.location.href = '/login.html';
-  };
-
-  // ========= helpers =========
-  function isValidEmail(e){
-    if (!EMAIL_RE.test(e)) return false;
-    if (LIMIT_DOMAIN) {
-      const domain = e.split('@')[1]?.toLowerCase();
-      return ALLOWED_DOMAINS.includes(domain);
+/* ===== 从后端加载 Moderation Report ===== */
+async function loadModerationReport(assignmentId) {
+  try {
+    const res = await fetch(`/api/uploads/assignments/${assignmentId}/moderation-report`);
+    const data = await res.json();
+    if (data.error) {
+      console.error("加载报告失败:", data.error);
+      return;
     }
-    return true;
-  }
-  function unique(arr){ return Array.from(new Set(arr.map(s=>s.toLowerCase()))); }
 
-  function loadHistory(){
-    try{ const raw = localStorage.getItem('inviteEmailHistory'); const arr = raw ? JSON.parse(raw) : []; return unique(arr); }catch{ return []; }
-  }
-  function saveHistory(){ const combined = unique([...history, ...emails]); localStorage.setItem('inviteEmailHistory', JSON.stringify(combined)); }
+    markersInfo = data.totals.marker_totals.map(m => ({
+      id: m.marker_id,
+      name: m.marker_name || `Marker ${m.marker_id}`
+    }));
+    markerKeys = markersInfo.map(m => m.id);
 
-  function renderChips(){
-    listEl.innerHTML = '';
-    emails.forEach((e,i)=>{
-      const chip = document.createElement('div');
-      chip.className = 'chip' + (isValidEmail(e) ? '' : ' bad');
-      chip.innerHTML = `<span>${e}</span><span class="x" aria-label="remove" title="Remove">×</span>`;
-      chip.querySelector('.x').addEventListener('click', ()=>{ emails.splice(i,1); renderChips(); });
-      listEl.appendChild(chip);
-    });
-  }
-
-  function showSuggest(items){
-    suggest = items || [];
-    activeIdx = -1;
-    if (suggest.length === 0){ suggestEl.classList.add('hidden'); suggestEl.innerHTML=''; return; }
-    suggestEl.innerHTML = suggest.map((s,idx)=>`
-      <div class="suggest-item" role="option" data-idx="${idx}">
-        <span>${s}</span>
-        <span class="meta">${history.includes(s) ? 'history' : 'suggest'}</span>
-      </div>
-    `).join('');
-    suggestEl.classList.remove('hidden');
-  }
-  function closeSuggest(){ suggest = []; activeIdx=-1; suggestEl.classList.add('hidden'); }
-
-  function pick(value){
-    const parts = value.split(/[\,\s;]+/).map(v=>v.trim()).filter(Boolean);
-    const valid = [];
-    parts.forEach(p=>{
-      const m = p.match(/<([^>]+)>/); const email = (m? m[1] : p).toLowerCase();
-      if (isValidEmail(email)) valid.push(email);
-    });
-    if (valid.length){ emails = unique([...emails, ...valid]); renderChips(); inputEl.value = ''; closeSuggest(); }
-  }
-
-  // ========= input events =========
-  inputEl.addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter' || e.key === ',' || e.key === ';'){ e.preventDefault(); pick(inputEl.value); }
-    else if (e.key === 'Backspace' && !inputEl.value){ emails.pop(); renderChips(); }
-    else if (e.key === 'ArrowDown'){ if (!suggest.length) return; e.preventDefault(); activeIdx = Math.min(suggest.length-1, activeIdx+1); refreshActive(); }
-    else if (e.key === 'ArrowUp'){ if (!suggest.length) return; e.preventDefault(); activeIdx = Math.max(0, activeIdx-1); refreshActive(); }
-    else if (e.key === 'Tab'){ if (suggest.length && activeIdx >= 0){ e.preventDefault(); pick(suggest[activeIdx]); } }
-  });
-  inputEl.addEventListener('blur', ()=>{ if (inputEl.value.trim()) pick(inputEl.value); setTimeout(closeSuggest,150); });
-
-  inputEl.addEventListener('input', async ()=>{
-    const q = inputEl.value.trim().toLowerCase();
-    if (!q){ closeSuggest(); return; }
-    let local = history.filter(e=> e.startsWith(q) && !emails.includes(e));
-    let remote = [];
-    try{
-      const res = await fetch(`/api/markers/suggest?q=${encodeURIComponent(q)}`);
-      if (res.ok){ const data = await res.json(); remote = (data.emails || []).map(String); }
-    }catch{}
-    const merged = unique([...local, ...remote]).filter(e=> !emails.includes(e));
-    showSuggest(merged.slice(0,8));
-    bindSuggestClicks();
-  });
-
-  function bindSuggestClicks(){
-    suggestEl.querySelectorAll('.suggest-item').forEach(el=>{
-      el.addEventListener('mousedown', (e)=>{ e.preventDefault(); const idx = Number(el.dataset.idx); if (Number.isFinite(idx)) pick(suggest[idx]); });
-    });
-  }
-  function refreshActive(){ suggestEl.querySelectorAll('.suggest-item').forEach((el,i)=>{ el.classList.toggle('active', i===activeIdx); }); }
-
-  // ========= buttons =========
-  btnClear.addEventListener('click', ()=>{ emails = []; renderChips(); inputEl.value=''; closeSuggest(); setStatus(''); });
-
-  btnSend.addEventListener('click', async ()=>{
-    if (emails.length===0){ setStatus('Please add at least one email.', 'err'); return; }
-    saveHistory();
-    setStatus('Sending invites…');
-    try{
-      let res = await fetch('/api/invitations/batch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emails }) });
-      if (!res.ok){ // fallback: per-email
-        for (const email of emails){
-          const r = await fetch('/api/invitations', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
-          if (!r.ok) throw new Error('Invite failed for ' + email);
+    rows = data.criteria.map(c => {
+      const markersObj = {};
+      const markerCommentsObj = {}; // 添加marker comments存储
+      (c.marker_scores || []).forEach(ms => {
+        markersObj[ms.marker_id] = ms.score;
+        // 存储marker的comment
+        if (ms.comment) {
+          markerCommentsObj[ms.marker_id] = ms.comment;
         }
-      }
-      setStatus('Invites sent.', 'ok');
-      emails = []; renderChips(); inputEl.value='';
-      await refreshTable();
-    }catch(err){ setStatus(err.message || 'Failed to send invites', 'err'); }
-  });
+      });
+      return {
+        criterion: `${c.title} / ${c.max_score}`,
+        title: c.title,
+        chair: c.baseline_score,
+        chairComment: c.baseline_comment || '', // 添加baseline comment
+        lower: c.range_lower,
+        upper: c.range_upper,
+        percent: c.baseline_percentage,
+        markers: markersObj,
+        markerComments: markerCommentsObj, // 添加marker comments
+        description: rubricDescriptions[c.title] || "",
+        total: null
+      };
+    });
 
-  function setStatus(msg, type){ statusEl.className = 'msg' + (type ? ` ${type}` : ''); statusEl.textContent = msg || ''; }
+    // 添加总分
+    const totals = data.totals;
+    const totalMarkersObj = {};
+    (totals.marker_totals || []).forEach(mt => {
+      totalMarkersObj[mt.marker_id] = mt.total;
+    });
+    rows.push({
+      criterion: "Total / " + totals.max_total_score,
+      chair: totals.baseline_total,
+      lower: totals.range_lower,
+      upper: totals.range_upper,
+      percent: totals.baseline_percentage,
+      markers: totalMarkersObj,
+      markerComments: {}, // 总分行没有comments
+      description: "",
+      total: null
+    });
 
-  // ========= table =========
-  async function refreshTable(){
-    try{
-      const res = await fetch('/api/invitations');
-      let data;
-      if (res.ok){ data = await res.json(); }
-      else{
-        // demo data (with new statuses)
-        data = { items: [
-          {email:'email@deakin.edu.au', status:'active',  sent_at:'Apr 2, 2025'},
-          {email:'john@deakin.edu.au',  status:'pending', sent_at:'Jun 2, 2025'},
-          {email:'eric@deakin.edu.au',  status:'close',   sent_at:'Jun 3, 2025'},
-          {email:'alex@deakin.edu.au',  status:'active',  sent_at:'Jun 4, 2025'},
-        ]};
-      }
-      renderTable(data.items || []);
-    }catch{ renderTable([]); }
+    renderAlignment('all');
+    renderDifferences('all');
+    updateMarkerSelectors();
+
+  } catch (err) {
+    console.error("获取 moderation report 出错:", err);
   }
+}
 
-  function renderTable(items){
-    tbody.innerHTML = '';
-    items.forEach(item=>{
+/* ===== Alignment 表格 ===== */
+function renderAlignment(selected='all'){
+  let headers = ["Criterion","Unit Chair","Range 5% Lower","Range 5% Upper"];
+  if(selected==='all'){
+    headers = headers.concat(markerKeys.map(id=>{
+      const m = markersInfo.find(mi=>mi.id===id);
+      return m ? m.name : `Marker ${id}`;
+    }));
+    // All Markers视图：不添加Total和Comment列
+  } else {
+    const m = markersInfo.find(mi=>mi.id==selected);
+    headers.push(m ? m.name : `Marker ${selected}`);
+    // 单个marker视图：只添加Comment列，不添加Total列
+    headers.push('Comment');
+  }
+  alignHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
+
+  alignBody.innerHTML='';
+  rows.forEach(r=>{
+    const tds = [
+      `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
+      `<td>${fmt(r.chair)}</td>`,
+      `<td>${fmt(r.lower)}</td>`,
+      `<td>${fmt(r.upper)}</td>`
+    ];
+    if(selected==='all'){
+      markerKeys.forEach(id=>{
+        const v=r.markers?.[id];
+        if(v==null) tds.push('<td class="muted">–</td>');
+        else tds.push(`<td class="${isOut(v,r.lower,r.upper)?'bad-cell':''}">${fmt(v)}</td>`);
+      });
+      // All Markers视图：不添加Total和Comment列
+    } else {
+      const v=r.markers?.[selected];
+      if(v==null) tds.push('<td class="muted">–</td>');
+      else tds.push(`<td class="${isOut(v,r.lower,r.upper)?'bad-cell':''}">${fmt(v)}</td>`);
+
+      // 单个marker视图：只添加Comment列，不添加Total列
+      const comment = r.markerComments?.[selected] || '';
+      tds.push(`<td style="text-align:left;max-width:200px;word-wrap:break-word;">${comment ? escapeHtml(comment) : '<span class="muted">—</span>'}</td>`);
+    }
+
+    const tr=document.createElement('tr'); tr.innerHTML=tds.join(''); alignBody.appendChild(tr);
+  });
+}
+
+/* ===== Difference 表格（支持 all 和单 marker） ===== */
+function renderDifferences(selected='all'){
+  allDiffSection.classList.add('hidden');
+  diffSection.classList.add('hidden');
+  allDiffHeader.innerHTML=''; allDiffBody.innerHTML='';
+  diffHeader.innerHTML=''; diffBody.innerHTML='';
+
+  if (selected === 'all') {
+    allDiffSection.classList.remove('hidden');
+    const headers = ['Criterion','Percent'];
+    markerKeys.forEach(id=>{
+      const m = markersInfo.find(mi=>mi.id===id);
+      headers.push(m ? m.name : `Marker ${id}`);
+      headers.push('Difference');
+    });
+    allDiffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
+
+    rows.forEach(r=>{
+      const cells = [
+        `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
+        `<td>${fmt(r.percent)}</td>`
+      ];
+      markerKeys.forEach(id=>{
+        const v = r.markers?.[id];
+        const d = (v!=null && r.percent!=null) ? Number((v - r.percent).toFixed(2)) : null;
+        const out = (v!=null) && isOut(v, r.lower, r.upper);
+        cells.push(`<td class="${out?'bad-cell':''}">${v==null?'—':fmt(v)}</td>`);
+        cells.push(`<td class="${out?'bad-cell':''}">${d==null?'—':(d>0?`+${fmt(d)}`:fmt(d))}</td>`);
+      });
       const tr = document.createElement('tr');
-      const s  = (item.status || '').toLowerCase();
-
-      const tdEmail = document.createElement('td'); tdEmail.textContent = item.email;
-
-      const tdStatus= document.createElement('td');
-      const pill = document.createElement('span');
-      const {pillClass, pillText} = mapStatus(s);
-      pill.className = 'pill ' + pillClass;
-      pill.textContent = pillText;
-      tdStatus.appendChild(pill);
-
-      const tdDate  = document.createElement('td');  tdDate.textContent = item.sent_at || '—';
-
-      const tdAct   = document.createElement('td');
-      // Actions by status
-      if(s === 'pending'){
-        tdAct.appendChild(actionLink('Resend', ()=>resend(item.email)));
-        tdAct.appendChild(spacer());
-        tdAct.appendChild(actionLink('Revoke', ()=>revoke(item.email)));
-      } else if(s === 'active' || s === 'accepted'){ // accepted → active
-        tdAct.appendChild(actionLink('Close', ()=>closeInvite(item.email)));
-      } else if(s === 'close' || s === 'closed'){
-        tdAct.appendChild(actionLink('Reopen', ()=>reopenInvite(item.email)));
-      } else {
-        tdAct.appendChild(document.createTextNode('—'));
-      }
-
-      tr.append(tdEmail, tdStatus, tdDate, tdAct);
-      tbody.appendChild(tr);
+      tr.innerHTML = cells.join('');
+      allDiffBody.appendChild(tr);
     });
-    
-    // Update data overview statistics
-    updateDataOverview(items);
-  }
+  } else {
+    diffSection.classList.remove('hidden');
+    const m = markersInfo.find(mi=>mi.id==selected);
+    const headers = ['Criterion','Percent', m ? m.name : `Marker ${selected}`,'Difference'];
+    diffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
-  function updateDataOverview(items){
-    const stats = {
-      total: items.length,
-      active: 0,
-      pending: 0,
-      closed: 0
-    };
+    rows.forEach(r=>{
+      const v = r.markers?.[selected];
+      const d = (v!=null && r.percent!=null) ? Number((v - r.percent).toFixed(2)) : null;
+      const out = (v!=null) && isOut(v, r.lower, r.upper);
 
-    items.forEach(item => {
-      const status = (item.status || '').toLowerCase();
-      switch(status) {
-        case 'active':
-        case 'accepted':
-          stats.active++;
-          break;
-        case 'pending':
-          stats.pending++;
-          break;
-        case 'close':
-        case 'closed':
-          stats.closed++;
-          break;
-      }
+      const cells = [
+        `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
+        `<td>${fmt(r.percent)}</td>`,
+        `<td class="${out?'bad-cell':''}">${v==null?'—':fmt(v)}</td>`,
+        `<td class="${out?'bad-cell':''}">${d==null?'—':(d>0?`+${fmt(d)}`:fmt(d))}</td>`
+      ];
+      const tr = document.createElement('tr');
+      tr.innerHTML = cells.join('');
+      diffBody.appendChild(tr);
     });
+  }
+}
 
-    // Update DOM elements
-    document.getElementById('totalMarkers').textContent = stats.total;
-    document.getElementById('activeMarkers').textContent = stats.active;
-    document.getElementById('pendingMarkers').textContent = stats.pending;
-    document.getElementById('closedMarkers').textContent = stats.closed;
+/* ===== 更新下拉框 ===== */
+function updateMarkerSelectors(){
+  const sel = document.getElementById("markerSelect");
+  sel.innerHTML = `<option value="all">All Markers</option>`;
+  markersInfo.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+
+  const allSel = document.getElementById("allFbSelect");
+  allSel.innerHTML = "";
+  markersInfo.forEach(m => allSel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+}
+
+/* ===== 初始化 ===== */
+(async function init() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const projectId = urlParams.get("project");
+  const assignmentKey = urlParams.get("assignment"); // assignment1 / assignment2
+
+  if (!projectId || !assignmentKey) {
+    console.warn("缺少 project 或 assignment 参数");
+    return;
   }
 
-  function mapStatus(s){
-    switch((s||'').toLowerCase()){
-      case 'active':
-      case 'accepted': return { pillClass:'active',  pillText:'Active' };
-      case 'pending':  return { pillClass:'pending', pillText:'Pending' };
-      case 'close':
-      case 'closed':   return { pillClass:'close',   pillText:'Closed' };
-      default:         return { pillClass:'pending', pillText: s || 'Pending' };
+  await loadRubricDescriptions(projectId);
+
+  try {
+    const res = await fetch(`/api/uploads/project/${projectId}/latest-ids`);
+    const data = await res.json();
+
+    let assignmentId = null;
+    if (assignmentKey === "assignment1" && data.assignment1) {
+      assignmentId = data.assignment1.assignment_id;
+    } else if (assignmentKey === "assignment2" && data.assignment2) {
+      assignmentId = data.assignment2.assignment_id;
     }
-  }
 
-  function actionLink(text, handler){ const a=document.createElement('a'); a.href='#'; a.textContent=text; a.addEventListener('click', e=>{ e.preventDefault(); handler(); }); return a; }
-  function spacer(){ return document.createTextNode('  '); }
-
-  async function resend(email){
-    try{ const r = await fetch('/api/invitations/resend', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Resent to ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to resend to ' + email, 'err'); }
-  }
-  async function revoke(email){
-    try{ const r = await fetch('/api/invitations/revoke', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Revoked ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to revoke ' + email, 'err'); }
-  }
-  async function closeInvite(email){
-    try{ const r = await fetch('/api/invitations/close', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Closed ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to close ' + email, 'err'); }
-  }
-  async function reopenInvite(email){
-    try{ const r = await fetch('/api/invitations/reopen', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Reopened ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to reopen ' + email, 'err'); }
-  }
-
-  // init
-    try {
-      const rawUser = localStorage.getItem("user");
-      if (rawUser) {
-        const user = JSON.parse(rawUser);
-        if (user && user.name) {
-          document.getElementById("username").textContent = user.name;
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load username:", err);
+    if (!assignmentId) {
+      console.error("未找到对应的 assignmentId");
+      return;
     }
-  renderChips();
-  refreshTable();
+
+    // 将assignment ID存储到全局变量和localStorage中，供feedback功能使用
+    window.currentAssignmentId = assignmentId;
+    localStorage.setItem('currentAssignmentId', assignmentId.toString());
+    console.log(`✅ Assignment ID stored: ${assignmentId}`);
+
+    // 调试当前状态
+    debugCurrentState();
+
+    loadModerationReport(assignmentId);
+  } catch (err) {
+    console.error("初始化失败:", err);
+  }
 })();
+
+/* ===== Marker切换事件 ===== */
+markerSelect.addEventListener('change', e=>{
+  const selected = e.target.value;
+  renderAlignment(selected);
+  renderDifferences(selected);
+});
+/* ===== 单 marker Feedback 事件绑定 ===== */
+const fbTextarea = document.getElementById('fbTextarea');
+const fbSend = document.getElementById('fbSend');
+const fbHint = document.getElementById('fbHint');
+
+// 保存当前选中的 marker ID
+let currentMarkerId = null;
+
+// 当用户选择单个 marker 时，更新 currentMarkerId 并显示 feedback 区域
+document.getElementById('markerSelect').addEventListener('change', e => {
+  const selected = e.target.value;
+  currentMarkerId = selected !== 'all' ? selected : null;
+
+  if (currentMarkerId) {
+    console.log(`✅ Marker selected: ${currentMarkerId}`);
+    document.getElementById('feedback').classList.remove('hidden');
+    document.getElementById('diffSection').classList.remove('hidden');
+    document.getElementById('allDiffSection').classList.add('hidden');
+    document.getElementById('allFeedback').classList.add('hidden');
+    document.getElementById('fbTitle').textContent = `Feedback for Marker ${currentMarkerId}`;
+  } else {
+    console.log('📋 Showing all markers view');
+    document.getElementById('feedback').classList.add('hidden');
+    document.getElementById('diffSection').classList.add('hidden');
+    document.getElementById('allDiffSection').classList.remove('hidden');
+    document.getElementById('allFeedback').classList.remove('hidden');
+  }
+});
+
+// 点击 Send Feedback 按钮
+fbSend.addEventListener('click', async () => {
+  if (!currentMarkerId) return alert('Please select a marker first.');
+  const content = fbTextarea.value.trim();
+  if (!content) return alert('Please write some feedback before sending.');
+
+  fbSend.disabled = true;
+  fbHint.textContent = 'Sending...';
+
+  try {
+    // 获取当前assignment ID (从URL或全局变量)
+    const assignmentId = getCurrentAssignmentId();
+    if (!assignmentId) {
+      throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
+    }
+
+    // 发送feedback到后端API
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        assignment_id: assignmentId,
+        marker_id: currentMarkerId,
+        content: content,
+        title: `Feedback for Marker ${currentMarkerId}`,
+        created_by: getCurrentUserId() // 假设你有这个函数获取当前用户ID
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send feedback');
+    }
+
+    const result = await response.json();
+    console.log(`✅ Feedback sent successfully:`, result);
+
+    fbHint.textContent = '✅ Feedback sent successfully!';
+    fbTextarea.value = ''; // 清空输入框
+    setTimeout(() => (fbHint.textContent = ''), 3000);
+  } catch (err) {
+    console.error('❌ Failed to send feedback:', err);
+    console.log('🔍 Debug info:');
+    debugCurrentState();
+    fbHint.textContent = `❌ Failed to send feedback: ${err.message}`;
+  } finally {
+    fbSend.disabled = false;
+  }
+});
+/* ===== All markers Feedback 事件绑定 ===== */
+const allFbTextarea = document.getElementById('allFbTextarea');
+const allFbSend = document.getElementById('allFbSend');
+const allFbSelect = document.getElementById('allFbSelect');
+const allFbHint = document.getElementById('allFbHint');
+
+allFbSend.addEventListener('click', async () => {
+  const markerId = allFbSelect.value;
+  const content = allFbTextarea.value.trim();
+
+  if (!markerId) return alert('Please select a marker to send feedback.');
+  if (!content) return alert('Please write feedback content.');
+
+  allFbSend.disabled = true;
+  allFbHint.textContent = 'Sending...';
+
+  try {
+    // 获取当前assignment ID
+    const assignmentId = getCurrentAssignmentId();
+    if (!assignmentId) {
+      throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
+    }
+
+    // 发送feedback到后端API
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        assignment_id: assignmentId,
+        marker_id: markerId,
+        content: content,
+        title: `Feedback for Marker ${markerId}`,
+        created_by: getCurrentUserId()
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send feedback');
+    }
+
+    const result = await response.json();
+    console.log(`✅ Feedback sent successfully:`, result);
+
+    allFbHint.textContent = '✅ Feedback sent successfully!';
+    allFbTextarea.value = ''; // 清空输入框
+    setTimeout(() => (allFbHint.textContent = ''), 3000);
+  } catch (err) {
+    console.error('❌ Failed to send feedback:', err);
+    console.log('🔍 Debug info:');
+    debugCurrentState();
+    allFbHint.textContent = `❌ Failed to send feedback: ${err.message}`;
+  } finally {
+    allFbSend.disabled = false;
+  }
+});
+
