@@ -99,18 +99,22 @@
   .label-strong{font-weight:700}
   
   /* Table */
-  .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:var(--radius);background:#fff;max-height:600px}
+  .table-wrap{overflow:auto;border:2px solid var(--border);border-radius:var(--radius);background:#fff;max-height:600px}
   .mb-12{margin-bottom:16px}
   table{width:100%;border-collapse:collapse;min-width:1400px}
   thead th{
-    position:sticky;top:0;z-index:1;background:#F9FAFB;border-bottom:1px solid var(--border);
-    padding:10px 8px;font-weight:700;text-align:center;white-space:nowrap
+    position:sticky;top:0;z-index:1;background:#F9FAFB;border-bottom:2px solid var(--border);
+    padding:12px 10px;font-weight:800;text-align:center;white-space:nowrap;font-size:14px;
+    border-right:1px solid var(--border)
   }
-  tbody td{padding:8px;border-bottom:1px solid #F1F5F9;text-align:center;vertical-align:middle}
+  thead th:last-child{border-right:none}
+  tbody td{padding:10px 8px;border-bottom:1px solid #E5E7EB;text-align:center;vertical-align:middle;border-right:1px solid #E5E7EB;font-weight:500}
   tbody tr:last-child td{border-bottom:none}
-  tbody td:first-child{text-align:left;min-width:320px}
+  tbody tr:hover{background:#F8F9FA}
+  tbody td:first-child{text-align:left;min-width:320px;font-weight:600}
+  tbody td:last-child{border-right:none}
   .muted{color:var(--muted)}
-  .bad-cell{color:var(--bad);font-weight:700;background:#FFF1F1}
+  .bad-cell{color:var(--bad);font-weight:700;background:#FEF2F2}
   
   /* Feedback */
   .subhead{margin:16px 0 12px;font-size:18px;font-weight:800}
