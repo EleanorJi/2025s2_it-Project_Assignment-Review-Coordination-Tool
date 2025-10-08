@@ -273,6 +273,8 @@ body {
     overflow:visible;
     transition:all 0.3s ease;
     box-shadow:0 2px 8px rgba(15,23,42,0.04);
+    position:relative;
+    z-index:1;
   }
 .tm-task-section:hover {
     box-shadow:0 6px 24px rgba(15,23,42,0.08);
@@ -360,7 +362,7 @@ body {
     background:#fff; border:1px solid var(--border);
     border-radius:12px; 
     box-shadow:0 8px 24px rgba(15,23,42,0.12), 0 2px 8px rgba(15,23,42,0.08);
-    display:none; min-width:160px; z-index:99999;
+    display:none; min-width:160px; z-index:999999;
     overflow:hidden;
     animation:dropdownFadeIn 0.15s ease;
     margin-top:4px;

@@ -190,6 +190,7 @@ document.querySelectorAll('.nav-item').forEach(b=>{
           </div>
         `).join('');
       } else {
+        completedTasksList.innerHTML = '<div class="empty-state">No completed tasks</div>';
       }
 
       // Update recent feedback list
