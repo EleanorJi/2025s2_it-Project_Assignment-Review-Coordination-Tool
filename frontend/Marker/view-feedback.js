@@ -118,7 +118,8 @@ async function fetchBaselineData(assignmentId) {
     const res = await fetch(`/api/uploads/scoring/baseline/${assignmentId}`);
     if (!res.ok) throw new Error('Failed to fetch baseline data');
     const data = await res.json();
-    return data.baseline_scores || [];
+    // 只返回 finalized 为 true 的 baseline 分数
+    return (data.baseline_scores || []).filter(score => score.finalized === true);
 }
 
 // 获取marker分数
@@ -166,7 +167,8 @@ function transformData(assignmentData, projectData, baselineData, markerData, fe
       max: r.max_score || baseline?.criterion_max_score || 0,
       // 用 null 表示缺失（便于后续判断），存在则为 number
       markerScore: typeof marker?.score === 'number' ? marker.score : null,
-      coordinatorScore: typeof baseline?.score === 'number' ? baseline.score : null,
+      // 只有当 baseline 存在且 finalized 时才显示 coordinator 分数
+      coordinatorScore: (baseline && baseline.finalized && typeof baseline.score === 'number') ? baseline.score : null,
       coordinatorFeedback: baseline?.comment || '',
       markerComments: marker?.comment || ''
     };
@@ -219,8 +221,8 @@ async function loadFeedback(data){
   const coordinatorTotal = data.criteria.reduce((sum, c) => sum + (typeof c.coordinatorScore === 'number' ? c.coordinatorScore : 0), 0);
   const totalMax = data.criteria.reduce((sum, c) => sum + (c.max || 0), 0);
 
-  // 是否至少有一个 baseline 存在（用于决定顶部 coordinator 总分是否显示）
-  const hasAnyBaseline = data.criteria.some(c => typeof c.coordinatorScore === 'number');
+  // 是否至少有一个 finalized 的 baseline 存在
+  const hasAnyBaseline = data.criteria.some(c => c.coordinatorScore !== null);
 
   // 更新顶部总分显示
   markerScoreEl.textContent = `${markerTotal}/${totalMax}`;
