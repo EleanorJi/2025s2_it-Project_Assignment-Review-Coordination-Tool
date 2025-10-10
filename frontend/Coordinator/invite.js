@@ -165,7 +165,33 @@
         credentials: 'include',
         body: JSON.stringify({ emails }) 
       });
-      if (!res.ok){ 
+      
+      if (res.ok) {
+        // Handle batch response with detailed results
+        const data = await res.json();
+        if (data.success && data.results) {
+          const invited = data.results.filter(r => r.status === 'invited' || r.status === 'renewed').length;
+          const alreadySent = data.results.filter(r => r.status === 'skipped' && r.reason === 'Active invitation already exists').length;
+          const userExists = data.results.filter(r => r.status === 'skipped' && r.reason === 'User already exists').length;
+          
+          let message = '';
+          if (invited > 0 && alreadySent > 0) {
+            message = `${invited} invites sent, ${alreadySent} already sent.`;
+          } else if (invited > 0) {
+            message = 'Invites sent.';
+          } else if (alreadySent > 0) {
+            message = 'Already sent.';
+          } else if (userExists > 0) {
+            message = 'Users already exist.';
+          } else {
+            message = 'No invites processed.';
+          }
+          
+          setStatus(message, 'ok');
+        } else {
+          setStatus('Invites sent.', 'ok');
+        }
+      } else { 
         // fallback: per-email
         for (const email of emails){
           const r = await fetch('/api/invitations', { 
@@ -179,8 +205,9 @@
             throw new Error(data.message || 'Invite failed for ' + email);
           }
         }
+        setStatus('Invites sent.', 'ok');
       }
-      setStatus('Invites sent.', 'ok');
+      
       emails = []; renderChips(); inputEl.value='';
       await refreshTable();
     }catch(err){ setStatus(err.message || 'Failed to send invites', 'err'); }
