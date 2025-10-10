@@ -314,7 +314,8 @@ body {
     letter-spacing:-0.3px;
 }
 .tm-task-status {
-    display:inline-flex; align-items:center; gap:4px;
+    margin-left:8px;
+    display:inline-flex; align-items:center; 
     padding:3px 8px; border-radius:12px;
     font-size:10px; font-weight:600; 
     text-transform:uppercase;
@@ -342,8 +343,9 @@ body {
   /* ======================
      Status Dropdown - Enhanced
      ====================== */
-  .tm-status-dropdown { position:relative; margin-left:8px }
-.tm-status-toggle {
+  .tm-status-dropdown { position:relative; margin-left:2px }
+
+  .tm-status-toggle {
     background:rgba(255,255,255,0.5); 
     border:1px solid rgba(107,114,128,0.2); 
     color:#6b7280; cursor:pointer; font-weight:800;
@@ -351,13 +353,13 @@ body {
     transition:all 0.2s;
     font-size:16px;
   }
-.tm-status-toggle:hover {
+  .tm-status-toggle:hover {
     background:rgba(248,250,252,0.9);
     border-color:#cbd5e1;
     color:var(--primary);
     transform:scale(1.05);
   }
-.tm-status-menu {
+  .tm-status-menu {
     position:absolute; top:100%; left:0; 
     background:#fff; border:1px solid var(--border);
     border-radius:12px; 
@@ -377,7 +379,7 @@ body {
     visibility:visible;
     transform:translateY(0);
   }
-.tm-status-item {
+  .tm-status-item {
     padding:10px 14px; cursor:pointer; font-weight:600; 
     transition:all 0.15s;
     font-size:13px;

@@ -4,6 +4,12 @@ const invitationController = require('../controllers/invitationController');
 const authenticate = require('../middleware/auth');
 const { requireCoordinator } = require('../middleware/roleAuth');
 
+// Debug middleware
+router.use((req, res, next) => {
+  console.log('📍 Invitations router - Method:', req.method, 'Path:', req.path);
+  next();
+});
+
 router.post('/', authenticate, requireCoordinator, invitationController.inviteMarker);
 router.get('/verify', invitationController.verifyInvite);
 router.post('/complete-signup', invitationController.completeSignup);

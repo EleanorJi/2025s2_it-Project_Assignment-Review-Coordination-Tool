@@ -228,22 +228,12 @@ async function loadFeedback(data){
 
   // 更新总体分差显示（只有在存在 baseline 时才计算差值）
   if (hasAnyBaseline) {
-    const difference = coordinatorTotal - markerTotal;
+    const difference = markerTotal - coordinatorTotal;
     scoreDifferenceEl.textContent = difference > 0 ? `+${difference}` : `${difference}`;
     scoreDifferenceEl.className = 'difference-value';
-    scoreDifferenceEl.classList.remove('difference-large','positive','negative','neutral');
-    if (Math.abs(difference) > 5) {
-      scoreDifferenceEl.classList.add('large-diff');
-    } else if (difference > 0) {
-      scoreDifferenceEl.classList.add('positive');
-    } else if (difference < 0) {
-      scoreDifferenceEl.classList.add('negative');
-    } else {
-      scoreDifferenceEl.classList.add('neutral');
-    }
   } else {
     scoreDifferenceEl.textContent = "-";
-    scoreDifferenceEl.className = "difference-value difference-neutral";
+    scoreDifferenceEl.className = "difference-value";
   }
 
   // --- 渲染表格行 ---
@@ -278,12 +268,12 @@ async function loadFeedback(data){
     const td3 = td();
     td3.className = 'difference-cell';
     if (typeof c.coordinatorScore !== 'number') {
-      td3.innerHTML = `<span class="difference-neutral">-</span>`;
+      td3.innerHTML = `<span>-</span>`;
     } else {
       const markerValForDiff = (typeof c.markerScore === 'number') ? c.markerScore : 0;
-      const diff = c.coordinatorScore - markerValForDiff;
+      const diff = markerValForDiff - c.coordinatorScore;
       const diffText = diff > 0 ? `+${diff}` : `${diff}`;
-      td3.innerHTML = `<span class="${getDifferenceClass(diff)}">${diffText}</span>`;
+      td3.innerHTML = `<span>${diffText}</span>`;
     }
     tr.appendChild(td3);
 
@@ -320,19 +310,6 @@ async function loadFeedback(data){
   } else {
       coordinatorFeedbackEl.textContent = 'No detailed feedback provided.';
       coordinatorFeedbackEl.classList.add('empty');
-  }
-}
-
-
-function getDifferenceClass(diff) {
-  if (Math.abs(diff) > 5) {
-    return 'difference-large';
-  } else if (diff > 0) {
-    return 'difference-positive';
-  } else if (diff < 0) {
-    return 'difference-negative';
-  } else {
-    return 'difference-neutral';
   }
 }
 
