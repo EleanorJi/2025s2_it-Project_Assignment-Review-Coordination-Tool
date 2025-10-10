@@ -307,6 +307,8 @@ exports.inviteMarkersBatch = async (req, res) => {
 // List invitations
 exports.listInvitations = async (req, res) => {
   const createdBy = req.user.id;
+  const currentUserEmail = req.user.email; // Get current user's email to exclude
+  
   try {
     const result = await db.query(
       `WITH latest_invitations AS (
@@ -337,8 +339,9 @@ exports.listInvitations = async (req, res) => {
          AND NOT (li.used_at IS NOT NULL AND NOT EXISTS (
            SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
          ))  -- Exclude revoked invitations that haven't been accepted
+         AND COALESCE(u.email, li.email) != $2  -- Exclude current user's email
        ORDER BY sent_at DESC`,
-      [createdBy]
+      [createdBy, currentUserEmail]
     );
     console.log('Data returned to frontend:');
     result.rows.forEach((row, index) => {

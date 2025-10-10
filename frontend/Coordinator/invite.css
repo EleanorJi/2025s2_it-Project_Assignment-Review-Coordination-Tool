@@ -156,6 +156,53 @@ h1{font-size:32px;font-weight:800;margin:-18px 0 14px -2px;letter-spacing:-0.5px
 .pill.accept{background:#e8f5e8;border-color:#c3e6c3;color:#28a745}
 .pill.pending{background:#fff3cd;border-color:#ffeaa7;color:#856404}
 .pill.expired{background:#f8d7da;border-color:#f5c6cb;color:#721c24}
+
+/* Action Buttons in Table */
+.action-buttons{
+  display:flex; gap:8px; align-items:center;
+}
+.action-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:6px 12px; border-radius:8px; font-weight:600; font-size:12px;
+  text-decoration:none; cursor:pointer; transition:all 0.2s ease;
+  border:1px solid; min-width:70px; text-align:center;
+}
+.action-btn:hover{
+  transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Resend Button - Blue Theme */
+.action-btn.resend{
+  background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8;
+}
+.action-btn.resend:hover{
+  background:#dbeafe; border-color:#93c5fd; color:#1e40af;
+}
+
+/* Revoke Button - Red Theme */
+.action-btn.revoke{
+  background:#fef2f2; border-color:#fecaca; color:#dc2626;
+}
+.action-btn.revoke:hover{
+  background:#fee2e2; border-color:#fca5a5; color:#b91c1c;
+}
+
+/* Close Button - Gray Theme */
+.action-btn.close{
+  background:#f9fafb; border-color:#d1d5db; color:#374151;
+}
+.action-btn.close:hover{
+  background:#f3f4f6; border-color:#9ca3af; color:#1f2937;
+}
+
+/* Reopen Button - Green Theme */
+.action-btn.reopen{
+  background:#f0fdf4; border-color:#bbf7d0; color:#16a34a;
+}
+.action-btn.reopen:hover{
+  background:#dcfce7; border-color:#86efac; color:#15803d;
+}
+
 .table a{color:#1d4ed8; font-weight:600; text-decoration:none}
 
 /* Status / messages */

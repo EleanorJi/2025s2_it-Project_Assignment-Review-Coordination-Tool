@@ -295,21 +295,26 @@
       const tdDate  = document.createElement('td');  tdDate.textContent = item.sent_at || '—';
 
       const tdAct   = document.createElement('td');
+      // Create action buttons container
+      const actionContainer = document.createElement('div');
+      actionContainer.className = 'action-buttons';
+      
       // Actions by status
       if(s === 'pending'){
-        tdAct.appendChild(actionLink('Resend', ()=>resend(item.email)));
-        tdAct.appendChild(spacer());
-        tdAct.appendChild(actionLink('Revoke', ()=>revoke(item.email)));
+        actionContainer.appendChild(actionButton('Resend', 'resend', ()=>resend(item.email)));
+        actionContainer.appendChild(actionButton('Revoke', 'revoke', ()=>revoke(item.email)));
       } else if(s === 'active' || s === 'accepted'){ // accepted → active
-        tdAct.appendChild(actionLink('Close', ()=>closeInvite(item.email)));
+        actionContainer.appendChild(actionButton('Close', 'close', ()=>closeInvite(item.email)));
       } else if(s === 'expired'){
         // Expired supports Resend
-        tdAct.appendChild(actionLink('Resend', ()=>resend(item.email)));
+        actionContainer.appendChild(actionButton('Resend', 'resend', ()=>resend(item.email)));
       } else if(s === 'close' || s === 'closed'){
-        tdAct.appendChild(actionLink('Reopen', ()=>reopenInvite(item.email)));
+        actionContainer.appendChild(actionButton('Reopen', 'reopen', ()=>reopenInvite(item.email)));
       } else {
-        tdAct.appendChild(document.createTextNode('—'));
+        actionContainer.appendChild(document.createTextNode('—'));
       }
+      
+      tdAct.appendChild(actionContainer);
 
       tr.append(tdEmail, tdStatus, tdDate, tdAct);
       tbody.appendChild(tr);
@@ -330,6 +335,18 @@
 
   function actionLink(text, handler){ const a=document.createElement('a'); a.href='#'; a.textContent=text; a.addEventListener('click', e=>{ e.preventDefault(); handler(); }); return a; }
   function spacer(){ return document.createTextNode('  '); }
+  
+  // New styled action button function
+  function actionButton(text, type, handler) {
+    const button = document.createElement('button');
+    button.className = `action-btn ${type}`;
+    button.textContent = text;
+    button.addEventListener('click', e => {
+      e.preventDefault();
+      handler();
+    });
+    return button;
+  }
 
   async function resend(email){
     try{ 
