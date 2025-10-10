@@ -4,7 +4,7 @@ let markerKeys = [];
 let markersInfo = [];
 let rubricDescriptions = {}; // 新增：保存 rubric description
 
-console.log('📊 Feedback.js v2.1 loaded - Difference calculation updated');
+console.log('📊 Feedback.js v2.5 loaded - 3-tier color for Total (green≤2.5%, yellow≤5%, red>5%), 2-tier for criteria (green≤5%, red>5%)');
 
 /* ===== 辅助函数 ===== */
 // 获取当前assignment ID
@@ -84,6 +84,34 @@ function fmt(n){ const v=Number(n); if(Number.isNaN(v)) return ''; return (v%1==
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function isOut(v, lo, hi){ return v<lo || v>hi; }
 
+/**
+ * 获取单元格颜色类
+ * @param {number} value - marker的分数
+ * @param {object} row - 行数据
+ * @returns {string} - CSS类名
+ */
+function getCellClass(value, row) {
+  if (value == null) return '';
+  
+  // 对于Total行，使用三级颜色系统
+  if (row.isTotal) {
+    if (value >= row.warningLower && value <= row.warningUpper) {
+      return 'good-cell'; // 在±2.5%以内，绿色
+    } else if (value >= row.lower && value <= row.upper) {
+      return 'warning-cell'; // 在2.5%-5%之间，黄色
+    } else {
+      return 'bad-cell'; // 超过±5%，红色
+    }
+  }
+  
+  // 对于普通criterion行，使用两级颜色系统
+  if (value >= row.lower && value <= row.upper) {
+    return 'good-cell'; // 在±5%以内，绿色
+  } else {
+    return 'bad-cell'; // 超过±5%，红色
+  }
+}
+
 /* ===== 从后端加载 Rubric 描述 ===== */
 async function loadRubricDescriptions(projectId) {
   try {
@@ -145,7 +173,7 @@ async function loadModerationReport(assignmentId) {
       };
     });
 
-    // 添加总分
+    // 添加总分行 (Note: Total row uses ±5% range for red, ±2.5% for warning, individual criteria use ±5% range)
     const totals = data.totals;
     const totalMarkersObj = {};
     (totals.marker_totals || []).forEach(mt => {
@@ -154,14 +182,17 @@ async function loadModerationReport(assignmentId) {
     rows.push({
       criterion: "Total / " + totals.max_total_score,
       chair: totals.baseline_total, // ⚡ Coordinator的总分，从后端baseline_total提取
-      lower: totals.range_lower,
-      upper: totals.range_upper,
+      lower: totals.range_lower, // ±5% for Total row (red threshold)
+      upper: totals.range_upper, // ±5% for Total row (red threshold)
+      warningLower: totals.warning_lower, // ±2.5% for Total row (warning threshold)
+      warningUpper: totals.warning_upper, // ±2.5% for Total row (warning threshold)
       percent: totals.baseline_percentage,
       maxScore: totals.max_total_score, // 保存总分
       markers: totalMarkersObj,
       markerComments: {}, // 总分行没有comments
       description: "",
-      total: null
+      total: null,
+      isTotal: true // 标记这是总分行
     });
 
     renderAlignment('all');
@@ -178,7 +209,7 @@ async function loadModerationReport(assignmentId) {
 
 /* ===== Alignment 表格 ===== */
 function renderAlignment(selected='all'){
-  let headers = ["Criterion","Unit Chair","Range 5% Lower","Range 5% Upper"];
+  let headers = ["Criterion","Unit Chair","Range Lower","Range Upper"];
   if(selected==='all'){
     headers = headers.concat(markerKeys.map(id=>{
       const m = markersInfo.find(mi=>mi.id===id);
@@ -205,13 +236,13 @@ function renderAlignment(selected='all'){
       markerKeys.forEach(id=>{
         const v=r.markers?.[id];
         if(v==null) tds.push('<td class="muted">–</td>');
-        else tds.push(`<td class="${isOut(v,r.lower,r.upper)?'bad-cell':''}">${fmt(v)}</td>`);
+        else tds.push(`<td class="${getCellClass(v, r)}">${fmt(v)}</td>`);
       });
       // All Markers视图：不添加Total和Comment列
     } else {
       const v=r.markers?.[selected];
       if(v==null) tds.push('<td class="muted">–</td>');
-      else tds.push(`<td class="${isOut(v,r.lower,r.upper)?'bad-cell':''}">${fmt(v)}</td>`);
+      else tds.push(`<td class="${getCellClass(v, r)}">${fmt(v)}</td>`);
 
       // 单个marker视图：只添加Comment列，不添加Total列
       const comment = r.markerComments?.[selected] || '';
@@ -234,15 +265,15 @@ function renderDifferences(selected='all'){
     const headers = ['Criterion','Unit Chair'];
     markerKeys.forEach(id=>{
       const m = markersInfo.find(mi=>mi.id===id);
+      headers.push('Difference');
       headers.push(m ? m.name : `Marker ${id}`);
       headers.push('Percent');
-      headers.push('Difference');
     });
     allDiffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
     rows.forEach(r=>{
       const cells = [
-        `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
+        `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
         `<td>${fmt(r.chair)}</td>`
       ];
       markerKeys.forEach(id=>{
@@ -253,13 +284,14 @@ function renderDifferences(selected='all'){
         // Percent = marker的分数 / criterion的总分 * 100
         const percent = (v!=null && maxScore!=null && maxScore > 0) ? Number(((v / maxScore) * 100).toFixed(2)) : null;
         
-        // Difference = (marker的分数 / coordinator的分数) * 100
-        const diff = (v!=null && coordinatorScore!=null && coordinatorScore > 0) ? Number(((v / coordinatorScore) * 100).toFixed(2)) : null;
+        // Difference = marker的分数 - coordinator的分数
+        const diff = (v!=null && coordinatorScore!=null) ? Number((v - coordinatorScore).toFixed(2)) : null;
         
-        const out = (v!=null) && isOut(v, r.lower, r.upper);
-        cells.push(`<td class="${out?'bad-cell':''}">${v==null?'—':fmt(v)}</td>`);
-        cells.push(`<td class="${out?'bad-cell':''}">${percent==null?'—':fmt(percent)+'%'}</td>`);
-        cells.push(`<td class="${out?'bad-cell':''}">${diff==null?'—':fmt(diff)+'%'}</td>`);
+        // 移除标红逻辑，不再使用bad-cell类
+        // 顺序改为：Difference, Marker, Percent
+        cells.push(`<td>${diff==null?'—':fmt(diff)}</td>`);
+        cells.push(`<td>${v==null?'—':fmt(v)}</td>`);
+        cells.push(`<td>${percent==null?'—':fmt(percent)+'%'}</td>`);
       });
       const tr = document.createElement('tr');
       tr.innerHTML = cells.join('');
@@ -268,7 +300,7 @@ function renderDifferences(selected='all'){
   } else {
     diffSection.classList.remove('hidden');
     const m = markersInfo.find(mi=>mi.id==selected);
-    const headers = ['Criterion','Unit Chair', m ? m.name : `Marker ${selected}`,'Percent','Difference'];
+    const headers = ['Criterion','Unit Chair','Difference', m ? m.name : `Marker ${selected}`,'Percent'];
     diffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
     rows.forEach(r=>{
@@ -279,17 +311,18 @@ function renderDifferences(selected='all'){
       // Percent = marker的分数 / criterion的总分 * 100
       const percent = (v!=null && maxScore!=null && maxScore > 0) ? Number(((v / maxScore) * 100).toFixed(2)) : null;
       
-      // Difference = (marker的分数 / coordinator的分数) * 100
-      const diff = (v!=null && coordinatorScore!=null && coordinatorScore > 0) ? Number(((v / coordinatorScore) * 100).toFixed(2)) : null;
+      // Difference = marker的分数 - coordinator的分数
+      const diff = (v!=null && coordinatorScore!=null) ? Number((v - coordinatorScore).toFixed(2)) : null;
       
-      const out = (v!=null) && isOut(v, r.lower, r.upper);
+      // 移除标红逻辑，不再使用bad-cell类
+      // 顺序改为：Criterion, Unit Chair, Difference, Marker, Percent
 
       const cells = [
-        `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
+        `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
         `<td>${fmt(coordinatorScore)}</td>`,
-        `<td class="${out?'bad-cell':''}">${v==null?'—':fmt(v)}</td>`,
-        `<td class="${out?'bad-cell':''}">${percent==null?'—':fmt(percent)+'%'}</td>`,
-        `<td class="${out?'bad-cell':''}">${diff==null?'—':fmt(diff)+'%'}</td>`
+        `<td>${diff==null?'—':fmt(diff)}</td>`,
+        `<td>${v==null?'—':fmt(v)}</td>`,
+        `<td>${percent==null?'—':fmt(percent)+'%'}</td>`
       ];
       const tr = document.createElement('tr');
       tr.innerHTML = cells.join('');

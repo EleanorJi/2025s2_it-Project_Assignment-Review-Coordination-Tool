@@ -335,7 +335,7 @@ exports.getMarkerDashboardData = async (req, res) => {
       LIMIT 5
     `, [markerId]);
 
-    // Get recent feedback
+    // Get recent feedback (last 30 days to show more relevant feedback)
     const recentFeedbackListResult = await db.query(`
       SELECT 
         f.feedback_id,
@@ -347,8 +347,9 @@ exports.getMarkerDashboardData = async (req, res) => {
       JOIN assignment a ON f.assignment_id = a.assignment_id
       JOIN project p ON a.project_id = p.project_id
       WHERE f.marker_id = $1
+        AND f.created_at > NOW() - INTERVAL '30 days'
       ORDER BY f.created_at DESC
-      LIMIT 3
+      LIMIT 5
     `, [markerId]);
 
     res.json({

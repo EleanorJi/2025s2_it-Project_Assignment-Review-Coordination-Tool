@@ -2811,14 +2811,17 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
     const baselineTotalRounded = Math.round(baselineTotal * 100) / 100;
     const baselineTotalPercentage = Math.round((baselineTotal / maxTotalScore) * 100 * 100) / 100;
 
-    // Calculate total score range (±2.5%)
-    const totalRangeLower = Math.round(baselineTotalRounded * 0.975 * 100) / 100;
-    const totalRangeUpper = Math.round(baselineTotalRounded * 1.025 * 100) / 100;
+    // Calculate total score range (±5% for red, ±2.5% for warning threshold)
+    const totalRangeLower = Math.round(baselineTotalRounded * 0.95 * 100) / 100;
+    const totalRangeUpper = Math.round(baselineTotalRounded * 1.05 * 100) / 100;
+    const totalWarningLower = Math.round(baselineTotalRounded * 0.975 * 100) / 100;
+    const totalWarningUpper = Math.round(baselineTotalRounded * 1.025 * 100) / 100;
 
     // Calculate marker total scores and determine if within range
     const markerTotals = Array.from(markersMap.values()).map(marker => {
       const markerTotal = Math.round(marker.total * 100) / 100;
       const withinRange = markerTotal >= totalRangeLower && markerTotal <= totalRangeUpper;
+      const withinWarningRange = markerTotal >= totalWarningLower && markerTotal <= totalWarningUpper;
       const difference = Math.abs(markerTotal - baselineTotalRounded);
       
       // Calculate total percentage and difference from baseline percentage
@@ -2832,6 +2835,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         percentage: markerTotalPercentage, // Total score percentage
         percentage_difference: totalPercentageDifference, // Percentage difference from baseline total score, can be positive or negative
         within_range: withinRange,
+        within_warning_range: withinWarningRange,
         difference: Math.round(difference * 100) / 100
       };
     });
@@ -2850,8 +2854,10 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         baseline_total: baselineTotalRounded,
         baseline_percentage: baselineTotalPercentage, // baseline total score percentage
         max_total_score: maxTotalScore, // maximum total score
-        range_lower: totalRangeLower,
+        range_lower: totalRangeLower, // ±5% range for red alert
         range_upper: totalRangeUpper,
+        warning_lower: totalWarningLower, // ±2.5% range for yellow warning
+        warning_upper: totalWarningUpper,
         marker_totals: markerTotals
       },
       summary: {

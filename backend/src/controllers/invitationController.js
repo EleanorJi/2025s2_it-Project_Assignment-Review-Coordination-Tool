@@ -438,6 +438,8 @@ exports.revokeInvite = async (req, res) => {
 exports.closeUser = async (req, res) => {
   const { email } = req.body;
   const currentUserId = req.user.id; // From authenticate middleware user.id
+  
+  console.log('🔴 closeUser called with email:', email, 'by user ID:', currentUserId);
 
   if (!email) {
     return res.status(400).json({ success: false, message: 'Email is required' });
@@ -446,9 +448,12 @@ exports.closeUser = async (req, res) => {
   try {
     // Find user by email and check if they were invited by current coordinator
     const userCheck = await db.query(
-      `SELECT u.user_id FROM app_user u
-       JOIN invitations i ON u.email = i.email
-       WHERE u.email = $1 AND u.role = 'MARKER' AND i.created_by = $2`,
+      `SELECT DISTINCT u.user_id FROM app_user u
+       WHERE u.email = $1 AND u.role = 'MARKER'
+       AND EXISTS (
+         SELECT 1 FROM invitations i 
+         WHERE i.email = u.email AND i.created_by = $2
+       )`,
       [email, currentUserId]
     );
 
@@ -493,9 +498,12 @@ exports.reopenUser = async (req, res) => {
   try {
     // Find user by email and check if they were invited by current coordinator
     const userCheck = await db.query(
-      `SELECT u.user_id FROM app_user u
-       JOIN invitations i ON u.email = i.email
-       WHERE u.email = $1 AND u.role = 'MARKER' AND i.created_by = $2`,
+      `SELECT DISTINCT u.user_id FROM app_user u
+       WHERE u.email = $1 AND u.role = 'MARKER'
+       AND EXISTS (
+         SELECT 1 FROM invitations i 
+         WHERE i.email = u.email AND i.created_by = $2
+       )`,
       [email, currentUserId]
     );
 
