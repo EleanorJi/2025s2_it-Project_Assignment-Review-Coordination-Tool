@@ -179,10 +179,10 @@
     const grades = gradeData[criterionId];
     if (!grades) return null;
 
-    // Sort grades from high to low
+    // Sort grades by index (0, 1, 2, 3, 4) - already sorted by score from high to low
     const sortedGrades = Object.keys(grades)
       .map(grade => parseInt(grade))
-      .sort((a, b) => b - a);
+      .sort((a, b) => a - b);
 
     for (const grade of sortedGrades) {
       const gradeInfo = grades[grade];
@@ -385,8 +385,11 @@
       const criterionId = index + 1; // Use 1-based index as key
       const descriptions = {};
 
-      // Iterate through all grade levels for this criterion
-      criterion.grade_levels.forEach((level, levelIndex) => {
+      // Sort grade levels by max_score from high to low (same as initializeGradeData)
+      const sortedLevels = [...criterion.grade_levels].sort((a, b) => b.max_score - a.max_score);
+
+      // Create descriptions with dynamic indices (0 = highest, 1 = second highest, etc.)
+      sortedLevels.forEach((level, gradeIndex) => {
         // Split description text by line breaks into array, filter empty lines
         const criteriaList = level.description
           .split('\n')
@@ -396,7 +399,7 @@
         // Build points string, format like: "0-4 points"
         const points = `${level.min_score}-${level.max_score} points`;
 
-        descriptions[4 - levelIndex] = {
+        descriptions[gradeIndex] = {
           points: points,
           criteria: criteriaList
         };
@@ -425,24 +428,27 @@
 
       // Initialize default grade for each grading criterion (select highest grade)
       if (criterion.grade_levels && criterion.grade_levels.length > 0) {
-        // Sort by seq_no in descending order, select highest grade as default
-        const sortedLevels = [...criterion.grade_levels].sort((a, b) => b.seq_no - a.seq_no);
-        currentGrades[criterionId] = sortedLevels[0].seq_no - 1;
-
-        // Build gradeData data structure
+        // Sort grade levels by max_score from high to low
+        const sortedLevels = [...criterion.grade_levels].sort((a, b) => b.max_score - a.max_score);
+        
+        // Build gradeData data structure with dynamic ordering
         gradeData[criterionId] = {};
 
-        // Create independent grade mapping for each grading criterion
-        criterion.grade_levels.forEach(level => {
-          gradeData[criterionId][5 - level.seq_no] = {
+        // Create grade mapping with dynamic indices (0 = highest, 1 = second highest, etc.)
+        sortedLevels.forEach((level, gradeIndex) => {
+          gradeData[criterionId][gradeIndex] = {
             name: level.level_name,
-            color: getGradeColor(5 - level.seq_no, criterion.grade_levels.length),
+            color: getGradeColor(gradeIndex, criterion.grade_levels.length),
             score: `${level.min_score}-${level.max_score}`,
             min_score: level.min_score,
             max_score: level.max_score,
-            description: level.description
+            description: level.description,
+            original_seq_no: level.seq_no // Keep original seq_no for reference
           };
         });
+
+        // Set default grade to highest (index 0)
+        currentGrades[criterionId] = 0;
       }
     });
   }
@@ -452,57 +458,68 @@
     // Color mapping for 5 levels (from high to low)
     const colorMappings = {
       5: [ // Case with 5 levels
-        'var(--grade-high-distinction)', // Highest level - Level 4
-        'var(--grade-distinction)',      // Level 3
-        'var(--grade-credit)',           // Level 2
-        'var(--grade-pass)',             // Level 1
-        'var(--grade-fail)'              // Lowest level - Level 0
+        'var(--grade-high-distinction)', // Index 0 - Highest level
+        'var(--grade-distinction)',      // Index 1 - Second highest
+        'var(--grade-credit)',           // Index 2 - Third highest
+        'var(--grade-pass)',             // Index 3 - Fourth highest
+        'var(--grade-fail)'              // Index 4 - Lowest level
       ],
-      4: [ // Case with 4 levels (maintain original logic)
-        'var(--grade-high-distinction)', // Highest level
-        'var(--grade-distinction)',
-        'var(--grade-credit)',
-        'var(--grade-pass)'
+      4: [ // Case with 4 levels
+        'var(--grade-high-distinction)', // Index 0 - Highest level
+        'var(--grade-distinction)',      // Index 1 - Second highest
+        'var(--grade-credit)',           // Index 2 - Third highest
+        'var(--grade-pass)'              // Index 3 - Lowest level
       ],
       3: [ // Case with 3 levels
-        'var(--grade-high-distinction)',
-        'var(--grade-distinction)',
-        'var(--grade-pass)'
+        'var(--grade-high-distinction)', // Index 0 - Highest level
+        'var(--grade-distinction)',      // Index 1 - Second highest
+        'var(--grade-pass)'              // Index 2 - Lowest level
       ],
       2: [ // Case with 2 levels
-        'var(--grade-pass)',
-        'var(--grade-fail)'
+        'var(--grade-pass)',             // Index 0 - Higher level
+        'var(--grade-fail)'              // Index 1 - Lower level
       ]
     };
 
     // Select appropriate color mapping based on total grade levels
     const colors = colorMappings[totalLevels] || colorMappings[4]; // Default to 4-level mapping
 
-    // Calculate color index (seqNo from high to low, needs to map to color array)
-    const colorIndex = totalLevels - 1 - seqNo;
+    // Use seqNo directly as color index (seqNo 0 = highest grade = first color)
+    const colorIndex = seqNo;
 
     // Ensure color index is within valid range
     const safeIndex = Math.max(0, Math.min(colorIndex, colors.length - 1));
     return colors[safeIndex] || 'var(--grade-pass)';
   }
 
-  // Backup default data loading function (updated to support 5 levels)
+  // Backup default data loading function (updated for dynamic grade levels)
   function loadDefaultRubricData() {
-    // Use default 5-level data
-    currentGrades = { 1: 4, 2: 4, 3: 4 }; // Default select highest level (Level 4)
+    // Use default 5-level data with dynamic ordering (0 = highest, 4 = lowest)
+    currentGrades = { 1: 0, 2: 0, 3: 0 }; // Default select highest level (index 0)
     gradeData = {
-      4: { name: 'High Distinction', color: 'var(--grade-high-distinction)', score: '9-10' },
-      3: { name: 'Distinction', color: 'var(--grade-distinction)', score: '7-8' },
-      2: { name: 'Credit', color: 'var(--grade-credit)', score: '5-6' },
-      1: { name: 'Pass', color: 'var(--grade-pass)', score: '0-4' },
-      0: { name: 'Fail', color: 'var(--grade-fail)', score: '0-0' }
+      1: {
+        0: { name: 'High Distinction', color: 'var(--grade-high-distinction)', score: '9-10', min_score: 9, max_score: 10 },
+        1: { name: 'Distinction', color: 'var(--grade-distinction)', score: '7-8', min_score: 7, max_score: 8 },
+        2: { name: 'Credit', color: 'var(--grade-credit)', score: '5-6', min_score: 5, max_score: 6 },
+        3: { name: 'Pass', color: 'var(--grade-pass)', score: '0-4', min_score: 0, max_score: 4 },
+        4: { name: 'Fail', color: 'var(--grade-fail)', score: '0-0', min_score: 0, max_score: 0 }
+      },
+      2: {
+        0: { name: 'High Distinction', color: 'var(--grade-high-distinction)', score: '9-10', min_score: 9, max_score: 10 },
+        1: { name: 'Distinction', color: 'var(--grade-distinction)', score: '7-8', min_score: 7, max_score: 8 },
+        2: { name: 'Credit', color: 'var(--grade-credit)', score: '5-6', min_score: 5, max_score: 6 },
+        3: { name: 'Pass', color: 'var(--grade-pass)', score: '0-4', min_score: 0, max_score: 4 },
+        4: { name: 'Fail', color: 'var(--grade-fail)', score: '0-0', min_score: 0, max_score: 0 }
+      },
+      3: {
+        0: { name: 'High Distinction', color: 'var(--grade-high-distinction)', score: '9-10', min_score: 9, max_score: 10 },
+        1: { name: 'Distinction', color: 'var(--grade-distinction)', score: '7-8', min_score: 7, max_score: 8 },
+        2: { name: 'Credit', color: 'var(--grade-credit)', score: '5-6', min_score: 5, max_score: 6 },
+        3: { name: 'Pass', color: 'var(--grade-pass)', score: '0-4', min_score: 0, max_score: 4 },
+        4: { name: 'Fail', color: 'var(--grade-fail)', score: '0-0', min_score: 0, max_score: 0 }
+      }
     };
 
-    console.log('⚠️ Using default rubric data with 5 levels');
-  }
-
-  // Fallback default rubric data
-  function loadDefaultRubricData() {
     criterionData = {
       1: {
         title: 'Introduction: Applies theoretical framework to topic',
@@ -535,6 +552,8 @@
         }
       }
     };
+
+    console.log('⚠️ Using default rubric data with dynamic grade levels');
   }
 
   // Dynamically generate grading criteria HTML
@@ -674,8 +693,8 @@
       return '';
     }
 
-    // Sort grades from high to low (4, 3, 2, 1, 0) - ensure correct HTML display order
-    const sortedGrades = Object.keys(grades).sort((a, b) => b - a);
+    // Sort grades by index (0, 1, 2, 3, 4) - already sorted by score from high to low
+    const sortedGrades = Object.keys(grades).sort((a, b) => parseInt(a) - parseInt(b));
 
     return sortedGrades.map(grade => {
       const gradeInfo = grades[grade];
@@ -1149,17 +1168,21 @@
         });
       });
 
-      // Arrow navigation (adjusted for high-to-low order)
+      // Arrow navigation (adjusted for dynamic grade levels)
       leftArrow?.addEventListener('click', () => {
         const currentGrade = currentGrades[criterionId];
-        const newGrade = Math.min(4, currentGrade + 1); // Move to higher grade
+        const newGrade = Math.max(0, currentGrade - 1); // Move to higher grade (lower index)
         selectGrade(criterionId, newGrade);
       });
 
       rightArrow?.addEventListener('click', () => {
         const currentGrade = currentGrades[criterionId];
-        const newGrade = Math.max(0, currentGrade - 1); // Move to lower grade
-        selectGrade(criterionId, newGrade);
+        const grades = gradeData[criterionId];
+        if (grades) {
+          const maxGradeIndex = Math.max(...Object.keys(grades).map(g => parseInt(g)));
+          const newGrade = Math.min(maxGradeIndex, currentGrade + 1); // Move to lower grade (higher index)
+          selectGrade(criterionId, newGrade);
+        }
       });
     });
   }
@@ -1287,18 +1310,18 @@
     });
   }
 
-  // Calculate corresponding grade based on score (assuming 5 grades)
+  // Calculate corresponding grade based on score (dynamic grade levels)
   function calculateGradeFromScore(score, maxScore, criterionId) {
     const grades = gradeData[criterionId];
     if (!grades) {
       console.warn('Grade data not found for criterion:', criterionId);
-      return 4; // Default return highest grade
+      return 0; // Default return highest grade (index 0)
     }
 
-    // Sort grades from high to low
+    // Sort grades by index (0, 1, 2, 3, 4) - already sorted by score from high to low
     const sortedGrades = Object.keys(grades)
       .map(grade => parseInt(grade))
-      .sort((a, b) => b - a);
+      .sort((a, b) => a - b);
 
     // Iterate through grades to find corresponding grade for score
     for (const grade of sortedGrades) {
