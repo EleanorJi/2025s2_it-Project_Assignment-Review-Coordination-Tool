@@ -112,11 +112,38 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         `;
 
+      // Get all unique grade level names with their score information
+      const gradeLevelMap = new Map();
+      data.criteria.forEach(criterion => {
+        if (criterion.grade_levels) {
+          criterion.grade_levels.forEach(level => {
+            // Store the highest max_score for each level_name across all criteria
+            if (!gradeLevelMap.has(level.level_name) || 
+                gradeLevelMap.get(level.level_name).max_score < level.max_score) {
+              gradeLevelMap.set(level.level_name, {
+                level_name: level.level_name,
+                max_score: level.max_score,
+                min_score: level.min_score
+              });
+            }
+          });
+        }
+      });
+
+      // Convert to array and sort by max_score from high to low
+      const gradeLevelOrder = Array.from(gradeLevelMap.values())
+        .sort((a, b) => b.max_score - a.max_score)
+        .map(level => level.level_name);
+
+      // Update table headers dynamically
+      updateTableHeaders(gradeLevelOrder);
+
       // Render table
-      tbody.innerHTML = '';      if (!data.criteria || data.criteria.length === 0) {
+      tbody.innerHTML = '';
+      if (!data.criteria || data.criteria.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="7" style="text-align: center; padding: 20px; color: var(--muted);">
+            <td colspan="${gradeLevelOrder.length + 2}" style="text-align: center; padding: 20px; color: var(--muted);">
               No criteria found for this rubric.
             </td>
           </tr>
@@ -135,10 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         tr.appendChild(td0);
 
-        // Render columns based on backend returned grade levels
-        // Grade level order: HD, D, C, P, F
-        const gradeLevelOrder = ['High Distinction', 'Distinction', 'Credit', 'Pass', 'Fail'];
-
+        // Render columns based on dynamically determined grade levels
         gradeLevelOrder.forEach(levelName => {
           const level = criterion.grade_levels?.find(l => l.level_name === levelName);
           const cell = td();
@@ -171,6 +195,29 @@ document.addEventListener('DOMContentLoaded', () => {
   function td(){ const e = document.createElement('td'); return e; }
   function esc(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
   function nl2br(s){ return s.replace(/\n/g,'<br>'); }
+
+  function updateTableHeaders(gradeLevelOrder) {
+    const table = document.getElementById('rubric-table');
+    if (!table) return;
+
+    const thead = table.querySelector('thead tr');
+    if (!thead) return;
+
+    // Clear existing grade level headers (keep first and last columns)
+    const existingHeaders = thead.querySelectorAll('th');
+    // Remove all headers except the first (Criteria) and last (Criteria Score)
+    for (let i = existingHeaders.length - 2; i >= 1; i--) {
+      thead.removeChild(existingHeaders[i]);
+    }
+
+    // Insert new grade level headers
+    gradeLevelOrder.forEach((levelName, index) => {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.innerHTML = `<div class="grade-header">${esc(levelName)}</div>`;
+      thead.insertBefore(th, thead.lastElementChild);
+    });
+  }
 
   /* ===== Demo data (used when API is not available, does not affect future integration) ===== */
   function demoRubric(){
