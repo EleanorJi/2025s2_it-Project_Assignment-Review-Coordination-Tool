@@ -97,6 +97,54 @@ class EmailService {
       }
     }
 
+  /**
+   * Send feedback notification email to marker
+   * @param {string} to Marker email address
+   * @param {string} markerName Marker name
+   * @param {string} coordinatorName Coordinator name
+   * @param {string} assignmentName Assignment name
+   * @param {string} projectName Project name
+   * @param {number} projectId Project ID for URL
+   * @param {number} assignmentId Assignment ID for URL
+   * @param {string} [coordinatorEmail] Coordinator email for replyTo/from
+   */
+  static async sendFeedbackNotificationEmail(to, markerName, coordinatorName, assignmentName, projectName, projectId, assignmentId, coordinatorEmail) {
+    try {
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+      const feedbackUrl = `${websiteUrl}/dashboard/marker/feedback?project=${projectId}&assignment_id=${assignmentId}`;
+
+      // Render HTML template
+      const html = await TemplateUtils.renderTemplate('./emailTemplates/feedback-notification-email.html', {
+        markerName,
+        coordinatorName,
+        assignmentName,
+        projectName,
+        feedbackUrl,
+        feedbackDate: new Date().toLocaleDateString(),
+        currentYear: new Date().getFullYear()
+      });
+
+      // 默认用平台已验证的发件邮箱，但显示名用协调员姓名；同时把回复地址指向协调员邮箱，便于直接回信
+      const fromAddress = process.env.EMAIL_USER;
+      const allowDynamicFrom = process.env.ALLOW_DYNAMIC_FROM === 'true';
+
+      const mailOptions = {
+        from: allowDynamicFrom && coordinatorEmail ? coordinatorEmail : `${coordinatorName || 'Coordinator'} <${fromAddress}>`,
+        to: to,
+        subject: `New Feedback Received - ${assignmentName}`,
+        html: html,
+        replyTo: coordinatorEmail || undefined
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`Feedback notification email sent to: ${to}, Message ID: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send feedback notification email:', error);
+      throw new Error('Failed to send feedback notification email');
+    }
+  }
+
 }
 
 module.exports = EmailService;

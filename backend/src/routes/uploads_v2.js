@@ -3424,11 +3424,8 @@ function parseMaxScoreFromDescription(description) {
   
   // Match patterns like: 总分: 20分, Total: 20 points, Max: 15, 最高分: 25分
   const maxScorePatterns = [
-    /总分[：:]\s*(\d+(?:\.\d+)?)\s*分?/i,  // Chinese format: 总分: 20分
-    /最高分[：:]\s*(\d+(?:\.\d+)?)\s*分?/i,  // Chinese format: 最高分: 25分
     /total[：:]\s*(\d+(?:\.\d+)?)\s*points?/i,  // English format: Total: 20 points
     /max[：:]\s*(\d+(?:\.\d+)?)/i,  // English format: Max: 15
-    /(\d+(?:\.\d+)?)\s*分\s*总分/i,  // Chinese format: 20分总分
     /(\d+(?:\.\d+)?)\s*points?\s*total/i  // English format: 20 points total
   ];
   

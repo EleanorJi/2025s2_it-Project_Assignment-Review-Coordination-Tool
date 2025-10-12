@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const db = require('../config/database');
+const EmailService = require('../services/emailService');
 
 const router = express.Router();
 
@@ -42,6 +43,10 @@ router.get('/:assignmentId/:markerId', async (req, res) => {
 router.post('/', async (req, res) => {
     const { assignment_id, marker_id, content, title, created_by } = req.body;
 
+    // Derive effective creator id: body.created_by -> req.user.id -> cookie userId
+    const cookieUserId = req.cookies && req.cookies.userId ? parseInt(req.cookies.userId) : null;
+    const effectiveCreatedBy = created_by || (req.user && req.user.id) || cookieUserId || null;
+
     // 验证必需字段
     if (!assignment_id || !marker_id || !content) {
         return res.status(400).json({
@@ -82,12 +87,62 @@ router.post('/', async (req, res) => {
             `INSERT INTO feedback (assignment_id, marker_id, content, title, created_by)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING feedback_id, assignment_id, marker_id, content, title, created_by, created_at`,
-            [assignment_id, marker_id, content, title || null, created_by || null]
+            [assignment_id, marker_id, content, title || null, effectiveCreatedBy]
         );
 
         const newFeedback = feedbackResult.rows[0];
 
         console.log(`✅ Feedback created successfully: feedback_id=${newFeedback.feedback_id}`);
+
+        // Send email notification to marker
+        try {
+            console.log(`🔍 Debug email sending - marker_id: ${marker_id}, created_by: ${effectiveCreatedBy}, assignment_id: ${assignment_id}`);
+            
+            // Get marker and coordinator information for email
+            const markerInfo = await db.query(
+                'SELECT name, email FROM app_user WHERE user_id = $1',
+                [marker_id]
+            );
+            console.log(`🔍 Marker info query result:`, markerInfo.rows);
+            
+            const coordinatorInfo = await db.query(
+                'SELECT name, email FROM app_user WHERE user_id = $1',
+                [effectiveCreatedBy]
+            );
+            console.log(`🔍 Coordinator info query result:`, coordinatorInfo.rows);
+            
+            const assignmentInfo = await db.query(`
+                SELECT a.assignment_id, a.name as assignment_name, a.project_id, p.name as project_name
+                FROM assignment a
+                JOIN project p ON a.project_id = p.project_id
+                WHERE a.assignment_id = $1
+            `, [assignment_id]);
+            console.log(`🔍 Assignment info query result:`, assignmentInfo.rows);
+
+            if (markerInfo.rows.length > 0 && coordinatorInfo.rows.length > 0 && assignmentInfo.rows.length > 0) {
+                const marker = markerInfo.rows[0];
+                const coordinator = coordinatorInfo.rows[0];
+                const assignment = assignmentInfo.rows[0];
+
+                await EmailService.sendFeedbackNotificationEmail(
+                    marker.email,
+                    marker.name,
+                    coordinator.name,
+                    assignment.assignment_name,
+                    assignment.project_name,
+                    assignment.project_id,
+                    assignment.assignment_id,
+                    coordinator.email // 传入协调员邮箱用于from/replyTo
+                );
+                
+                console.log(`📧 Feedback notification email sent to: ${marker.email}`);
+            } else {
+                console.warn('⚠️ Could not send feedback notification email: missing user or assignment information');
+            }
+        } catch (emailError) {
+            console.error('❌ Failed to send feedback notification email:', emailError);
+            // Don't fail the feedback creation if email sending fails
+        }
 
         res.status(201).json({
             success: true,
