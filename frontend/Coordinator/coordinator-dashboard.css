@@ -180,15 +180,30 @@
     border-color:#bbdefb;
   }
 
-  /* Outliers List - Enhanced */
+  /* Outliers List - Enhanced with max 3 items and scroll */
   .outliers-list{
     display:flex;flex-direction:column;gap:12px;
+    max-height:300px;overflow-y:auto;
+    padding-right:4px;
+  }
+  .outliers-list::-webkit-scrollbar{
+    width:6px;
+  }
+  .outliers-list::-webkit-scrollbar-track{
+    background:#f1f5f9;border-radius:3px;
+  }
+  .outliers-list::-webkit-scrollbar-thumb{
+    background:#cbd5e1;border-radius:3px;
+  }
+  .outliers-list::-webkit-scrollbar-thumb:hover{
+    background:#94a3b8;
   }
   .outlier-item{
     padding:16px 18px;border:1px solid var(--border);
     border-radius:14px;background:#fff;
     transition:all 0.3s ease;
     box-shadow:0 2px 8px rgba(15,23,42,0.04);
+    flex-shrink:0;
   }
   .outlier-item:hover{
     background:#f8fafc;transform:translateY(-2px);

@@ -312,9 +312,25 @@
       taskSections.appendChild(taskSection);
     });
     
-    // 渲染完成后恢复展开状态
+    // 渲染完成后恢复展开状态或处理自动展开
     setTimeout(() => {
-      restoreExpandedStates();
+      // Check if we need to auto-expand a specific assignment
+      const expandData = sessionStorage.getItem('expandAssignment');
+      if (expandData) {
+        try {
+          const { projectId, round } = JSON.parse(expandData);
+          autoExpandAssignment(projectId, round);
+          // Clear the sessionStorage after handling
+          sessionStorage.removeItem('expandAssignment');
+        } catch (error) {
+          console.error('Failed to auto-expand assignment:', error);
+          // Fallback to normal restore
+          restoreExpandedStates();
+        }
+      } else {
+        // Normal restore of expanded states
+        restoreExpandedStates();
+      }
     }, 100);
   }
 
@@ -768,6 +784,64 @@
     chevron.classList.toggle('expanded');
     
     // 保存展开状态
+    saveExpandedStates();
+  }
+
+  // Auto-expand specific assignment when navigating from dashboard
+  function autoExpandAssignment(projectId, round) {
+    console.log('Auto-expanding assignment:', projectId, 'round:', round);
+    
+    // Find the task section with matching project_id
+    const taskSection = $(`.tm-task-section[data-task-id="${projectId}"]`);
+    if (!taskSection) {
+      console.warn('Task section not found for project:', projectId);
+      return;
+    }
+
+    // Expand the task section
+    const taskContent = taskSection.querySelector('.tm-task-content');
+    const taskChevron = taskSection.querySelector('.tm-task-chevron');
+    if (taskContent && taskChevron) {
+      taskContent.classList.add('expanded');
+      taskChevron.classList.add('expanded');
+    }
+
+    // Find the assignment section based on round (1 or 2)
+    const assignmentTitle = `Assignment ${round}`;
+    const assignmentSections = taskSection.querySelectorAll('.tm-assignment-item');
+    let targetAssignmentSection = null;
+
+    for (const section of assignmentSections) {
+      const title = section.querySelector('.tm-assignment-title');
+      if (title && title.textContent.trim() === assignmentTitle) {
+        targetAssignmentSection = section;
+        break;
+      }
+    }
+
+    if (targetAssignmentSection) {
+      // Expand the assignment section
+      const assignmentActions = targetAssignmentSection.querySelector('.tm-assignment-actions');
+      const assignmentChevron = targetAssignmentSection.querySelector('.tm-assignment-chevron');
+      if (assignmentActions && assignmentChevron) {
+        assignmentActions.classList.add('expanded');
+        assignmentChevron.classList.add('expanded');
+      }
+
+      // Scroll to the assignment section
+      setTimeout(() => {
+        targetAssignmentSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 200);
+
+      console.log('Successfully auto-expanded assignment:', assignmentTitle);
+    } else {
+      console.warn('Assignment section not found:', assignmentTitle);
+    }
+    
+    // Save the expanded state
     saveExpandedStates();
   }
 

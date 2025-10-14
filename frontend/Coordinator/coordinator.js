@@ -239,7 +239,7 @@ function initCommonNav() {
             </div>
             <div class="assignment-actions">
               <span class="assignment-status ${assignment.is_published ? 'active' : 'draft'}">${getStatusText(assignment.is_published)}</span>
-              <button class="btn primary sm" onclick="window.location.href='/dashboard/coordinator/taskManagement'">Manage</button>
+              <button class="btn primary sm" onclick="navigateToAssignment('${assignment.project_id}', ${assignment.round})">Manage</button>
             </div>
           </div>
         `).join('');
@@ -247,13 +247,44 @@ function initCommonNav() {
         recentAssignmentsList.innerHTML = '<div class="empty-state">No recent assignments</div>';
       }
 
-      // Update outliers list
+      // Update outliers list - only show total score, max 3 items with scroll
       const outliersList = document.getElementById('outliers-list');
       if (data.outliers && data.outliers.length > 0) {
-        outliersList.innerHTML = data.outliers.map(outlier => `
+        // Group by marker and assignment to show total score
+        const groupedOutliers = {};
+        data.outliers.forEach(outlier => {
+          const key = `${outlier.marker_name}_${outlier.assignment_name}`;
+          if (!groupedOutliers[key]) {
+            groupedOutliers[key] = {
+              marker_name: outlier.marker_name,
+              assignment_name: outlier.assignment_name,
+              total_score: 0,
+              total_max_score: 0,
+              baseline_total: 0,
+              count: 0
+            };
+          }
+          groupedOutliers[key].total_score += outlier.score || 0;
+          groupedOutliers[key].total_max_score += outlier.max_score || 0;
+          groupedOutliers[key].baseline_total += outlier.baseline_score || 0;
+          groupedOutliers[key].count++;
+        });
+
+        // Convert to array and calculate total deviation
+        const outlierItems = Object.values(groupedOutliers).map(item => {
+          const deviation = item.baseline_total > 0 
+            ? ((item.total_score - item.baseline_total) / item.baseline_total * 100).toFixed(1)
+            : 0;
+          return {
+            ...item,
+            deviation_percent: parseFloat(deviation)
+          };
+        });
+
+        outliersList.innerHTML = outlierItems.map(outlier => `
           <div class="outlier-item">
             <div class="outlier-title">${outlier.marker_name} • ${outlier.assignment_name}</div>
-            <div class="outlier-content">${outlier.criterion_name}: ${outlier.score}/${outlier.max_score}</div>
+            <div class="outlier-content">Total Score: ${outlier.total_score}/${outlier.total_max_score}</div>
             <div class="outlier-meta">
               Deviation: <span class="outlier-deviation ${outlier.deviation_percent > 0 ? 'positive' : 'negative'}">
                 ${outlier.deviation_percent > 0 ? '+' : ''}${outlier.deviation_percent}%
@@ -288,4 +319,15 @@ function initCommonNav() {
   function getStatusText(isPublished) {
     return isPublished ? 'Published' : 'Draft';
   }
+
+  // Navigate to task management with specific assignment expanded
+  window.navigateToAssignment = function(projectId, round) {
+    // Store the target assignment info in sessionStorage for task-management.js to pick up
+    sessionStorage.setItem('expandAssignment', JSON.stringify({
+      projectId: projectId,
+      round: round
+    }));
+    // Navigate to task management
+    window.location.href = '/dashboard/coordinator/taskManagement';
+  };
 })();
