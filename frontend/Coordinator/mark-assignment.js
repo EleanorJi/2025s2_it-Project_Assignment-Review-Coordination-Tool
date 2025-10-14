@@ -278,9 +278,13 @@
 
       // 3. Format date
       let dueDateText = 'Due date not set';
-      if (assignment.due_at) {
-        const dueDate = new Date(assignment.due_at);
-        dueDateText = `Due: ${formatDueDate(dueDate)}`;
+      if (assignment.due_at_local_iso) {
+        dueDateText = `Due: ${prettyFromIsoLocal(assignment.due_at_local_iso)}`;
+      } else if (assignment.due_at_pretty) {
+        dueDateText = `Due: ${assignment.due_at_pretty}`;
+      } else if (assignment.due_at) {
+        // Fallback: best-effort pretty print without timezone conversion
+        dueDateText = `Due: ${prettyFromIsoLocal(String(assignment.due_at).replace(' ', 'T'))}`;
       }
 
       // 4. Update page elements
@@ -301,6 +305,41 @@
         dueDate: assignment.due_at
       });
 
+      // Wire edit due date button (Coordinator only)
+      const editBtn = document.getElementById('edit-due-btn');
+      try {
+        const rawUser = localStorage.getItem('user');
+        const user = rawUser ? JSON.parse(rawUser) : null;
+        const isCoordinator = user && user.role === 'COORDINATOR';
+        if (isCoordinator && editBtn) {
+          editBtn.style.display = 'inline-block';
+
+          // Parse current due date for later comparison
+          const parseLocalIsoToDate = (isoLocal) => {
+            if (!isoLocal) return null;
+            const m = String(isoLocal).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+            if (!m) return null;
+            const [_, y, mo, d, hh, mm, ss] = m;
+            return new Date(parseInt(y), parseInt(mo) - 1, parseInt(d), parseInt(hh), parseInt(mm), parseInt(ss || '00'));
+          };
+
+          const originalDue = assignment.due_at_local_iso
+            ? parseLocalIsoToDate(assignment.due_at_local_iso)
+            : (assignment.due_at ? new Date(String(assignment.due_at).replace(' ', 'T')) : null);
+
+          editBtn.addEventListener('click', () => {
+            // If original due date already passed, block editing
+            if (originalDue && new Date() > originalDue) {
+              showNotification('原始截止时间已过，无法更改', 'error');
+              return;
+            }
+            openEditDueDialog(assignment);
+          });
+        }
+      } catch (_) {
+        // ignore
+      }
+
     } catch (error) {
       console.error('❌ Failed to setup assignment details:', error);
 
@@ -315,20 +354,129 @@
       if (dueDateEl) {
         dueDateEl.textContent = 'Due: Date not available';
       }
+      // Wire edit due date button in fallback (Coordinator only, without due check)
+      const editBtn = document.getElementById('edit-due-btn');
+      try {
+        const rawUser = localStorage.getItem('user');
+        const user = rawUser ? JSON.parse(rawUser) : null;
+        const isCoordinator = user && user.role === 'COORDINATOR';
+        if (isCoordinator && editBtn) {
+          editBtn.style.display = 'inline-block';
+          editBtn.addEventListener('click', () => openEditDueDialog({ assignment_id: ASSIGNMENT_ID }));
+        }
+      } catch (_) { /* noop */ }
+
     }
   }
 
   // Date formatting helper function (matching your provided format: Tue Sep 16, 2025 10:00)
-  function formatDueDate(date) {
-    const options = {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  function formatDueDateInTz(date, tz) {
+    const z = new Intl.DateTimeFormat('en-AU', {
+      timeZone: tz,
+      year: 'numeric', month: 'short', day: '2-digit', weekday: 'short',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(date).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+    // Compose like: Wed, Oct 15, 2025, 00:46
+    return `${z.weekday}, ${z.month} ${z.day.replace(/^0/, '')}, ${z.year}, ${z.hour}:${z.minute}`;
+  }
+
+  // Render pretty string from ISO-like local (YYYY-MM-DDTHH:MM:SS) without timezone shift
+  function prettyFromIsoLocal(isoLocal) {
+    // Parse components instead of new Date() to avoid timezone conversion
+    const m = String(isoLocal).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return isoLocal;
+    const [_, y, mo, d, hh, mm] = m;
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    // Compute weekday using Date in UTC to avoid offset, but only for weekday
+    const weekdayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dt = new Date(Date.UTC(parseInt(y), parseInt(mo)-1, parseInt(d)));
+    const weekday = weekdayNames[dt.getUTCDay()];
+    return `${weekday}, ${monthNames[parseInt(mo)-1]} ${parseInt(d)}, ${y}, ${hh}:${mm}`;
+  }
+
+  function toDatetimeLocalValue(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const y = date.getFullYear();
+    const m = pad(date.getMonth()+1);
+    const d = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const mm = pad(date.getMinutes());
+    return `${y}-${m}-${d}T${hh}:${mm}`;
+  }
+
+  function openEditDueDialog(assignment) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:10000;`;
+    const card = document.createElement('div');
+    card.style.cssText = `background:#fff;padding:16px 20px;border-radius:8px;min-width:340px;max-width:92%;`;
+    card.innerHTML = `
+      <div style="font-weight:700;margin-bottom:12px;font-size:16px;">Edit Due Date</div>
+      <div style="margin-bottom:6px;color:#555;font-size:12px;">Due date</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+        <input id="edit-due-date" type="date" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;" />
+        <input id="edit-due-time" type="time" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:6px;" />
+      </div>
+      <div id="edit-due-err" style="display:none;color:#DC2626;font-weight:600;font-size:12px;margin-top:4px;">Please select a valid due date.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+        <button id="cancel-due" class="btn">Cancel</button>
+        <button id="save-due" class="btn primary">Save</button>
+      </div>
+    `;
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    // Prefill current due
+    const dateInput = card.querySelector('#edit-due-date');
+    const timeInput = card.querySelector('#edit-due-time');
+    const errLine = card.querySelector('#edit-due-err');
+
+    const parseLocalIso = (isoLocal) => {
+      const m = String(isoLocal).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (!m) return null;
+      const [_, y, mo, d, hh, mm] = m;
+      return { date: `${y}-${mo}-${d}`, time: `${hh}:${mm}` };
     };
-    return date.toLocaleDateString('en-US', options);
+
+    let seed = null;
+    if (assignment.due_at_local_iso) seed = parseLocalIso(assignment.due_at_local_iso);
+    if (!seed && assignment.due_at) seed = parseLocalIso(String(assignment.due_at).replace(' ', 'T'));
+    if (!seed) {
+      const now = new Date();
+      seed = { date: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`, time: `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` };
+    }
+    dateInput.value = seed.date;
+    timeInput.value = seed.time;
+
+    card.querySelector('#cancel-due').addEventListener('click', () => document.body.removeChild(modal));
+    card.querySelector('#save-due').addEventListener('click', async () => {
+      try {
+        const due = (dateInput.value || '').trim();
+        const time = (timeInput.value || '').trim();
+        if (!due) { errLine.style.display = 'block'; return; }
+        const dueDateTime = `${due}T${time ? time : '23:59'}:59`;
+
+        const resp = await fetch(`/api/uploads/assignment/${assignment.assignment_id}/due`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ due_at: dueDateTime })
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const data = await resp.json();
+        // Update UI
+        const dueDateEl = document.querySelector('.due-date');
+        if (dueDateEl) {
+          if (data.assignment?.due_at_local_iso) {
+            dueDateEl.textContent = `Due: ${prettyFromIsoLocal(data.assignment.due_at_local_iso)}`;
+          } else if (data.assignment?.due_at_pretty) {
+            dueDateEl.textContent = `Due: ${data.assignment.due_at_pretty}`;
+          }
+        }
+        showNotification('Due date updated', 'success');
+        document.body.removeChild(modal);
+      } catch (e) {
+        console.error(e);
+        showNotification('Failed to update due date', 'error');
+      }
+    });
   }
 
 

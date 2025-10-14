@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assignment Due Soon</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; color: #222; }
+      .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+      .title { font-size: 20px; font-weight: bold; margin: 0 0 12px; }
+      .muted { color: #666; font-size: 12px; }
+      .card { border: 1px solid #eee; border-radius: 8px; padding: 16px; }
+      .footer { margin-top: 24px; font-size: 12px; color: #888; }
+      .highlight { font-weight: bold; }
+      a.button { display: inline-block; background: #0052cc; color: #fff !important; text-decoration: none; padding: 10px 16px; border-radius: 6px; margin-top: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <p class="muted">This is an automated message. Please do not reply.</p>
+      <div class="card">
+        <p class="title">Assignment Due in 2 Days</p>
+        <p>Hi {{userName}},</p>
+        <p>
+          The assignment <span class="highlight">{{assignmentName}}</span> in project
+          <span class="highlight">{{projectName}}</span> is due at <span class="highlight">{{dueAt}}</span>.
+        </p>
+        <p>
+          There are 2 days left. Please complete marking as soon as possible.
+        </p>
+        <p>
+          <a class="button" href="{{websiteUrl}}" target="_blank" rel="noopener">Open Site</a>
+        </p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{currentYear}} Assignment Moderation Tool</p>
+      </div>
+    </div>
+  </body>
+  </html>
+
+

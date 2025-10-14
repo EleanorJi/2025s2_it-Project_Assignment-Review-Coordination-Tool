@@ -2074,9 +2074,13 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
 router.get('/assignment/:assignment_id/status', async (req, res) => {
   try {
     const { assignment_id } = req.params;
+    const BUSINESS_TZ = process.env.BUSINESS_TIMEZONE || 'Australia/Melbourne';
 
     const result = await db.query(
-      `SELECT assignment_id, is_published, name, round, version, project_id, due_at, created_at
+      `SELECT 
+         assignment_id, is_published, name, round, version, project_id, due_at, created_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty
        FROM assignment WHERE assignment_id = $1`,
       [assignment_id]
     );
@@ -2094,6 +2098,8 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
         version: row.version,
         project_id: row.project_id,
         due_at: row.due_at,
+        due_at_local_iso: row.due_at_local_iso,
+        due_at_pretty: row.due_at_pretty,
         created_at: row.created_at,
         is_published: row.is_published
       }
@@ -2101,6 +2107,57 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
   } catch (error) {
     console.error('❌ Failed to get assignment status:', error);
     return res.status(500).json({ error: 'Failed to get assignment status', details: error.message });
+  }
+});
+
+const { requireCoordinator } = require('../middleware/roleAuth');
+
+// Update assignment due date: PUT /api/uploads/assignment/:assignment_id/due
+router.put('/assignment/:assignment_id/due', requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    const { due_at } = req.body || {};
+
+    if (!due_at) {
+      return res.status(400).json({ error: 'Missing due_at' });
+    }
+
+    // Parse to a timestamp string acceptable by Postgres timestamp without time zone
+    // Expect ISO string or datetime-local string from browser
+    const parsed = new Date(due_at);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: 'Invalid due_at format' });
+    }
+
+    // Format as 'YYYY-MM-DD HH:MM:SS'
+    const pad = (n) => String(n).padStart(2, '0');
+    const ts = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`;
+
+    const result = await db.query(
+      `UPDATE assignment SET due_at = $1 WHERE assignment_id = $2 
+       RETURNING assignment_id, due_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty`,
+      [ts, assignment_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    console.log(`✅ Updated due_at for assignment ${assignment_id} -> ${ts}`);
+    return res.json({
+      success: true,
+      assignment: {
+        assignment_id: parseInt(result.rows[0].assignment_id),
+        due_at: result.rows[0].due_at,
+        due_at_local_iso: result.rows[0].due_at_local_iso,
+        due_at_pretty: result.rows[0].due_at_pretty
+      }
+    });
+  } catch (error) {
+    console.error('❌ Failed to update assignment due date:', error);
+    return res.status(500).json({ error: 'Failed to update assignment due date', details: error.message });
   }
 });
 

@@ -9,6 +9,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const { startDeadlineNotifier } = require('./jobs/deadlineNotifier');
 
 app.use(express.json());
 app.use(cookieParser());
@@ -52,5 +53,8 @@ app.listen(port, () => {
   console.log('   POST /api/invitations/complete-signup - Complete registration');
   console.log('   GET  /api/health              - Health check');
   console.log('\n🔒 Authentication: Using cookies for user authentication');});
+
+// Start background jobs
+startDeadlineNotifier();
 
 module.exports = app;

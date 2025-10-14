@@ -145,6 +145,116 @@ class EmailService {
     }
   }
 
+  /**
+   * Send assignment deadline passed email to user
+   * @param {string} to Recipient email address
+   * @param {string} userName User name
+   * @param {string} assignmentName Assignment name
+   * @param {string} projectName Project name
+   * @param {string} dueAt ISO string or localized string of deadline
+   */
+  static async sendAssignmentDeadlineEmail(to, userName, assignmentName, projectName, dueAt, pendingSectionHtml = '') {
+    try {
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+
+      const html = await TemplateUtils.renderTemplate('./emailTemplates/deadline-passed-email.html', {
+        userName,
+        assignmentName,
+        projectName,
+        dueAt,
+        pendingSection: pendingSectionHtml,
+        websiteUrl,
+        currentYear: new Date().getFullYear()
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: to,
+        subject: `Assignment Deadline Passed - ${projectName}: ${assignmentName}`,
+        html: html
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`Deadline email sent to: ${to}, Message ID: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send assignment deadline email:', error);
+      throw new Error('Failed to send assignment deadline email');
+    }
+  }
+
+  /**
+   * Send marking completed email to user
+   * @param {string} to Recipient email address
+   * @param {string} userName User name
+   * @param {string} assignmentName Assignment name
+   * @param {string} projectName Project name
+   */
+  static async sendMarkingCompletedEmail(to, userName, assignmentName, projectName) {
+    try {
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+
+      const html = await TemplateUtils.renderTemplate('./emailTemplates/marking-completed-email.html', {
+        userName,
+        assignmentName,
+        projectName,
+        websiteUrl,
+        currentYear: new Date().getFullYear()
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: to,
+        subject: `Marking Completed - ${projectName}: ${assignmentName}`,
+        html: html
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`Marking completed email sent to: ${to}, Message ID: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send marking completed email:', error);
+      throw new Error('Failed to send marking completed email');
+    }
+  }
+
+  /**
+   * Send due-soon (2 days left) reminder email to user
+   * @param {string} to Recipient email address
+   * @param {string} userName User name
+   * @param {string} assignmentName Assignment name
+   * @param {string} projectName Project name
+   * @param {string} dueAt Formatted due time
+   */
+  static async sendDueSoonEmail(to, userName, assignmentName, projectName, dueAt) {
+    try {
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+
+      const html = await TemplateUtils.renderTemplate('./emailTemplates/due-soon-email.html', {
+        userName,
+        assignmentName,
+        projectName,
+        dueAt,
+        websiteUrl,
+        currentYear: new Date().getFullYear()
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: to,
+        subject: `Due in 2 Days - ${projectName}: ${assignmentName}`,
+        html: html
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`Due-soon email sent to: ${to}, Message ID: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send due-soon email:', error);
+      throw new Error('Failed to send due-soon email');
+    }
+  }
+
 }
 
 module.exports = EmailService;
