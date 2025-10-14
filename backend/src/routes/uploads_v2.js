@@ -2111,9 +2111,10 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
 });
 
 const { requireCoordinator } = require('../middleware/roleAuth');
+const authenticate = require('../middleware/auth');
 
 // Update assignment due date: PUT /api/uploads/assignment/:assignment_id/due
-router.put('/assignment/:assignment_id/due', requireCoordinator, async (req, res) => {
+router.put('/assignment/:assignment_id/due', authenticate, requireCoordinator, async (req, res) => {
   try {
     const { assignment_id } = req.params;
     const { due_at } = req.body || {};
@@ -2158,6 +2159,79 @@ router.put('/assignment/:assignment_id/due', requireCoordinator, async (req, res
   } catch (error) {
     console.error('❌ Failed to update assignment due date:', error);
     return res.status(500).json({ error: 'Failed to update assignment due date', details: error.message });
+  }
+});
+
+/**
+ * Coordinator only - list active markers who have NOT submitted marks for the assignment
+ * Definition of "submitted": has at least one finalized marker_score row for this assignment
+ * GET /api/uploads/assignment/:assignment_id/pending-markers
+ */
+router.get('/assignment/:assignment_id/pending-markers', authenticate, requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    console.log(`[pending-markers] assignment_id=${assignment_id}, userId=${req.user?.id}`);
+
+    // Verify assignment and get project to resolve rubric criteria count (optional info)
+    const a = await db.query('SELECT assignment_id, project_id FROM assignment WHERE assignment_id = $1', [assignment_id]);
+    console.log('[pending-markers] assignment query rows:', a.rows.length);
+    if (a.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    const projectId = a.rows[0].project_id;
+    console.log('[pending-markers] projectId=', projectId);
+
+    // Get criteria count from latest rubric (for reference)
+    const crit = await db.query(
+      `SELECT COUNT(*) AS criteria_count
+       FROM rubric_criterion rc
+       JOIN rubric r ON rc.rubric_id = r.rubric_id
+       WHERE r.project_id = $1
+         AND r.version = (SELECT MAX(version) FROM rubric WHERE project_id = $1)`,
+      [projectId]
+    );
+    console.log('[pending-markers] criteria_count rows:', crit.rows);
+    const criteriaCount = parseInt(crit.rows[0]?.criteria_count || '0', 10);
+
+    // Aggregate marker submission status for this assignment
+    const result = await db.query(
+      `WITH ms AS (
+         SELECT marker_id,
+                COUNT(*) FILTER (WHERE finalized = true) AS finalized_count,
+                COUNT(*) AS total_count
+         FROM marker_score
+         WHERE assignment_id = $1
+         GROUP BY marker_id
+       )
+       SELECT u.user_id       AS marker_id,
+              u.name          AS marker_name,
+              u.email         AS marker_email,
+              COALESCE(ms.total_count, 0)     AS submitted_count,
+              COALESCE(ms.finalized_count, 0) AS finalized_count
+       FROM app_user u
+       LEFT JOIN ms ON ms.marker_id = u.user_id
+       WHERE u.role = 'MARKER' AND u.is_active = true
+         AND COALESCE(ms.finalized_count, 0) = 0
+       ORDER BY u.name ASC`,
+      [assignment_id]
+    );
+    console.log('[pending-markers] result count:', result.rows.length);
+
+    return res.json({
+      assignment_id: parseInt(assignment_id),
+      criteria_count: criteriaCount,
+      pending_markers: result.rows.map(r => ({
+        marker_id: parseInt(r.marker_id),
+        name: r.marker_name,
+        email: r.marker_email,
+        submitted_count: parseInt(r.submitted_count || 0, 10),
+        finalized_count: parseInt(r.finalized_count || 0, 10)
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to list pending markers:', error);
+    return res.status(500).json({ error: 'Failed to list pending markers', details: error.message });
   }
 });
 
