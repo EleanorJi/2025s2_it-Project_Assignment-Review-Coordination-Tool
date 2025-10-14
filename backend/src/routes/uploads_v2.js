@@ -2130,6 +2130,21 @@ router.put('/assignment/:assignment_id/due', authenticate, requireCoordinator, a
       return res.status(400).json({ error: 'Invalid due_at format' });
     }
 
+    // 1) Server-side rule: if original due date already passed, reject change
+    const originalDueRes = await db.query(
+      'SELECT due_at, (due_at < NOW()) AS is_past FROM assignment WHERE assignment_id = $1',
+      [assignment_id]
+    );
+    if (originalDueRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    if (originalDueRes.rows[0].is_past === true) {
+      return res.status(400).json({
+        error: 'Cannot modify due date',
+        message: 'Original due date has already passed and cannot be changed.'
+      });
+    }
+
     // Format as 'YYYY-MM-DD HH:MM:SS'
     const pad = (n) => String(n).padStart(2, '0');
     const ts = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`;
