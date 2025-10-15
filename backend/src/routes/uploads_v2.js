@@ -2074,9 +2074,13 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
 router.get('/assignment/:assignment_id/status', async (req, res) => {
   try {
     const { assignment_id } = req.params;
+    const BUSINESS_TZ = process.env.BUSINESS_TIMEZONE || 'Australia/Melbourne';
 
     const result = await db.query(
-      `SELECT assignment_id, is_published, name, round, version, project_id, due_at, created_at
+      `SELECT 
+         assignment_id, is_published, name, round, version, project_id, due_at, created_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty
        FROM assignment WHERE assignment_id = $1`,
       [assignment_id]
     );
@@ -2094,6 +2098,8 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
         version: row.version,
         project_id: row.project_id,
         due_at: row.due_at,
+        due_at_local_iso: row.due_at_local_iso,
+        due_at_pretty: row.due_at_pretty,
         created_at: row.created_at,
         is_published: row.is_published
       }
@@ -2101,6 +2107,146 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
   } catch (error) {
     console.error('❌ Failed to get assignment status:', error);
     return res.status(500).json({ error: 'Failed to get assignment status', details: error.message });
+  }
+});
+
+const { requireCoordinator } = require('../middleware/roleAuth');
+const authenticate = require('../middleware/auth');
+
+// Update assignment due date: PUT /api/uploads/assignment/:assignment_id/due
+router.put('/assignment/:assignment_id/due', authenticate, requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    const { due_at } = req.body || {};
+
+    if (!due_at) {
+      return res.status(400).json({ error: 'Missing due_at' });
+    }
+
+    // Parse to a timestamp string acceptable by Postgres timestamp without time zone
+    // Expect ISO string or datetime-local string from browser
+    const parsed = new Date(due_at);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: 'Invalid due_at format' });
+    }
+
+    // 1) Server-side rule: if original due date already passed, reject change
+    const originalDueRes = await db.query(
+      'SELECT due_at, (due_at < NOW()) AS is_past FROM assignment WHERE assignment_id = $1',
+      [assignment_id]
+    );
+    if (originalDueRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    if (originalDueRes.rows[0].is_past === true) {
+      return res.status(400).json({
+        error: 'Cannot modify due date',
+        message: 'Original due date has already passed and cannot be changed.'
+      });
+    }
+
+    // Format as 'YYYY-MM-DD HH:MM:SS'
+    const pad = (n) => String(n).padStart(2, '0');
+    const ts = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`;
+
+    const result = await db.query(
+      `UPDATE assignment SET due_at = $1 WHERE assignment_id = $2 
+       RETURNING assignment_id, due_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty`,
+      [ts, assignment_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    console.log(`✅ Updated due_at for assignment ${assignment_id} -> ${ts}`);
+    return res.json({
+      success: true,
+      assignment: {
+        assignment_id: parseInt(result.rows[0].assignment_id),
+        due_at: result.rows[0].due_at,
+        due_at_local_iso: result.rows[0].due_at_local_iso,
+        due_at_pretty: result.rows[0].due_at_pretty
+      }
+    });
+  } catch (error) {
+    console.error('❌ Failed to update assignment due date:', error);
+    return res.status(500).json({ error: 'Failed to update assignment due date', details: error.message });
+  }
+});
+
+/**
+ * Coordinator only - list active markers who have NOT submitted marks for the assignment
+ * Definition of "submitted": has at least one finalized marker_score row for this assignment
+ * GET /api/uploads/assignment/:assignment_id/pending-markers
+ */
+router.get('/assignment/:assignment_id/pending-markers', authenticate, requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    console.log(`[pending-markers] assignment_id=${assignment_id}, userId=${req.user?.id}`);
+
+    // Verify assignment and get project to resolve rubric criteria count (optional info)
+    const a = await db.query('SELECT assignment_id, project_id FROM assignment WHERE assignment_id = $1', [assignment_id]);
+    console.log('[pending-markers] assignment query rows:', a.rows.length);
+    if (a.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    const projectId = a.rows[0].project_id;
+    console.log('[pending-markers] projectId=', projectId);
+
+    // Get criteria count from latest rubric (for reference)
+    const crit = await db.query(
+      `SELECT COUNT(*) AS criteria_count
+       FROM rubric_criterion rc
+       JOIN rubric r ON rc.rubric_id = r.rubric_id
+       WHERE r.project_id = $1
+         AND r.version = (SELECT MAX(version) FROM rubric WHERE project_id = $1)`,
+      [projectId]
+    );
+    console.log('[pending-markers] criteria_count rows:', crit.rows);
+    const criteriaCount = parseInt(crit.rows[0]?.criteria_count || '0', 10);
+
+    // Aggregate marker submission status for this assignment
+    const result = await db.query(
+      `WITH ms AS (
+         SELECT marker_id,
+                COUNT(*) FILTER (WHERE finalized = true) AS finalized_count,
+                COUNT(*) AS total_count
+         FROM marker_score
+         WHERE assignment_id = $1
+         GROUP BY marker_id
+       )
+       SELECT u.user_id       AS marker_id,
+              u.name          AS marker_name,
+              u.email         AS marker_email,
+              COALESCE(ms.total_count, 0)     AS submitted_count,
+              COALESCE(ms.finalized_count, 0) AS finalized_count
+       FROM app_user u
+       LEFT JOIN ms ON ms.marker_id = u.user_id
+       WHERE u.role = 'MARKER' AND u.is_active = true
+         AND COALESCE(ms.finalized_count, 0) = 0
+       ORDER BY u.name ASC`,
+      [assignment_id]
+    );
+    console.log('[pending-markers] result count:', result.rows.length);
+
+    return res.json({
+      assignment_id: parseInt(assignment_id),
+      criteria_count: criteriaCount,
+      pending_markers: result.rows.map(r => ({
+        marker_id: parseInt(r.marker_id),
+        name: r.marker_name,
+        email: r.marker_email,
+        submitted_count: parseInt(r.submitted_count || 0, 10),
+        finalized_count: parseInt(r.finalized_count || 0, 10)
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to list pending markers:', error);
+    return res.status(500).json({ error: 'Failed to list pending markers', details: error.message });
   }
 });
 
@@ -3424,11 +3570,8 @@ function parseMaxScoreFromDescription(description) {
   
   // Match patterns like: 总分: 20分, Total: 20 points, Max: 15, 最高分: 25分
   const maxScorePatterns = [
-    /总分[：:]\s*(\d+(?:\.\d+)?)\s*分?/i,  // Chinese format: 总分: 20分
-    /最高分[：:]\s*(\d+(?:\.\d+)?)\s*分?/i,  // Chinese format: 最高分: 25分
     /total[：:]\s*(\d+(?:\.\d+)?)\s*points?/i,  // English format: Total: 20 points
     /max[：:]\s*(\d+(?:\.\d+)?)/i,  // English format: Max: 15
-    /(\d+(?:\.\d+)?)\s*分\s*总分/i,  // Chinese format: 20分总分
     /(\d+(?:\.\d+)?)\s*points?\s*total/i  // English format: 20 points total
   ];
   

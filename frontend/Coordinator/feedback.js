@@ -65,7 +65,19 @@ function getCurrentUserId() {
     return window.currentUserId;
   }
 
-  return null;
+  // 兜底：从 cookie 读取 userId（后端认证中间件写入）
+  try {
+    const cookieStr = document.cookie || '';
+    const match = cookieStr.match(/(?:^|;\s*)userId=([^;]+)/);
+    if (match) {
+      const id = parseInt(decodeURIComponent(match[1]));
+      if (!Number.isNaN(id)) return id;
+    }
+  } catch (_) {}
+
+  // 临时修复：使用默认的coordinator ID
+  console.warn('⚠️ No user info found, using default coordinator ID: 1');
+  return 1; // 默认使用admin用户作为coordinator
 }
 
 // DOM 元素
