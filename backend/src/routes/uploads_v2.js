@@ -3845,5 +3845,408 @@ router.get('/rubric/grade-level/:grade_level_id', async (req, res) => {
   }
 });
 
+/**
+ * Add new criterion (row) to rubric
+ * POST /api/uploads/rubric/:rubric_id/add-criterion
+ */
+router.post('/rubric/:rubric_id/add-criterion', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id } = req.params;
+    const { title, description, max_score } = req.body;
+    
+    console.log(`➕ Adding new criterion to rubric: ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Verify rubric exists
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "row", "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentRows = rubricCheck.rows[0].row || 0;
+    
+    // Get next sequence number
+    const seqResult = await client.query(
+      'SELECT COALESCE(MAX(seq_no), 0) + 1 as next_seq FROM rubric_criterion WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    const nextSeq = seqResult.rows[0].next_seq;
+    
+    // Create new criterion
+    const criterionResult = await client.query(
+      `INSERT INTO rubric_criterion (rubric_id, seq_no, title, description, max_score)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING criterion_id, seq_no, title, description, max_score`,
+      [
+        rubric_id,
+        nextSeq,
+        title || `New Criterion ${nextSeq}`,
+        description || null,
+        max_score || 0
+      ]
+    );
+    
+    const newCriterion = criterionResult.rows[0];
+    console.log(`✅ Created new criterion: ${newCriterion.criterion_id}`);
+    
+    // Get all existing grade levels from other criteria in this rubric
+    const existingLevels = await client.query(
+      `SELECT DISTINCT cgl.level_name, cgl.min_score, cgl.max_score, cgl.seq_no
+       FROM criterion_grade_level cgl
+       JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+       WHERE rc.rubric_id = $1
+       ORDER BY cgl.seq_no`,
+      [rubric_id]
+    );
+    
+    // Create grade level entries for this new criterion
+    const createdLevels = [];
+    for (const level of existingLevels.rows) {
+      const levelResult = await client.query(
+        `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING grade_level_id, level_name, min_score, max_score, seq_no`,
+        [
+          newCriterion.criterion_id,
+          level.level_name,
+          level.min_score || 0,
+          level.max_score || 0,
+          null, // Empty description for new criterion
+          level.seq_no
+        ]
+      );
+      createdLevels.push(levelResult.rows[0]);
+    }
+    
+    console.log(`✅ Created ${createdLevels.length} grade levels for new criterion`);
+    
+    // Update rubric row count
+    await client.query(
+      'UPDATE rubric SET "row" = $1 WHERE rubric_id = $2',
+      [currentRows + 1, rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'New criterion added successfully',
+      criterion: {
+        criterion_id: newCriterion.criterion_id,
+        seq_no: newCriterion.seq_no,
+        title: newCriterion.title,
+        description: newCriterion.description,
+        max_score: parseFloat(newCriterion.max_score),
+        grade_levels: createdLevels.map(level => ({
+          grade_level_id: level.grade_level_id,
+          level_name: level.level_name,
+          min_score: parseFloat(level.min_score),
+          max_score: parseFloat(level.max_score),
+          seq_no: level.seq_no
+        }))
+      },
+      rubric_updated: {
+        new_row_count: currentRows + 1
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to add new criterion:', error);
+    res.status(500).json({
+      error: 'Failed to add new criterion',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Delete criterion (row) from rubric
+ * DELETE /api/uploads/rubric/criterion/:criterion_id
+ */
+router.delete('/rubric/criterion/:criterion_id', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { criterion_id } = req.params;
+    
+    console.log(`🗑️ Deleting criterion: ${criterion_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Get criterion and rubric info
+    const criterionCheck = await client.query(
+      `SELECT rc.criterion_id, rc.title, rc.rubric_id, r."row"
+       FROM rubric_criterion rc
+       JOIN rubric r ON rc.rubric_id = r.rubric_id
+       WHERE rc.criterion_id = $1`,
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Criterion not found' });
+    }
+    
+    const criterion = criterionCheck.rows[0];
+    const rubricId = criterion.rubric_id;
+    const currentRows = criterion.row || 0;
+    
+    // Delete all grade levels for this criterion
+    const deletedLevels = await client.query(
+      'DELETE FROM criterion_grade_level WHERE criterion_id = $1 RETURNING grade_level_id',
+      [criterion_id]
+    );
+    
+    console.log(`✅ Deleted ${deletedLevels.rows.length} grade levels`);
+    
+    // Delete the criterion itself
+    await client.query(
+      'DELETE FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    console.log(`✅ Deleted criterion: ${criterion.title}`);
+    
+    // Update rubric row count
+    await client.query(
+      'UPDATE rubric SET "row" = $1 WHERE rubric_id = $2',
+      [Math.max(0, currentRows - 1), rubricId]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Criterion deleted successfully',
+      deleted: {
+        criterion_id: parseInt(criterion_id),
+        title: criterion.title,
+        grade_levels_deleted: deletedLevels.rows.length
+      },
+      rubric_updated: {
+        rubric_id: rubricId,
+        new_row_count: Math.max(0, currentRows - 1)
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to delete criterion:', error);
+    res.status(500).json({
+      error: 'Failed to delete criterion',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Delete grade level (column) from rubric
+ * DELETE /api/uploads/rubric/:rubric_id/grade-level/:level_name
+ */
+router.delete('/rubric/:rubric_id/grade-level/:level_name', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id, level_name } = req.params;
+    const decodedLevelName = decodeURIComponent(level_name);
+    
+    console.log(`🗑️ Deleting grade level: ${decodedLevelName} from rubric ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Get rubric info
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentColumns = rubricCheck.rows[0].column || 0;
+    
+    // Delete all grade level entries with this level_name for this rubric's criteria
+    const deletedLevels = await client.query(
+      `DELETE FROM criterion_grade_level cgl
+       USING rubric_criterion rc
+       WHERE cgl.criterion_id = rc.criterion_id
+         AND rc.rubric_id = $1
+         AND cgl.level_name = $2
+       RETURNING cgl.grade_level_id, cgl.criterion_id`,
+      [rubric_id, decodedLevelName]
+    );
+    
+    if (deletedLevels.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ 
+        error: 'Grade level not found',
+        message: `No grade level with name "${decodedLevelName}" found in this rubric`
+      });
+    }
+    
+    console.log(`✅ Deleted ${deletedLevels.rows.length} grade level entries`);
+    
+    // Update rubric column count
+    await client.query(
+      'UPDATE rubric SET "column" = $1 WHERE rubric_id = $2',
+      [Math.max(0, currentColumns - 1), rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Grade level deleted successfully',
+      deleted: {
+        level_name: decodedLevelName,
+        entries_deleted: deletedLevels.rows.length
+      },
+      rubric_updated: {
+        rubric_id: parseInt(rubric_id),
+        new_column_count: Math.max(0, currentColumns - 1)
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to delete grade level:', error);
+    res.status(500).json({
+      error: 'Failed to delete grade level',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Add new grade level (column) to rubric
+ * POST /api/uploads/rubric/:rubric_id/add-grade-level
+ */
+router.post('/rubric/:rubric_id/add-grade-level', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id } = req.params;
+    const { level_name, min_score, max_score } = req.body;
+    
+    console.log(`➕ Adding new grade level to rubric: ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Verify rubric exists
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "row", "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentColumns = rubricCheck.rows[0].column || 0;
+    
+    // Get next sequence number for grade levels
+    const seqResult = await client.query(
+      `SELECT COALESCE(MAX(cgl.seq_no), 0) + 1 as next_seq
+       FROM criterion_grade_level cgl
+       JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+       WHERE rc.rubric_id = $1`,
+      [rubric_id]
+    );
+    const nextSeq = seqResult.rows[0].next_seq;
+    
+    // Get all criteria for this rubric
+    const criteriaResult = await client.query(
+      'SELECT criterion_id FROM rubric_criterion WHERE rubric_id = $1 ORDER BY seq_no',
+      [rubric_id]
+    );
+    
+    if (criteriaResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Cannot add grade level: no criteria exist in this rubric',
+        message: 'Please add at least one criterion first'
+      });
+    }
+    
+    // Create new grade level for each criterion
+    const createdLevels = [];
+    for (const criterion of criteriaResult.rows) {
+      const levelResult = await client.query(
+        `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING grade_level_id, criterion_id, level_name, min_score, max_score, seq_no`,
+        [
+          criterion.criterion_id,
+          level_name || `New Level ${nextSeq}`,
+          min_score || 0,
+          max_score || 0,
+          null, // Empty description for new grade level
+          nextSeq
+        ]
+      );
+      createdLevels.push(levelResult.rows[0]);
+    }
+    
+    console.log(`✅ Created ${createdLevels.length} grade level entries`);
+    
+    // Update rubric column count
+    await client.query(
+      'UPDATE rubric SET "column" = $1 WHERE rubric_id = $2',
+      [currentColumns + 1, rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'New grade level added successfully',
+      grade_level: {
+        level_name: level_name || `New Level ${nextSeq}`,
+        min_score: parseFloat(min_score || 0),
+        max_score: parseFloat(max_score || 0),
+        seq_no: nextSeq,
+        entries_created: createdLevels.map(level => ({
+          grade_level_id: level.grade_level_id,
+          criterion_id: level.criterion_id,
+          level_name: level.level_name,
+          min_score: parseFloat(level.min_score),
+          max_score: parseFloat(level.max_score)
+        }))
+      },
+      rubric_updated: {
+        new_column_count: currentColumns + 1
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to add new grade level:', error);
+    res.status(500).json({
+      error: 'Failed to add new grade level',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 
 module.exports = router;
