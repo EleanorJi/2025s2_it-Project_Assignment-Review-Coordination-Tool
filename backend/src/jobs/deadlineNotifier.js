@@ -67,10 +67,27 @@ async function fetchDueAssignments() {
 }
 
 async function fetchActiveCoordinators() {
-  // Testing mode: send to a fixed email address
-  return [
-    { user_id: 999, name: 'Test User', email: '1762299384@qq.com' }
-  ];
+  // Get all active COORDINATOR users from app_user table
+  const result = await db.query(
+    `SELECT user_id, name, email
+     FROM app_user
+     WHERE is_active = true
+       AND UPPER(role) = 'COORDINATOR'
+     ORDER BY name`
+  );
+  return result.rows;
+}
+
+async function fetchActiveUsers() {
+  // Get all active users (both COORDINATOR and MARKER) from app_user table
+  const result = await db.query(
+    `SELECT user_id, name, email, role
+     FROM app_user
+     WHERE is_active = true
+       AND UPPER(role) IN ('COORDINATOR', 'MARKER')
+     ORDER BY name`
+  );
+  return result.rows;
 }
 
 async function notifyUsersForAssignment(assignment, users) {
@@ -122,6 +139,7 @@ async function notifyUsersForAssignment(assignment, users) {
     [assignment.assignment_id]
   );
 
+  // Build pending section for COORDINATOR emails only
   let pendingSection = '';
   if (pendingMarkers.rows.length > 0) {
     const listItems = pendingMarkers.rows
@@ -130,26 +148,53 @@ async function notifyUsersForAssignment(assignment, users) {
     pendingSection = `<p><strong>Pending markers (no finalized score):</strong></p><ul>${listItems}</ul>`;
   }
 
+  // Separate users by role
+  const coordinators = users.filter(u => u.role && u.role.toUpperCase() === 'COORDINATOR');
+  const markers = users.filter(u => u.role && u.role.toUpperCase() === 'MARKER');
+
+  console.log(`👥 Sending to ${coordinators.length} coordinators (with pending markers info)`);
+  console.log(`👥 Sending to ${markers.length} markers (without pending markers info)`);
+
   const dueAtStr = new Date(assignment.due_at).toLocaleString();
-  const emailResults = await Promise.allSettled(
-    users.map((u) =>
+  
+  // Send emails to coordinators with pending markers information
+  const coordinatorEmailResults = await Promise.allSettled(
+    coordinators.map((u) =>
       EmailService.sendAssignmentDeadlineEmail(
         u.email,
         u.name || 'User',
         assignment.assignment_name,
         assignment.project_name,
         dueAtStr,
-        pendingSection
+        pendingSection  // Include pending markers info for coordinators
       )
     )
   );
 
+  // Send emails to markers without pending markers information
+  const markerEmailResults = await Promise.allSettled(
+    markers.map((u) =>
+      EmailService.sendAssignmentDeadlineEmail(
+        u.email,
+        u.name || 'User',
+        assignment.assignment_name,
+        assignment.project_name,
+        dueAtStr,
+        ''  // No pending markers info for markers
+      )
+    )
+  );
+
+  // Combine all email results
+  const emailResults = [...coordinatorEmailResults, ...markerEmailResults];
+  const allUsers = [...coordinators, ...markers];
+
   // Log email results
   emailResults.forEach((result, index) => {
     if (result.status === 'fulfilled') {
-      console.log(`✅ Email sent successfully to ${users[index].email}`);
+      console.log(`✅ Email sent successfully to ${allUsers[index].email}`);
     } else {
-      console.error(`❌ Failed to send email to ${users[index].email}:`, result.reason);
+      console.error(`❌ Failed to send email to ${allUsers[index].email}:`, result.reason);
     }
   });
 }
@@ -206,27 +251,27 @@ async function checkAndNotifyDeadlines() {
     await ensureNotificationLogTable();
     console.log('✅ Notification log table ensured');
     
-    const [assignments, coordinators] = await Promise.all([
+    const [assignments, users] = await Promise.all([
       fetchDueAssignments(),
-      fetchActiveCoordinators()
+      fetchActiveUsers()
     ]);
 
     console.log(`📋 Found ${assignments?.length || 0} overdue assignments`);
-    console.log(`👥 Found ${coordinators?.length || 0} coordinators to notify`);
+    console.log(`👥 Found ${users?.length || 0} active users to notify`);
 
     if (!assignments || assignments.length === 0) {
       console.log('ℹ️ No overdue assignments found');
       return;
     }
 
-    if (!coordinators || coordinators.length === 0) {
-      console.log('ℹ️ No users to notify');
+    if (!users || users.length === 0) {
+      console.log('ℹ️ No active users to notify');
       return;
     }
 
     for (const asg of assignments) {
       console.log(`📧 Processing assignment: ${asg.assignment_name} (ID: ${asg.assignment_id})`);
-      await notifyUsersForAssignment(asg, coordinators);
+      await notifyUsersForAssignment(asg, users);
     }
     
     console.log('✅ Deadline check completed');
@@ -267,7 +312,7 @@ async function fetchAssignmentsDueInTwoDays() {
   return result.rows;
 }
 
-async function notifyDueSoonForAssignment(assignment) {
+async function notifyDueSoonForAssignment(assignment, users) {
   // Insert due-soon log first; prevent duplicates
   const insertRes = await db.query(
     `INSERT INTO public.notification_log (assignment_id, notification_type)
@@ -284,30 +329,50 @@ async function notifyDueSoonForAssignment(assignment) {
     return;
   }
 
-  const to = '1762299384@qq.com';
+  console.log(`📧 Sending due-soon emails to ${users.length} users`);
+
   const dueAtStr = new Date(assignment.due_at).toLocaleString();
-  try {
-    await EmailService.sendDueSoonEmail(
-      to,
-      'Coordinator',
-      assignment.assignment_name,
-      assignment.project_name,
-      dueAtStr
-    );
-    console.log(`✅ Due-soon email sent for assignment ${assignment.assignment_id}`);
-  } catch (e) {
-    console.error(`❌ Failed to send due-soon email for assignment ${assignment.assignment_id}:`, e);
-  }
+  const emailResults = await Promise.allSettled(
+    users.map((u) =>
+      EmailService.sendDueSoonEmail(
+        u.email,
+        u.name || 'User',
+        assignment.assignment_name,
+        assignment.project_name,
+        dueAtStr
+      )
+    )
+  );
+
+  // Log email results
+  emailResults.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      console.log(`✅ Due-soon email sent successfully to ${users[index].email}`);
+    } else {
+      console.error(`❌ Failed to send due-soon email to ${users[index].email}:`, result.reason);
+    }
+  });
 }
 
 async function checkAndNotifyDueSoon() {
   try {
     await ensureNotificationLogTable();
-    const assignments = await fetchAssignmentsDueInTwoDays();
+    const [assignments, users] = await Promise.all([
+      fetchAssignmentsDueInTwoDays(),
+      fetchActiveUsers()
+    ]);
+    
     console.log(`⏳ Found ${assignments?.length || 0} assignments due within 2 days`);
+    console.log(`👥 Found ${users?.length || 0} active users to notify`);
+    
     if (!assignments || assignments.length === 0) return;
+    if (!users || users.length === 0) {
+      console.log('ℹ️ No active users to notify for due-soon');
+      return;
+    }
+    
     for (const asg of assignments) {
-      await notifyDueSoonForAssignment(asg);
+      await notifyDueSoonForAssignment(asg, users);
     }
   } catch (err) {
     console.error('❌ Due-soon checker failure:', err);
@@ -346,9 +411,14 @@ async function checkAndNotifyMarkingCompletion() {
     const assignments = await fetchAssignmentsForCompletionCheck();
     if (!assignments || assignments.length === 0) return;
 
-    // Use same recipients as deadline (currently fixed test email)
+    // Get all active COORDINATOR users for marking completion notifications
     const coordinators = await fetchActiveCoordinators();
-    if (!coordinators || coordinators.length === 0) return;
+    if (!coordinators || coordinators.length === 0) {
+      console.log('ℹ️ No active coordinators to notify for marking completion');
+      return;
+    }
+
+    console.log(`👥 Found ${coordinators.length} active coordinators for marking completion notifications`);
 
     for (const asg of assignments) {
       const done = await allActiveMarkersCompleted(asg.assignment_id);
