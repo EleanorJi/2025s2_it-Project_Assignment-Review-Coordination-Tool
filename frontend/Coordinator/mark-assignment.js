@@ -1393,19 +1393,8 @@
     });
 
     submitBtn?.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to submit these marks? This action cannot be undone.')) {
-        try {
-          await submitMarks();
-          showNotification('Marks submitted successfully', 'success');
-          // 提交后锁定所有输入框
-          lockAllInputs();
-          // 提交后禁用按钮
-          disableActionButtons();
-        } catch (error) {
-          console.error('Error submitting marks:', error);
-          showNotification('Failed to submit marks', 'error');
-        }
-      }
+      // Show preview dialog instead of simple confirm
+      showSubmitPreviewDialog();
     });
   }
 
@@ -1666,6 +1655,164 @@
     setTimeout(() => {
       notification.remove();
     }, 3000);
+  }
+
+  // Show submit preview dialog with all scores and feedback
+  function showSubmitPreviewDialog() {
+    const scores = getCurrentScores();
+    const feedback = getCurrentFeedback();
+    const totalScore = calculateWeightedTotalScore();
+    
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'tm-modal';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '10001';
+    
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'tm-dialog';
+    modal.style.maxWidth = '700px';
+    modal.style.maxHeight = '90vh';
+    modal.style.overflow = 'hidden';
+    modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
+    
+    // Generate scores preview HTML
+    let scoresPreviewHtml = '';
+    Object.keys(scores).forEach(criterionId => {
+      const score = scores[criterionId];
+      const criterion = criterionData[criterionId];
+      const feedbackText = feedback[criterionId] || '';
+      const grade = currentGrades[criterionId];
+      const gradeInfo = gradeData[criterionId]?.[grade];
+      
+      if (criterion) {
+        scoresPreviewHtml += `
+          <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; background: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">
+                  ${criterionId}. ${criterion.title}
+                </div>
+                <div style="font-size: 12px; color: #6b7280;">
+                  Grade: <span style="color: ${gradeInfo?.color || '#0369a1'}; font-weight: 600;">${gradeInfo?.name || 'N/A'}</span>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 18px; font-weight: 700; color: #0369a1;">${score}</div>
+                <div style="font-size: 12px; color: #6b7280;">/ ${criterion.maxScore}</div>
+              </div>
+            </div>
+            ${feedbackText ? `
+              <div style="margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 4px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; font-weight: 600; color: #1e40af; margin-bottom: 4px;">Feedback:</div>
+                <div style="font-size: 12px; color: #1e40af; line-height: 1.5;">${feedbackText}</div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+    });
+    
+    modal.innerHTML = `
+      <div class="tm-dialog-hd" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-bottom: none; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h3 style="color: white; margin: 0; flex: 1;">Submit Marks - Preview & Confirm</h3>
+          <span style="background: rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">PREVIEW</span>
+        </div>
+      </div>
+      <div class="tm-dialog-bd" style="overflow-y: auto; flex: 1;">
+        <p style="font-size: 15px; font-weight: 600; color: #1f2937; margin-bottom: 16px;">
+          Please review all marks and feedback before submitting:
+        </p>
+        
+        <!-- Total Score Display -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; border-radius: 8px; margin-bottom: 16px; text-align: center;">
+          <div style="color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; margin-bottom: 4px;">Total Score</div>
+          <div style="color: white; font-size: 36px; font-weight: 700;">${totalScore}</div>
+          <div style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">/ 100</div>
+        </div>
+        
+        <!-- All Scores -->
+        <div style="margin-top: 16px;">
+          <div style="font-weight: 600; margin-bottom: 12px; color: #1f2937; font-size: 14px;">All Criterion Scores:</div>
+          <div style="max-height: 400px; overflow-y: auto; padding: 4px;">
+            ${scoresPreviewHtml}
+          </div>
+        </div>
+        
+        <div style="background: #fef3c7; padding: 14px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 16px;">
+          <div style="font-weight: 600; margin-bottom: 6px; color: #92400e; font-size: 13px;">⚠️ Important</div>
+          <div style="font-size: 12px; color: #92400e; line-height: 1.6;">
+            Once submitted, marks cannot be changed. Please ensure all scores and feedback are correct before confirming.
+          </div>
+        </div>
+      </div>
+      <div class="tm-dialog-ft" style="flex-shrink: 0; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+        <button class="btn tm-cancel-btn" id="cancelSubmitBtn">Cancel</button>
+        <button class="btn primary" id="confirmSubmitBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
+            <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Confirm & Submit Marks
+        </button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // Add event listeners
+    const cancelBtn = modal.querySelector('#cancelSubmitBtn');
+    const confirmBtn = modal.querySelector('#confirmSubmitBtn');
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+    
+    confirmBtn.addEventListener('click', async () => {
+      // Disable button to prevent double-click
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px; animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/>
+          <path d="M12 2 A10 10 0 0 1 22 12" stroke="currentColor" stroke-width="2" fill="none"/>
+        </svg>
+        Submitting...
+      `;
+      
+      try {
+        await submitMarks();
+        document.body.removeChild(overlay);
+        showNotification('Marks submitted successfully', 'success');
+        // 提交后锁定所有输入框
+        lockAllInputs();
+        // 提交后禁用按钮
+        disableActionButtons();
+      } catch (error) {
+        console.error('Error submitting marks:', error);
+        document.body.removeChild(overlay);
+        showNotification('Failed to submit marks', 'error');
+      }
+    });
+    
+    // Prevent closing on overlay click to force user decision
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        // Do nothing - user must choose
+      }
+    });
+    
+    // Add spin animation style
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   // Back button functionality

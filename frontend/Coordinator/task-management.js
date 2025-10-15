@@ -594,14 +594,16 @@
         console.log(`🔘 ${assignment.title} 显示按钮: Mark Assignment, Feedback (已发布但未提交评分)`);
       }
     } else {
-      // Unpublished: Display Upload button
+      // Unpublished: Always show Upload button
       actions.appendChild(uploadBtn);
 
-      // Only display View button and Publish button when assignment files exist
+      // If assignment files exist, show Publish and Mark Assignment buttons
       if (task.file_counts?.assignment > 0) {
         actions.appendChild(publishBtn);
-        console.log(`🔘 ${assignment.title} display buttons: Upload, View, Publish`);
+        actions.appendChild(markBtn);
+        console.log(`🔘 ${assignment.title} display buttons: Upload, Publish, Mark Assignment`);
       } else {
+        // No files uploaded yet, only show Upload and Publish
         actions.appendChild(publishBtn);
         console.log(`🔘 ${assignment.title} display buttons: Upload, Publish`);
       }
@@ -645,17 +647,18 @@
   function showDeleteConfirmDialog(projectId, projectName) {
     // Create modal overlay
     const overlay = document.createElement('div');
-    overlay.className = 'tm-delete-modal';
+    overlay.className = 'tm-modal';
+    overlay.style.display = 'flex';
     
     // Create modal content
     const modal = document.createElement('div');
-    modal.className = 'tm-delete-dialog';
+    modal.className = 'tm-dialog';
     
     modal.innerHTML = `
-      <div class="tm-delete-header">
+      <div class="tm-dialog-hd">
         <h3>Confirm Deletion</h3>
       </div>
-      <div class="tm-delete-body">
+      <div class="tm-dialog-bd">
         <p>Are you sure you want to delete <strong>${projectName}</strong>?</p>
         <p>This action will permanently remove the project and all associated data including:</p>
         <ul>
@@ -666,7 +669,7 @@
         </ul>
         <p><strong>This action cannot be undone.</strong></p>
       </div>
-      <div class="tm-delete-footer">
+      <div class="tm-dialog-ft">
         <button class="btn tm-cancel-btn">Cancel</button>
         <button class="btn tm-confirm-delete-btn">Delete Project</button>
       </div>
@@ -1083,13 +1086,320 @@
       projectMsg.style.display = text ? 'block' : 'none';
   }
 
-  // ---------- toast ----------
+  // ---------- Rubric Status Dialog Functions ----------
+  
+  // Delete rubric function
+  async function deleteRubric(rubricId) {
+    try {
+      const response = await fetch(`/api/uploads/rubric/${rubricId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        console.log('Rubric deleted successfully:', rubricId);
+      } else {
+        console.error('Failed to delete rubric:', rubricId);
+      }
+    } catch (error) {
+      console.error('Error deleting rubric:', error);
+    }
+  }
+
+  // Show preview dialog before confirming
+  function showRubricPreviewDialog(projectId, rubricId, details) {
+    const overlay = document.createElement('div');
+    overlay.className = 'tm-modal';
+    overlay.style.display = 'flex';
+    
+    const modal = document.createElement('div');
+    modal.className = 'tm-dialog';
+    modal.style.maxWidth = '700px';
+    
+    const criteriaCount = details.criteria?.length || 0;
+    const gradeLevelsCount = details.summary?.grade_levels_count || 0;
+    
+    // Generate full preview content
+    let previewHtml = '';
+    if (details.criteria && details.criteria.length > 0) {
+      previewHtml = details.criteria.map((criterion, idx) => {
+        const gradeLevels = criterion.grade_levels || [];
+        const levelNames = gradeLevels.map(l => l.level_name).join(', ');
+        return `
+          <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; background: #fafafa;">
+            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">
+              ${criterion.seq_no || idx + 1}. ${criterion.title}
+            </div>
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+              Max Score: ${criterion.max_score}
+            </div>
+            <div style="font-size: 12px; color: #6b7280;">
+              Grade Levels: ${levelNames || 'N/A'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    modal.innerHTML = `
+      <div class="tm-dialog-hd" style="background: #f0f9ff; border-bottom: 1px solid #bfdbfe;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h3 style="color: #1e40af; margin: 0; flex: 1;">Rubric Preview - Please Confirm</h3>
+          <span style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">PREVIEW</span>
+        </div>
+      </div>
+      <div class="tm-dialog-bd">
+        <p><strong>Please review your rubric before confirming:</strong></p>
+        
+        <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <div style="font-size: 24px; font-weight: 700; color: #0369a1;">${criteriaCount}</div>
+              <div style="font-size: 13px; color: #0c4a6e;">Criteria</div>
+            </div>
+            <div>
+              <div style="font-size: 24px; font-weight: 700; color: #0369a1;">${gradeLevelsCount}</div>
+              <div style="font-size: 13px; color: #0c4a6e;">Grade Levels</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 16px;">
+          <div style="font-weight: 600; margin-bottom: 8px; color: #1f2937;">All Criteria:</div>
+          <div style="max-height: 400px; overflow-y: auto; padding: 4px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
+            ${previewHtml}
+          </div>
+        </div>
+        
+        <p style="margin-top: 16px; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; color: #92400e;">
+          <strong>Note:</strong> If the preview looks correct, click "Confirm & Save". Otherwise, click "Cancel & Re-upload" to choose a different file.
+        </p>
+      </div>
+      <div class="tm-dialog-ft">
+        <button class="btn tm-cancel-btn">Cancel & Re-upload</button>
+        <button class="btn primary">Confirm & Save</button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    const cancelBtn = modal.querySelector('.tm-cancel-btn');
+    const confirmBtn = modal.querySelector('.btn.primary');
+    
+    // Cancel - delete rubric and allow re-upload
+    cancelBtn.addEventListener('click', async () => {
+      document.body.removeChild(overlay);
+      await deleteRubric(rubricId);
+      await fetchProjects();
+      toast('Rubric cancelled. You can upload a new file.');
+      openRubricModal(projectId);
+    });
+    
+    // Confirm - keep rubric and show success
+    confirmBtn.addEventListener('click', async () => {
+      document.body.removeChild(overlay);
+      await fetchProjects();
+      toast('Rubric confirmed successfully!');
+      showRubricSuccessDialog(projectId, details);
+    });
+    
+    // Prevent closing on overlay click to force user decision
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        // Do nothing - user must choose
+      }
+    });
+  }
+
+  // Show error dialog for empty rubric
+  function showRubricErrorDialog(projectId) {
+    const overlay = document.createElement('div');
+    overlay.className = 'tm-modal';
+    overlay.style.display = 'flex';
+    
+    const modal = document.createElement('div');
+    modal.className = 'tm-dialog';
+    modal.style.maxWidth = '500px';
+    
+    modal.innerHTML = `
+      <div class="tm-dialog-hd" style="background: #fef2f2; border-bottom: 1px solid #fecaca;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h3 style="color: #991b1b; margin: 0; flex: 1;">Empty Rubric Detected</h3>
+          <span style="background: #dc2626; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">ERROR</span>
+        </div>
+      </div>
+      <div class="tm-dialog-bd">
+        <p><strong>The uploaded rubric file appears to be empty or could not be parsed correctly.</strong></p>
+        <p>Please ensure your rubric file meets the following requirements:</p>
+        <ul style="margin: 12px 0; padding-left: 24px; line-height: 1.8;">
+          <li><strong>Table format:</strong> Must contain clear rows and columns</li>
+          <li><strong>Score format:</strong> Use (min-max) notation, e.g., (8-10) points</li>
+          <li><strong>Content:</strong> Include criteria names, descriptions, and grade levels</li>
+          <li><strong>File format:</strong> .docx, .xlsx, or .csv</li>
+        </ul>
+        <p style="margin-top: 16px; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+          <strong>Tip:</strong> Download a sample template or review your file structure before re-uploading.
+        </p>
+      </div>
+      <div class="tm-dialog-ft">
+        <button class="btn tm-cancel-btn">Close</button>
+        <button class="btn primary">Re-upload Rubric</button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    const closeBtn = modal.querySelector('.tm-cancel-btn');
+    const reuploadBtn = modal.querySelector('.btn.primary');
+    
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+    
+    reuploadBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      openRubricModal(projectId);
+    });
+    
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    });
+  }
+
+  // Show success dialog with rubric details
+  function showRubricSuccessDialog(projectId, details) {
+    const overlay = document.createElement('div');
+    overlay.className = 'tm-modal';
+    overlay.style.display = 'flex';
+    
+    const modal = document.createElement('div');
+    modal.className = 'tm-dialog';
+    modal.style.maxWidth = '600px';
+    
+    const criteriaCount = details.criteria?.length || 0;
+    const gradeLevelsCount = details.summary?.grade_levels_count || 0;
+    
+    // Generate preview content
+    let previewHtml = '';
+    if (details.criteria && details.criteria.length > 0) {
+      const previewCriteria = details.criteria.slice(0, 3); // Show first 3 criteria
+      previewHtml = previewCriteria.map((criterion, idx) => {
+        const gradeLevels = criterion.grade_levels || [];
+        const levelNames = gradeLevels.map(l => l.level_name).join(', ');
+        return `
+          <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; background: #fafafa;">
+            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px;">
+              ${criterion.seq_no || idx + 1}. ${criterion.title}
+            </div>
+            <div style="font-size: 12px; color: #6b7280;">
+              Max Score: ${criterion.max_score} | Levels: ${levelNames || 'N/A'}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      if (details.criteria.length > 3) {
+        previewHtml += `<div style="text-align: center; color: #6b7280; font-size: 13px; margin-top: 8px;">... and ${details.criteria.length - 3} more criteria</div>`;
+      }
+    }
+    
+    modal.innerHTML = `
+      <div class="tm-dialog-hd" style="background: #f0fdf4; border-bottom: 1px solid #bbf7d0;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h3 style="color: #166534; margin: 0; flex: 1;">Rubric Uploaded Successfully</h3>
+          <span style="background: #16a34a; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SUCCESS</span>
+        </div>
+      </div>
+      <div class="tm-dialog-bd">
+        <p><strong>Your rubric has been successfully uploaded and parsed!</strong></p>
+        <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <div style="font-size: 24px; font-weight: 700; color: #0369a1;">${criteriaCount}</div>
+              <div style="font-size: 13px; color: #0c4a6e;">Criteria</div>
+            </div>
+            <div>
+              <div style="font-size: 24px; font-weight: 700; color: #0369a1;">${gradeLevelsCount}</div>
+              <div style="font-size: 13px; color: #0c4a6e;">Grade Levels</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 16px;">
+          <div style="font-weight: 600; margin-bottom: 8px; color: #1f2937;">Preview:</div>
+          <div style="max-height: 240px; overflow-y: auto; padding: 4px;">
+            ${previewHtml}
+          </div>
+        </div>
+        
+        <p style="margin-top: 16px; color: #374151;">
+          You can now view and edit your rubric to make any necessary adjustments.
+        </p>
+      </div>
+      <div class="tm-dialog-ft">
+        <button class="btn tm-cancel-btn">Close</button>
+        <button class="btn primary">View Full Rubric</button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    const closeBtn = modal.querySelector('.tm-cancel-btn');
+    const viewBtn = modal.querySelector('.btn.primary');
+    
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+    });
+    
+    viewBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      location.href = `/dashboard/coordinator/rubric?project=${projectId}`;
+    });
+    
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    });
+  }
+
+  // ---------- toast (center modal) ----------
   function toast(msg, ms=2200){
-    const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;right:16px;bottom:16px;background:#0F172A;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.2);opacity:0;transform:translateY(6px);transition:.2s;z-index:2000;font-weight:700';
-    el.textContent = msg; document.body.appendChild(el);
-    requestAnimationFrame(()=>{ el.style.opacity=1; el.style.transform='none'; });
-    setTimeout(()=>{ el.style.opacity=0; el.style.transform='translateY(6px)'; setTimeout(()=> el.remove(), 200); }, ms);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:3000;opacity:0;transition:opacity 0.2s';
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:#fff;padding:24px 32px;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:400px;min-width:300px;transform:scale(0.9);transition:transform 0.2s;text-align:center';
+    
+    modal.innerHTML = `
+      <div style="font-size:15px;color:#374151;line-height:1.5;font-weight:500">${msg}</div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+      modal.style.transform = 'scale(1)';
+    });
+    
+    setTimeout(() => {
+      overlay.style.opacity = '0';
+      modal.style.transform = 'scale(0.9)';
+      setTimeout(() => overlay.remove(), 200);
+    }, ms);
+    
+    // Click to close
+    overlay.addEventListener('click', () => {
+      overlay.style.opacity = '0';
+      modal.style.transform = 'scale(0.9)';
+      setTimeout(() => overlay.remove(), 200);
+    });
   }
 
   // 初始化
@@ -1269,6 +1579,7 @@
       if (file) {
         textDisplay.textContent = file.name;
         errLine.style.display = 'none';
+        dropArea.classList.add('file-selected');
       }
     };
 
@@ -1295,7 +1606,7 @@
       }
     });
 
-    // Submit
+    // Submit - Step 1: Upload and Preview
     submitBtn.addEventListener('click', async () => {
       const file = fileInput.files[0];
       if (!file) {
@@ -1304,13 +1615,46 @@
       }
 
       try {
+        // Show uploading toast
+        toast('Uploading and parsing rubric...');
 
+        // Upload draft file
         const draft = await uploadDraftFile(file, 'rubric');
-        await commitFile(draft.temp_name, 'rubric', null, null, projectId);
 
-        toast('Rubric uploaded successfully!');
+        // Close upload modal
         closeModal();
-        await fetchProjects(); // Refresh data
+        
+        // Commit to get rubric ID and parse
+        const commitResult = await commitFile(draft.temp_name, 'rubric', null, null, projectId);
+        const rubricId = commitResult.upload_record?.rubric_id;
+        
+        if (rubricId) {
+          // Wait for parsing to complete
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Get rubric details
+          const detailsResponse = await fetch(`/api/uploads/rubric/${rubricId}/details`);
+          
+          if (detailsResponse.ok) {
+            const details = await detailsResponse.json();
+            
+            // Check if rubric has criteria
+            if (!details.criteria || details.criteria.length === 0) {
+              // Empty rubric - show error and delete
+              await deleteRubric(rubricId);
+              showRubricErrorDialog(projectId);
+            } else {
+              // Show preview and confirm dialog
+              showRubricPreviewDialog(projectId, rubricId, details);
+            }
+          } else {
+            toast('Failed to parse rubric. Please check file format.');
+            await deleteRubric(rubricId);
+          }
+        } else {
+          toast('Upload failed. Please try again.');
+        }
+        
       } catch (error) {
         console.error('Upload error:', error);
         toast('Failed to upload rubric. Please try again.');
@@ -1364,6 +1708,7 @@
       if (file) {
         textDisplay.textContent = file.name;
         errLine.style.display = 'none';
+        dropArea.classList.add('file-selected');
       }
     };
 
@@ -1433,12 +1778,42 @@
           combinedDateTime = `${due}T23:59:59`;
         }
 
-        const draft = await uploadDraftFile(file, 'assignment1');
-        await commitFile(draft.temp_name, 'assignment', 1, combinedDateTime, projectId);
+        // Show uploading progress
+        toast('Uploading assignment...');
 
-        toast('Assignment 1 uploaded successfully!');
+        const draft = await uploadDraftFile(file, 'assignment1');
+        
+        // Close upload modal first
         closeModal();
-        await fetchProjects(); // Refresh data
+        
+        // Get rubric info for preview
+        let rubricInfo = null;
+        try {
+          const rubricRes = await fetch(`/api/uploads/project/${projectId}/latest-rubric`);
+          if (rubricRes.ok) {
+            const rubricData = await rubricRes.json();
+            if (rubricData.rubric_id) {
+              const detailRes = await fetch(`/api/uploads/rubric/${rubricData.rubric_id}/details`);
+              if (detailRes.ok) {
+                rubricInfo = await detailRes.json();
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to fetch rubric info:', error);
+        }
+
+        // Show preview dialog before committing
+        showAssignmentPreviewDialog(
+          projectId,
+          draft.temp_name,
+          'assignment',
+          1,
+          combinedDateTime,
+          file,
+          rubricInfo
+        );
+        
       } catch (error) {
         console.error('Upload error:', error);
         toast('Failed to upload assignment. Please try again.');
@@ -1492,6 +1867,7 @@
       if (file) {
         textDisplay.textContent = file.name;
         errLine.style.display = 'none';
+        dropArea.classList.add('file-selected');
       }
     };
 
@@ -1561,15 +1937,357 @@
           combinedDateTime = `${due}T23:59:59`;
         }
 
-        const draft = await uploadDraftFile(file, 'assignment2');
-        await commitFile(draft.temp_name, 'assignment', 2, combinedDateTime, projectId);
+        // Show uploading progress
+        toast('Uploading assignment...');
 
-        toast('Assignment 2 uploaded successfully!');
+        const draft = await uploadDraftFile(file, 'assignment2');
+        
+        // Close upload modal first
         closeModal();
-        await fetchProjects(); // Refresh data
+        
+        // Get rubric info for preview
+        let rubricInfo = null;
+        try {
+          const rubricRes = await fetch(`/api/uploads/project/${projectId}/latest-rubric`);
+          if (rubricRes.ok) {
+            const rubricData = await rubricRes.json();
+            if (rubricData.rubric_id) {
+              const detailRes = await fetch(`/api/uploads/rubric/${rubricData.rubric_id}/details`);
+              if (detailRes.ok) {
+                rubricInfo = await detailRes.json();
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to fetch rubric info:', error);
+        }
+
+        // Show preview dialog before committing
+        showAssignmentPreviewDialog(
+          projectId,
+          draft.temp_name,
+          'assignment',
+          2,
+          combinedDateTime,
+          file,
+          rubricInfo
+        );
+        
       } catch (error) {
         console.error('Upload error:', error);
         toast('Failed to upload assignment. Please try again.');
+      }
+    });
+  }
+
+  // ---------- Assignment Preview Dialog Functions ----------
+  
+  // Delete assignment draft function
+  async function deleteAssignmentDraft(tempName) {
+    try {
+      // You may need to implement a backend endpoint for this
+      console.log('Deleting draft:', tempName);
+      // For now, just log it as the draft will be cleaned up automatically
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+    }
+  }
+
+  // Format file size
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  // Format date time for display
+  function formatDateTime(dateTimeString) {
+    const date = new Date(dateTimeString);
+    const options = { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return date.toLocaleDateString('en-US', options);
+  }
+
+  // Show assignment preview dialog before confirming
+  function showAssignmentPreviewDialog(projectId, tempName, fileType, round, dueDate, file, rubricInfo) {
+    const overlay = document.createElement('div');
+    overlay.className = 'tm-modal';
+    overlay.style.display = 'flex';
+    
+    const modal = document.createElement('div');
+    modal.className = 'tm-dialog';
+    modal.style.maxWidth = '800px';
+    modal.style.maxHeight = '90vh';
+    modal.style.overflow = 'hidden';
+    modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
+    
+    // Generate rubric preview HTML
+    let rubricPreviewHtml = '';
+    if (rubricInfo && rubricInfo.criteria && rubricInfo.criteria.length > 0) {
+      const criteriaCount = rubricInfo.criteria.length;
+      const gradeLevelsCount = rubricInfo.summary?.grade_levels_count || 0;
+      
+      const previewCriteria = rubricInfo.criteria.slice(0, 3);
+      const criteriaListHtml = previewCriteria.map((criterion, idx) => {
+        const gradeLevels = criterion.grade_levels || [];
+        const levelNames = gradeLevels.map(l => l.level_name).join(', ');
+        return `
+          <div style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 6px; background: #fafafa;">
+            <div style="font-weight: 600; color: #1f2937; margin-bottom: 4px; font-size: 13px;">
+              ${criterion.seq_no || idx + 1}. ${criterion.title}
+            </div>
+            <div style="font-size: 11px; color: #6b7280;">
+              Max Score: ${criterion.max_score} | Levels: ${levelNames || 'N/A'}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      const moreText = criteriaCount > 3 ? `<div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 6px;">... and ${criteriaCount - 3} more criteria</div>` : '';
+      
+      rubricPreviewHtml = `
+        <div style="background: #f0f9ff; padding: 14px; border-radius: 8px; margin-bottom: 12px;">
+          <div style="font-weight: 600; margin-bottom: 10px; color: #0369a1; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M9 12H15M9 16H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Rubric Information
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div style="background: white; padding: 10px; border-radius: 6px;">
+              <div style="font-size: 20px; font-weight: 700; color: #0369a1;">${criteriaCount}</div>
+              <div style="font-size: 12px; color: #0c4a6e;">Criteria</div>
+            </div>
+            <div style="background: white; padding: 10px; border-radius: 6px;">
+              <div style="font-size: 20px; font-weight: 700; color: #0369a1;">${gradeLevelsCount}</div>
+              <div style="font-size: 12px; color: #0c4a6e;">Grade Levels</div>
+            </div>
+          </div>
+          <div style="max-height: 200px; overflow-y: auto; padding: 4px;">
+            ${criteriaListHtml}
+            ${moreText}
+          </div>
+        </div>
+      `;
+    } else {
+      rubricPreviewHtml = `
+        <div style="background: #fef3c7; padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #f59e0b;">
+          <div style="font-weight: 600; margin-bottom: 6px; color: #92400e; font-size: 13px;">⚠️ No Rubric Found</div>
+          <div style="font-size: 12px; color: #92400e; line-height: 1.5;">
+            This assignment will be uploaded without an associated rubric. You may want to upload a rubric first for proper grading.
+          </div>
+        </div>
+      `;
+    }
+    
+    modal.innerHTML = `
+      <div class="tm-dialog-hd" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-bottom: none; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h3 style="color: white; margin: 0; flex: 1;">Assignment ${round} - Preview & Confirm</h3>
+          <span style="background: rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">PREVIEW</span>
+        </div>
+      </div>
+      <div class="tm-dialog-bd" style="overflow-y: auto; flex: 1;">
+        <p style="font-size: 15px; font-weight: 600; color: #1f2937; margin-bottom: 16px;">
+          Please review your assignment details before confirming:
+        </p>
+        
+        <!-- Assignment Details -->
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e5e7eb;">
+          <div style="font-weight: 600; margin-bottom: 12px; color: #374151; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12H15M9 16H15M17 21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3H12.5858C12.851 3 13.1054 3.10536 13.2929 3.29289L18.7071 8.70711C18.8946 8.89464 19 9.149 19 9.41421V19C19 20.1046 18.1046 21 17 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Assignment Details
+          </div>
+          <div style="display: grid; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">
+              <span style="color: #6b7280; font-size: 13px;">File Name:</span>
+              <span style="color: #1f2937; font-weight: 600; font-size: 13px;">${file.name}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">
+              <span style="color: #6b7280; font-size: 13px;">File Size:</span>
+              <span style="color: #1f2937; font-weight: 600; font-size: 13px;">${formatFileSize(file.size)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">
+              <span style="color: #6b7280; font-size: 13px;">File Type:</span>
+              <span style="color: #1f2937; font-weight: 600; font-size: 13px;">PDF Document</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">
+              <span style="color: #6b7280; font-size: 13px;">Due Date:</span>
+              <span style="color: #dc2626; font-weight: 700; font-size: 13px;">${formatDateTime(dueDate)}</span>
+            </div>
+          </div>
+        </div>
+        
+        ${rubricPreviewHtml}
+        
+        <div style="background: #ecfdf5; padding: 14px; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 16px;">
+          <div style="font-weight: 600; margin-bottom: 6px; color: #065f46; font-size: 13px;">✓ Ready to Submit</div>
+          <div style="font-size: 12px; color: #065f46; line-height: 1.6;">
+            Once confirmed, this assignment will be saved and ready to publish. You can mark this assignment after publishing it.
+          </div>
+        </div>
+      </div>
+      <div class="tm-dialog-ft" style="flex-shrink: 0; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+        <button class="btn tm-cancel-btn">Cancel & Re-upload</button>
+        <button class="btn primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
+            <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Confirm & Save Assignment
+        </button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    const cancelBtn = modal.querySelector('.tm-cancel-btn');
+    const confirmBtn = modal.querySelector('.btn.primary');
+    
+    // Cancel - allow re-upload
+    cancelBtn.addEventListener('click', async () => {
+      document.body.removeChild(overlay);
+      await deleteAssignmentDraft(tempName);
+      toast('Upload cancelled. You can upload a different file.');
+      // Reopen the appropriate modal
+      if (round === 1) {
+        openAssignment1Modal(projectId);
+      } else {
+        openAssignment2Modal(projectId);
+      }
+    });
+    
+    // Confirm - commit the file
+    confirmBtn.addEventListener('click', async () => {
+      try {
+        // Disable button to prevent double-click
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Saving...';
+        
+        await commitFile(tempName, fileType, round, dueDate, projectId);
+        
+        document.body.removeChild(overlay);
+        
+        // Show success dialog
+        showAssignmentSuccessDialog(projectId, round, file, dueDate, rubricInfo);
+        
+        // Refresh project list
+        await fetchProjects();
+        
+      } catch (error) {
+        console.error('Commit error:', error);
+        document.body.removeChild(overlay);
+        toast('Failed to save assignment. Please try again.');
+      }
+    });
+    
+    // Prevent closing on overlay click to force user decision
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        // Do nothing - user must choose
+      }
+    });
+  }
+
+  // Show success dialog after assignment upload
+  function showAssignmentSuccessDialog(projectId, round, file, dueDate, rubricInfo) {
+    const overlay = document.createElement('div');
+    overlay.className = 'tm-modal';
+    overlay.style.display = 'flex';
+    
+    const modal = document.createElement('div');
+    modal.className = 'tm-dialog';
+    modal.style.maxWidth = '600px';
+    
+    const hasRubric = rubricInfo && rubricInfo.criteria && rubricInfo.criteria.length > 0;
+    
+    modal.innerHTML = `
+      <div class="tm-dialog-hd" style="background: #f0fdf4; border-bottom: 1px solid #bbf7d0;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h3 style="color: #166534; margin: 0; flex: 1;">Assignment ${round} Uploaded Successfully!</h3>
+          <span style="background: #16a34a; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SUCCESS</span>
+        </div>
+      </div>
+      <div class="tm-dialog-bd">
+        <div style="text-align: center; margin: 20px 0;">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto;">
+            <circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+            <path d="M8 12L11 15L16 9" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        
+        <p style="text-align: center; font-size: 15px; color: #374151; margin-bottom: 20px;">
+          <strong>${file.name}</strong> has been successfully uploaded and saved.
+        </p>
+        
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+          <div style="font-weight: 600; margin-bottom: 12px; color: #374151; font-size: 14px;">Assignment Summary:</div>
+          <div style="display: grid; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #6b7280;">Assignment:</span>
+              <span style="color: #1f2937; font-weight: 600;">Assignment ${round}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #6b7280;">Due Date:</span>
+              <span style="color: #dc2626; font-weight: 600;">${formatDateTime(dueDate)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #6b7280;">File Size:</span>
+              <span style="color: #1f2937; font-weight: 600;">${formatFileSize(file.size)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: #6b7280;">Rubric:</span>
+              <span style="color: ${hasRubric ? '#16a34a' : '#f59e0b'}; font-weight: 600;">${hasRubric ? '✓ Associated' : '⚠ Not Associated'}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div style="background: #dbeafe; padding: 14px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+          <div style="font-weight: 600; margin-bottom: 8px; color: #1e40af; font-size: 13px;">📋 Next Steps:</div>
+          <ol style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 12px; line-height: 1.8;">
+            <li>The assignment has been saved and is ready to publish</li>
+            <li>Return to Task Management to publish and mark the assignment</li>
+            <li>You can view the assignment anytime from the assignment section</li>
+          </ol>
+        </div>
+      </div>
+      <div class="tm-dialog-ft" style="gap: 8px;">
+        <button class="btn primary" id="backToTaskBtn" style="background: #3b82f6;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
+            <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Back to Task Management
+        </button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    const backBtn = modal.querySelector('#backToTaskBtn');
+    
+    backBtn.addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      // Store expansion data in sessionStorage to auto-expand the assignment
+      sessionStorage.setItem('expandAssignment', JSON.stringify({ projectId, round }));
+      // Refresh the page to show updated task with Mark Assignment button
+      window.location.reload();
+    });
+    
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
       }
     });
   }

@@ -3097,5 +3097,151 @@ router.get('/assignment/:assignment_id/files', async (req, res) => {
   }
 });
 
+// Update rubric criteria and grade levels - PUT /api/uploads/rubric/:rubric_id/update
+router.put('/rubric/:rubric_id/update', async (req, res) => {
+  const client = await db.connect();
+  try {
+    const { rubric_id } = req.params;
+    const { criteria } = req.body;
+
+    if (!criteria || !Array.isArray(criteria)) {
+      return res.status(400).json({ 
+        error: 'Missing or invalid criteria array' 
+      });
+    }
+
+    console.log(`📝 Updating rubric: rubric_id=${rubric_id}, criteria count=${criteria.length}`);
+
+    // Verify rubric exists
+    const rubricCheck = await db.query(
+      'SELECT rubric_id FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+
+    if (rubricCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+
+    await client.query('BEGIN');
+
+    // Update each criterion and its grade levels
+    for (const criterion of criteria) {
+      const { criterion_id, title, description, max_score, grade_levels } = criterion;
+
+      // Update criterion
+      await client.query(
+        `UPDATE rubric_criterion 
+         SET title = $1, description = $2, max_score = $3
+         WHERE criterion_id = $4 AND rubric_id = $5`,
+        [title, description || null, max_score, criterion_id, rubric_id]
+      );
+
+      console.log(`✅ Updated criterion: criterion_id=${criterion_id}`);
+
+      // Update grade levels
+      if (grade_levels && Array.isArray(grade_levels)) {
+        for (const level of grade_levels) {
+          const { level_id, description: levelDesc, min_score, max_score: levelMaxScore } = level;
+
+          await client.query(
+            `UPDATE criterion_grade_level 
+             SET description = $1, min_score = $2, max_score = $3
+             WHERE grade_level_id = $4 AND criterion_id = $5`,
+            [levelDesc || null, min_score, levelMaxScore, level_id, criterion_id]
+          );
+
+          console.log(`✅ Updated grade level: level_id=${level_id}`);
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`✅ Rubric updated successfully: rubric_id=${rubric_id}`);
+
+    res.json({
+      message: 'Rubric updated successfully',
+      rubric_id: parseInt(rubric_id),
+      updated_criteria_count: criteria.length
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Failed to update rubric:', error);
+    res.status(500).json({
+      error: 'Failed to update rubric',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Delete rubric - DELETE /api/uploads/rubric/:rubric_id
+router.delete('/rubric/:rubric_id', async (req, res) => {
+  const client = await db.connect();
+  try {
+    const { rubric_id } = req.params;
+
+    console.log(`🗑️ Deleting rubric: rubric_id=${rubric_id}`);
+
+    // Verify rubric exists
+    const rubricCheck = await db.query(
+      'SELECT rubric_id FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+
+    if (rubricCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+
+    await client.query('BEGIN');
+
+    // Delete grade levels first (foreign key constraint)
+    await client.query(
+      `DELETE FROM criterion_grade_level 
+       WHERE criterion_id IN (
+         SELECT criterion_id FROM rubric_criterion WHERE rubric_id = $1
+       )`,
+      [rubric_id]
+    );
+
+    // Delete criteria
+    await client.query(
+      'DELETE FROM rubric_criterion WHERE rubric_id = $1',
+      [rubric_id]
+    );
+
+    // Delete rubric
+    await client.query(
+      'DELETE FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+
+    // Delete associated upload records
+    await client.query(
+      'DELETE FROM upload WHERE rubric_id = $1',
+      [rubric_id]
+    );
+
+    await client.query('COMMIT');
+    console.log(`✅ Rubric deleted successfully: rubric_id=${rubric_id}`);
+
+    res.json({
+      message: 'Rubric deleted successfully',
+      rubric_id: parseInt(rubric_id)
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Failed to delete rubric:', error);
+    res.status(500).json({
+      error: 'Failed to delete rubric',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 
 module.exports = router;

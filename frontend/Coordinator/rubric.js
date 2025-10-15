@@ -1,4 +1,8 @@
 // rubric.js — Fetch backend data and render to table
+let isEditMode = false;
+let currentRubricData = null;
+let originalRubricData = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     // ✅ Display username
     try {
@@ -16,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Failed to load username:", err);
     }
     document.getElementById('backBtn')?.addEventListener('click', () => history.back());
+    document.getElementById('editBtn')?.addEventListener('click', enterEditMode);
+    document.getElementById('saveBtn')?.addEventListener('click', saveRubric);
+    document.getElementById('cancelBtn')?.addEventListener('click', cancelEdit);
     loadRubric();
   });
   
@@ -66,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ Retrieved rubric detail data:', data);
 
         // Update UI using backend returned data
+        currentRubricData = JSON.parse(JSON.stringify(data)); // Deep copy
+        originalRubricData = JSON.parse(JSON.stringify(data)); // Save original for cancel
         updateRubricUI(data, metaEl, tbody);
 
       } catch (error) {
@@ -126,12 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       data.criteria.forEach((criterion, idx) => {
         const tr = document.createElement('tr');
+        tr.dataset.criterionId = criterion.criterion_id;
 
         // Left side criteria - using backend field names
         const td0 = td();
+        td0.dataset.field = 'criterion-info';
         td0.innerHTML = `
-          <div class="criterion-title">${criterion.seq_no || idx + 1}. ${esc(criterion.title)}</div>
-          ${criterion.description ? `<div style="font-weight: 400; margin-top: 4px; color: var(--muted);">${esc(criterion.description)}</div>` : ''}
+          <div class="criterion-title" data-field="title">${criterion.seq_no || idx + 1}. ${esc(criterion.title)}</div>
+          ${criterion.description ? `<div style="font-weight: 400; margin-top: 4px; color: var(--muted);" data-field="description">${esc(criterion.description)}</div>` : '<div style="font-weight: 400; margin-top: 4px; color: var(--muted);" data-field="description"></div>'}
         `;
         tr.appendChild(td0);
 
@@ -142,30 +153,197 @@ document.addEventListener('DOMContentLoaded', () => {
         gradeLevelOrder.forEach(levelName => {
           const level = criterion.grade_levels?.find(l => l.level_name === levelName);
           const cell = td();
+          cell.dataset.levelName = levelName;
+          if (level) {
+            cell.dataset.levelId = level.level_id;
+          }
 
           if (level) {
             // Display score range
             if (level.min_score !== undefined && level.max_score !== undefined) {
-              cell.innerHTML += `<div class="badge">${level.min_score} - ${level.max_score}</div>`;
+              cell.innerHTML += `<div class="badge" data-field="score-range"><span data-field="min-score">${level.min_score}</span> - <span data-field="max-score">${level.max_score}</span></div>`;
+            } else {
+              cell.innerHTML += `<div class="badge" data-field="score-range"><span data-field="min-score">0</span> - <span data-field="max-score">0</span></div>`;
             }
             // Display description
             if (level.description) {
-              cell.innerHTML += `<div>${nl2br(esc(level.description))}</div>`;
+              cell.innerHTML += `<div data-field="level-description">${nl2br(esc(level.description))}</div>`;
+            } else {
+              cell.innerHTML += `<div data-field="level-description"></div>`;
             }
           } else {
-            cell.innerHTML = '<div style="color: var(--muted); font-style: italic;">Not defined</div>';
+            cell.innerHTML = '<div class="badge" data-field="score-range"><span data-field="min-score">0</span> - <span data-field="max-score">0</span></div>';
+            cell.innerHTML += '<div data-field="level-description"></div>';
           }
           tr.appendChild(cell);
         });
 
         // Right side max score - using max_score field
         const tdScore = td();
-        tdScore.innerHTML = `<div class="meta" style="font-weight: 700;">/ ${esc(String(criterion.max_score ?? '0'))}</div>`;
+        tdScore.dataset.field = 'max-score';
+        tdScore.innerHTML = `<div class="meta" style="font-weight: 700;">/ <span data-field="max-score-value">${esc(String(criterion.max_score ?? '0'))}</span></div>`;
         tr.appendChild(tdScore);
 
         tbody.appendChild(tr);
       });
     }
+
+  /* ===== Edit Mode Functions ===== */
+  function enterEditMode() {
+    isEditMode = true;
+    
+    // Show/hide buttons
+    document.getElementById('editBtn').style.display = 'none';
+    document.getElementById('saveBtn').style.display = 'block';
+    document.getElementById('cancelBtn').style.display = 'block';
+    
+    // Make table cells editable
+    const tbody = document.getElementById('rubric-body');
+    const rows = tbody.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+      // Make criterion title and description editable
+      const titleDiv = row.querySelector('[data-field="title"]');
+      const descDiv = row.querySelector('[data-field="description"]');
+      
+      if (titleDiv) {
+        const titleText = titleDiv.textContent.replace(/^\d+\.\s*/, '');
+        titleDiv.contentEditable = true;
+        titleDiv.textContent = titleText;
+        titleDiv.parentElement.classList.add('editable');
+      }
+      
+      if (descDiv) {
+        descDiv.contentEditable = true;
+        descDiv.parentElement.classList.add('editable');
+      }
+      
+      // Make grade level descriptions editable
+      const cells = row.querySelectorAll('td[data-level-name]');
+      cells.forEach(cell => {
+        const levelDesc = cell.querySelector('[data-field="level-description"]');
+        const minScore = cell.querySelector('[data-field="min-score"]');
+        const maxScore = cell.querySelector('[data-field="max-score"]');
+        
+        if (levelDesc) {
+          // Replace <br> with newlines for editing
+          levelDesc.innerHTML = levelDesc.innerHTML.replace(/<br>/g, '\n');
+          levelDesc.contentEditable = true;
+        }
+        
+        if (minScore) {
+          minScore.contentEditable = true;
+        }
+        
+        if (maxScore) {
+          maxScore.contentEditable = true;
+        }
+        
+        cell.classList.add('editable');
+      });
+      
+      // Make max score editable
+      const maxScoreValue = row.querySelector('[data-field="max-score-value"]');
+      if (maxScoreValue) {
+        maxScoreValue.contentEditable = true;
+        maxScoreValue.parentElement.parentElement.classList.add('editable');
+      }
+    });
+  }
+
+  function cancelEdit() {
+    isEditMode = false;
+    
+    // Show/hide buttons
+    document.getElementById('editBtn').style.display = 'block';
+    document.getElementById('saveBtn').style.display = 'none';
+    document.getElementById('cancelBtn').style.display = 'none';
+    
+    // Restore original data
+    currentRubricData = JSON.parse(JSON.stringify(originalRubricData));
+    const metaEl = document.getElementById('rubric-meta');
+    const tbody = document.getElementById('rubric-body');
+    updateRubricUI(currentRubricData, metaEl, tbody);
+  }
+
+  async function saveRubric() {
+    try {
+      // Collect updated data from the table
+      const tbody = document.getElementById('rubric-body');
+      const rows = tbody.querySelectorAll('tr');
+      
+      const updatedCriteria = [];
+      
+      rows.forEach(row => {
+        const criterionId = row.dataset.criterionId;
+        const titleDiv = row.querySelector('[data-field="title"]');
+        const descDiv = row.querySelector('[data-field="description"]');
+        const maxScoreValue = row.querySelector('[data-field="max-score-value"]');
+        
+        const criterion = {
+          criterion_id: parseInt(criterionId),
+          title: titleDiv ? titleDiv.textContent.trim() : '',
+          description: descDiv ? descDiv.textContent.trim() : '',
+          max_score: maxScoreValue ? parseFloat(maxScoreValue.textContent.trim()) : 0,
+          grade_levels: []
+        };
+        
+        // Collect grade level data
+        const cells = row.querySelectorAll('td[data-level-name]');
+        cells.forEach(cell => {
+          const levelName = cell.dataset.levelName;
+          const levelId = cell.dataset.levelId;
+          const levelDesc = cell.querySelector('[data-field="level-description"]');
+          const minScore = cell.querySelector('[data-field="min-score"]');
+          const maxScore = cell.querySelector('[data-field="max-score"]');
+          
+          if (levelId) {
+            criterion.grade_levels.push({
+              level_id: parseInt(levelId),
+              level_name: levelName,
+              description: levelDesc ? levelDesc.textContent.trim() : '',
+              min_score: minScore ? parseFloat(minScore.textContent.trim()) : 0,
+              max_score: maxScore ? parseFloat(maxScore.textContent.trim()) : 0
+            });
+          }
+        });
+        
+        updatedCriteria.push(criterion);
+      });
+      
+      // Send to backend
+      const rubricId = currentRubricData.rubric.rubric_id;
+      const response = await fetch(`/api/uploads/rubric/${rubricId}/update`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ criteria: updatedCriteria })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save rubric');
+      }
+      
+      const result = await response.json();
+      console.log('✅ Rubric saved successfully:', result);
+      
+      // Exit edit mode
+      isEditMode = false;
+      document.getElementById('editBtn').style.display = 'block';
+      document.getElementById('saveBtn').style.display = 'none';
+      document.getElementById('cancelBtn').style.display = 'none';
+      
+      // Reload rubric to get fresh data
+      await loadRubric();
+      
+      alert('Rubric saved successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error saving rubric:', error);
+      alert('Failed to save rubric. Please try again.');
+    }
+  }
 
   /* ===== Helpers ===== */
   function td(){ const e = document.createElement('td'); return e; }

@@ -78,7 +78,19 @@
     <div class="tm-dialog-bd">
       <div class="tm-card">
         <h4>Rubric</h4>
-        <div class="tm-label">Rubric (DOCX/CSV)</div>
+        
+        <!-- Template Requirements -->
+        <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 12px; margin-bottom: 16px; border-radius: 4px;">
+          <div style="font-weight: 600; color: #0369a1; margin-bottom: 8px;">Template Requirements:</div>
+          <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 13px; line-height: 1.6;">
+            <li><strong>Must be in table format</strong> with clear rows and columns</li>
+            <li><strong>Score format:</strong> Use (min-max) notation, e.g., (8-10) points</li>
+            <li>Include criteria names, descriptions, and grade levels</li>
+            <li>Supported formats: .docx, .xlsx, .csv</li>
+          </ul>
+        </div>
+
+        <div class="tm-label">Rubric File (DOCX/XLSX/CSV)</div>
         <div class="tm-drop" id="rubricDrop" data-accept=".docx,.csv,.xlsx,.xls">
           <input id="rubricFile" type="file" accept=".docx,.csv,.xlsx,.xls" hidden />
           <div>

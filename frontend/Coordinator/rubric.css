@@ -65,9 +65,12 @@
     font-weight: 600;
   }
 
-  .back-btn {
-    background: var(--primary);
-    color: #fff;
+  .button-group {
+    display: flex;
+    gap: 10px;
+  }
+
+  .back-btn, .edit-btn, .save-btn, .cancel-btn {
     border: none;
     font-weight: 500;
     cursor: pointer;
@@ -78,8 +81,40 @@
     min-width: 70px;
   }
 
+  .back-btn {
+    background: #000000;
+    color: #fff;
+  }
+
   .back-btn:hover {
-    background: #1a202c;
+    background: #18181b;
+  }
+
+  .edit-btn {
+    background: #1e40af;
+    color: #fff;
+  }
+
+  .edit-btn:hover {
+    background: #1e3a8a;
+  }
+
+  .save-btn {
+    background: #047857;
+    color: #fff;
+  }
+
+  .save-btn:hover {
+    background: #065f46;
+  }
+
+  .cancel-btn {
+    background: #b91c1c;
+    color: #fff;
+  }
+
+  .cancel-btn:hover {
+    background: #991b1b;
   }
 
   .main-content {
@@ -130,6 +165,17 @@
   .rubric-table tbody td{
     border:1px solid #dee2e6; padding:16px 12px; vertical-align:top;
     font-size:13px; line-height:1.5;
+  }
+
+  .rubric-table tbody td.editable {
+    background-color: #fffbeb;
+    cursor: text;
+  }
+
+  .rubric-table tbody td.editable[contenteditable="true"]:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+    background-color: #fff;
   }
   .rubric-table tbody tr td:first-child{
     width:320px; font-weight:700; background:#fafbfc;

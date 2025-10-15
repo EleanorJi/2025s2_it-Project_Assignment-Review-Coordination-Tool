@@ -842,3 +842,132 @@ body {
   text-align: center;
   font-size: 14px;
 }
+
+/* ======================
+   Modal Styles (Submit Preview)
+   ====================== */
+.tm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tm-modal.show {
+  display: flex;
+}
+
+.tm-dialog {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.tm-dialog-hd {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tm-dialog-hd h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.tm-dialog-bd {
+  padding: 20px 24px;
+  color: var(--text);
+}
+
+.tm-dialog-bd p {
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.tm-dialog-bd ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.tm-dialog-bd li {
+  margin: 4px 0;
+}
+
+.tm-dialog-ft {
+  padding: 16px 24px 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+}
+
+.tm-cancel-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tm-cancel-btn:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+/* Scrollbar for modal content */
+.tm-dialog-bd::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tm-dialog-bd::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.tm-dialog-bd::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.tm-dialog-bd::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  .tm-dialog[style*="700px"],
+  .tm-dialog[style*="600px"] {
+    max-width: 95% !important;
+    margin: 0 auto;
+  }
+}
