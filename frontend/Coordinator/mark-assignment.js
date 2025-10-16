@@ -59,6 +59,10 @@
     // Debug use, check current user information
     // getCurrentUser();
 
+    // Check if in preview mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPreviewMode = urlParams.get('preview') === 'true';
+
     // ✅ Get project_id and assignment identifier from URL
     await resolveAssignmentId();
 
@@ -90,6 +94,12 @@
     
     updateAllCriterionDisplays();
     updateTotalScoreDisplay();
+
+    // If in preview mode, hide action buttons only
+    if (isPreviewMode) {
+      console.log('Preview mode detected - hiding action buttons');
+      hideActionButtons();
+    }
   }
 
   // Load saved scores and feedback data from backend
@@ -519,8 +529,21 @@
 
     } catch (error) {
       console.error('Error loading rubric:', error);
-      // Fallback to default data
-      loadDefaultRubricData();
+      
+      // Show error message instead of loading demo data
+      const errorContainer = document.createElement('div');
+      errorContainer.style.cssText = 'padding:40px;text-align:center;background:#fef2f2;border:2px solid #fecaca;border-radius:12px;margin:20px;';
+      errorContainer.innerHTML = `
+        <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+        <div style="font-size:20px;font-weight:700;color:#991b1b;margin-bottom:12px;">Failed to Load Rubric</div>
+        <div style="font-size:14px;color:#991b1b;margin-bottom:20px;">${error.message}</div>
+        <div style="font-size:13px;color:#6b7280;">Please ensure a rubric has been uploaded for this project.</div>
+      `;
+      
+      const mainContent = $('.main-content') || document.body;
+      mainContent.insertBefore(errorContainer, mainContent.firstChild);
+      
+      throw error; // Re-throw to prevent further initialization
     }
   }
 
@@ -538,8 +561,11 @@
 
       // Create descriptions with dynamic indices (0 = highest, 1 = second highest, etc.)
       sortedLevels.forEach((level, gradeIndex) => {
+        // Handle null or empty description
+        const descriptionText = level.description || 'No description';
+        
         // Split description text by line breaks into array, filter empty lines
-        const criteriaList = level.description
+        const criteriaList = descriptionText
           .split('\n')
           .map(item => item.trim())
           .filter(item => item.length > 0);
@@ -2067,6 +2093,14 @@
       }
     };
   });
+
+  // Hide action buttons (for preview mode)
+  function hideActionButtons() {
+    const actionButtons = $('.action-buttons');
+    if (actionButtons) {
+      actionButtons.style.display = 'none';
+    }
+  }
 
   // Expose some functions for external use
   window.markingInterface = {

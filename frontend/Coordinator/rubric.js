@@ -7,6 +7,7 @@ let isEditMode = false;
 let gradeLevelOrder = [];
 let rubricId = null;
 let projectId = null;
+let hasPublishedAssignment = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   // Display username
@@ -83,12 +84,50 @@ async function loadRubric() {
     const data = await detailRes.json();
     console.log('✅ Retrieved rubric detail data:', data);
 
+    // Step 3: Check if any assignment is published
+    console.log('🔍 Checking assignment publish status...');
+    try {
+      const idsResponse = await fetch(`/api/uploads/project/${encodeURIComponent(projectId)}/latest-ids`);
+      if (idsResponse.ok) {
+        const idsData = await idsResponse.json();
+        
+        // Check assignment1 status
+        if (idsData.assignment1) {
+          const statusResponse1 = await fetch(`/api/uploads/assignment/${idsData.assignment1.assignment_id}/status`);
+          if (statusResponse1.ok) {
+            const statusData1 = await statusResponse1.json();
+            if (statusData1.assignment.is_published) {
+              hasPublishedAssignment = true;
+              console.log('⚠️ Assignment 1 is published - Edit mode disabled');
+            }
+          }
+        }
+        
+        // Check assignment2 status
+        if (idsData.assignment2 && !hasPublishedAssignment) {
+          const statusResponse2 = await fetch(`/api/uploads/assignment/${idsData.assignment2.assignment_id}/status`);
+          if (statusResponse2.ok) {
+            const statusData2 = await statusResponse2.json();
+            if (statusData2.assignment.is_published) {
+              hasPublishedAssignment = true;
+              console.log('⚠️ Assignment 2 is published - Edit mode disabled');
+            }
+          }
+        }
+      }
+    } catch (statusError) {
+      console.warn('⚠️ Could not check assignment status:', statusError);
+    }
+
     // Store data globally
     currentData = JSON.parse(JSON.stringify(data));
     originalData = JSON.parse(JSON.stringify(data));
 
     // Update UI
     updateRubricUI(data, metaEl, tbody);
+    
+    // Hide edit button if assignment is published
+    updateEditButtonVisibility();
 
   } catch (error) {
     console.error('❌ Loading rubric error:', error);
@@ -260,8 +299,31 @@ function renderTable(data, tbody) {
   });
 }
 
+// Update edit button visibility based on assignment publish status
+function updateEditButtonVisibility() {
+  const editBtn = document.getElementById('editBtn');
+  
+  if (hasPublishedAssignment) {
+    // Hide edit button
+    if (editBtn) {
+      editBtn.style.display = 'none';
+    }
+  } else {
+    // Show edit button
+    if (editBtn) {
+      editBtn.style.display = 'inline-block';
+    }
+  }
+}
+
 function enterEditMode() {
   if (isEditMode) return;
+  
+  // Prevent editing if assignment is published
+  if (hasPublishedAssignment) {
+    alert('Cannot edit rubric: An assignment has already been published.\n\nThe rubric cannot be modified after assignment publication to maintain consistency in grading.');
+    return;
+  }
   
   isEditMode = true;
   console.log('📝 Entering edit mode');

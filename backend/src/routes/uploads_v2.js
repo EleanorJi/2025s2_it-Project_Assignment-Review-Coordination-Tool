@@ -322,10 +322,13 @@ router.post('/commit', async (req, res) => {
             const criterionLevels = gradeLevels.filter(level => level.criterion_seq_no === criterion.seq_no);
             
             for (const level of criterionLevels) {
+              // Ensure description is never null or empty
+              const levelDescription = (level.description && level.description.trim()) || 'No description';
+              
               await client.query(
                 `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no) 
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [criterionId, level.level_name, level.min_score, level.max_score, level.description, level.seq_no]
+                [criterionId, level.level_name, level.min_score, level.max_score, levelDescription, level.seq_no]
               );
               
               console.log(`    🏆 Saved level: ${level.level_name} (${level.min_score}-${level.max_score} points)`);
@@ -730,8 +733,8 @@ router.post('/project', async (req, res) => {
   try {
     const { name, description } = req.body;
     
-    const projectName = name || 'New Project';
-    const projectDescription = description || 'Auto-created project for uploads';
+    const projectName = (name && name.trim()) || 'New Project';
+    const projectDescription = (description && description.trim()) || 'No description';
     
     console.log(`📁 Creating new project: ${projectName}`);
 
@@ -792,14 +795,16 @@ router.put('/project/:project_id', async (req, res) => {
     let paramIndex = 1;
 
     if (name) {
+      const trimmedName = name.trim();
       updateFields.push(`name = $${paramIndex}`);
-      updateValues.push(name);
+      updateValues.push(trimmedName || 'New Project');
       paramIndex++;
     }
 
-    if (description) {
+    if (description !== undefined) {
+      const trimmedDescription = (description && description.trim()) || 'No description';
       updateFields.push(`description = $${paramIndex}`);
-      updateValues.push(description);
+      updateValues.push(trimmedDescription);
       paramIndex++;
     }
 
@@ -3616,9 +3621,11 @@ router.put('/rubric/grade-level/:grade_level_id/description', async (req, res) =
     const currentLevel = gradeLevelCheck.rows[0];
     
     // Always try to parse score range from description
-    const parsedScores = parseScoreRangeFromDescription(description);
+    // Ensure description is never null or empty
+    const cleanDescription = (description && description.trim()) || 'No description';
+    const parsedScores = parseScoreRangeFromDescription(cleanDescription);
     let updateFields = ['description = $1'];
-    let updateValues = [description || null];
+    let updateValues = [cleanDescription];
     let valueIndex = 2;
     
     let scoreUpdateInfo = null;
@@ -3919,7 +3926,7 @@ router.post('/rubric/:rubric_id/add-criterion', async (req, res) => {
           level.level_name,
           level.min_score || 0,
           level.max_score || 0,
-          null, // Empty description for new criterion
+          'No description', // Default description for new criterion
           level.seq_no
         ]
       );
@@ -4198,7 +4205,7 @@ router.post('/rubric/:rubric_id/add-grade-level', async (req, res) => {
           level_name || `New Level ${nextSeq}`,
           min_score || 0,
           max_score || 0,
-          null, // Empty description for new grade level
+          'No description', // Default description for new grade level
           nextSeq
         ]
       );

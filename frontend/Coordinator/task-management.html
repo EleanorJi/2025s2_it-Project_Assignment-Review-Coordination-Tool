@@ -9,6 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/Coordinator/task-management.css">
+  
+  <!-- Libraries for file preview -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
 </head>
 <body>
@@ -91,7 +95,7 @@
     </div>
 
     <div class="tm-dialog-ft">
-      <button id="rubricSubmit" class="btn primary" style="min-width:160px">Submit</button>
+      <button id="rubricPreview" class="btn primary" style="min-width:160px;display:none;">Preview & Upload</button>
     </div>
   </div>
 </div>
@@ -126,7 +130,7 @@
     </div>
 
     <div class="tm-dialog-ft">
-      <button id="assignment1Submit" class="btn primary" style="min-width:160px">Submit</button>
+      <button id="assignment1Preview" class="btn primary" style="min-width:160px;display:none;">Preview & Upload</button>
     </div>
   </div>
 </div>
@@ -161,7 +165,7 @@
     </div>
 
     <div class="tm-dialog-ft">
-      <button id="assignment2Submit" class="btn primary" style="min-width:160px">Submit</button>
+      <button id="assignment2Preview" class="btn primary" style="min-width:160px;display:none;">Preview & Upload</button>
     </div>
   </div>
 </div>

@@ -76,6 +76,12 @@ body {
     font-weight: 800;
   }
 
+  .title-row .btn-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
   .back-btn {
     background: #fff;
     color: var(--text);
@@ -93,6 +99,8 @@ body {
     background: var(--bg);
     color: var(--text);
     border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(15,23,42,0.1);
   }
 
 .main-content {
