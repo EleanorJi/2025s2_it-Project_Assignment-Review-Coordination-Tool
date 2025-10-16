@@ -555,7 +555,7 @@
     });
 
     const publishBtn = createButton('Publish Assignment', () => {
-      publishAssignment(task.project_id, assignment.id);
+      showPublishConfirmation(task.project_id, assignment.id, assignment.title);
     });
 
     const markBtn = createButton('Mark Assignment', () => {
@@ -785,6 +785,173 @@
   function previewAssignmentFile(projectId, assignmentId, assignmentTitle) {
     // Navigate to mark page in preview mode (read-only)
     location.href = `/dashboard/coordinator/mark?project=${projectId}&assignment=${assignmentId}&preview=true`;
+  }
+
+  // Show publish confirmation modal
+  async function showPublishConfirmation(projectId, assignmentId, assignmentTitle) {
+    try {
+      // Get latest IDs
+      const idsResponse = await fetch(`/api/uploads/project/${projectId}/latest-ids`);
+      if (!idsResponse.ok) {
+        throw new Error('Failed to fetch project information');
+      }
+      const idsData = await idsResponse.json();
+
+      // Get assignment details
+      let targetAssignmentId, assignmentData;
+      if (assignmentId === 'assignment1') {
+        targetAssignmentId = idsData.assignment1?.assignment_id;
+      } else if (assignmentId === 'assignment2') {
+        targetAssignmentId = idsData.assignment2?.assignment_id;
+      }
+
+      if (!targetAssignmentId) {
+        toast(`${assignmentTitle} has no file uploaded. Please upload first.`);
+        return;
+      }
+
+      // Get assignment file info
+      const assignmentResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/files`);
+      if (assignmentResponse.ok) {
+        assignmentData = await assignmentResponse.json();
+      }
+
+      // Get rubric info
+      let rubricData = null;
+      if (idsData.rubric) {
+        const rubricResponse = await fetch(`/api/uploads/rubric/${idsData.rubric.rubric_id}/details`);
+        if (rubricResponse.ok) {
+          rubricData = await rubricResponse.json();
+        }
+      }
+
+      // Create modal
+      const modal = document.createElement('div');
+      modal.className = 'tm-modal show';
+      modal.id = 'publishConfirmModal';
+
+      // Build content
+      let rubricInfo = '<div style="color:var(--muted);font-style:italic;">No rubric uploaded</div>';
+      if (rubricData && rubricData.criteria) {
+        rubricInfo = `
+          <div style="font-size:14px;color:var(--text);">
+            <div style="margin-bottom:8px;"><strong>Criteria Count:</strong> ${rubricData.criteria.length}</div>
+            <div style="margin-bottom:12px;"><strong>Grade Levels:</strong> ${rubricData.rubric.columns || 0}</div>
+            <div style="max-height:150px;overflow-y:auto;background:#f8fafc;padding:12px;border-radius:8px;">
+              ${rubricData.criteria.map((c, i) => `
+                <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+                  <strong>${i + 1}. ${c.title}</strong>
+                  <span style="color:var(--muted);margin-left:8px;">(Max: ${c.max_score} points)</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      let assignmentInfo = '<div style="color:var(--muted);font-style:italic;">No assignment information</div>';
+      if (assignmentData && assignmentData.files && assignmentData.files.length > 0) {
+        const file = assignmentData.files[0];
+        const dueDate = file.due_at ? new Date(file.due_at).toLocaleString() : 'Not set';
+        assignmentInfo = `
+          <div style="font-size:14px;color:var(--text);">
+            <div style="margin-bottom:8px;"><strong>File:</strong> ${file.file_name || 'Assignment file'}</div>
+            <div style="margin-bottom:8px;"><strong>Due Date:</strong> ${dueDate}</div>
+            <div style="margin-bottom:8px;"><strong>Round:</strong> ${file.round}</div>
+          </div>
+        `;
+      }
+
+      modal.innerHTML = `
+        <div class="tm-dialog" style="max-width:700px;">
+          <div class="tm-dialog-hd">
+            <h3>Confirm Publication</h3>
+            <button class="btn tm-close-btn" id="publishConfirmClose">Close</button>
+          </div>
+          <div class="tm-dialog-bd">
+            <div style="margin-bottom:24px;padding:16px;background:#fef3c7;border:2px solid #fde68a;border-radius:12px;">
+              <div style="font-size:16px;font-weight:700;color:#92400e;margin-bottom:8px;">Important Notice</div>
+              <div style="font-size:14px;color:#92400e;">
+                Once published, the rubric cannot be edited. Please ensure all information is correct before proceeding.
+              </div>
+            </div>
+
+            <div style="margin-bottom:24px;">
+              <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+                ${assignmentTitle}
+              </div>
+              ${assignmentInfo}
+            </div>
+
+            <div style="margin-bottom:24px;">
+              <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+                Rubric Information
+              </div>
+              ${rubricInfo}
+            </div>
+
+            <div style="display:flex;gap:12px;padding:16px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
+              <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">i</div>
+              <div style="font-size:13px;color:var(--text);line-height:1.6;">
+                You can preview the assignment and rubric before publishing. Click the "Preview Assignment" button below to open a preview in a new tab.
+              </div>
+            </div>
+          </div>
+          <div class="tm-dialog-ft">
+            <button class="btn" id="publishConfirmCancel">Cancel</button>
+            <button class="btn" style="background:#3b82f6;color:white;border:1px solid #3b82f6;" id="publishConfirmPreview">Preview Assignment</button>
+            <button class="btn primary" id="publishConfirmSubmit">Confirm & Publish</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Bind events
+      const closeBtn = modal.querySelector('#publishConfirmClose');
+      const cancelBtn = modal.querySelector('#publishConfirmCancel');
+      const previewBtn = modal.querySelector('#publishConfirmPreview');
+      const submitBtn = modal.querySelector('#publishConfirmSubmit');
+
+      const closeModal = () => {
+        modal.remove();
+      };
+
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      previewBtn.addEventListener('click', () => {
+        window.open(`/dashboard/coordinator/mark?project=${projectId}&assignment=${assignmentId}&preview=true`, '_blank');
+      });
+
+      submitBtn.addEventListener('click', async () => {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Publishing...';
+        try {
+          await publishAssignment(projectId, assignmentId);
+          closeModal();
+        } catch (error) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm & Publish';
+        }
+      });
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+          document.removeEventListener('keydown', escapeHandler);
+        }
+      };
+      document.addEventListener('keydown', escapeHandler);
+
+    } catch (error) {
+      console.error('Failed to show publish confirmation:', error);
+      toast('Failed to load assignment information. Please try again.');
+    }
   }
 
   // Publish assignment
