@@ -122,7 +122,7 @@ class EmailService {
         assignmentName,
         projectName,
         WEBSITE_URL: websiteUrl,
-        userRole: 'marker',
+        userRole: 'marker', // 反馈通知总是发给marker
         feedbackDate: new Date().toLocaleDateString(),
         currentYear: new Date().getFullYear()
       });
@@ -161,6 +161,7 @@ class EmailService {
   static async sendAssignmentDeadlineEmail(to, userName, assignmentName, projectName, dueAt, userRole = 'marker', pendingSectionHtml = '') {
     try {
       const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
+      const normalizedUserRole = userRole ? userRole.toLowerCase() : 'marker';
 
       const html = await TemplateUtils.renderTemplate('./emailTemplates/deadline-passed-email.html', {
         userName,
@@ -169,7 +170,7 @@ class EmailService {
         dueAt,
         pendingSection: pendingSectionHtml,
         WEBSITE_URL: websiteUrl,
-        userRole: userRole,
+        userRole: normalizedUserRole,
         currentYear: new Date().getFullYear()
       });
 
@@ -200,13 +201,14 @@ class EmailService {
   static async sendMarkingCompletedEmail(to, userName, assignmentName, projectName, userRole = 'coordinator') {
     try {
       const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
+      const normalizedUserRole = userRole ? userRole.toLowerCase() : 'coordinator';
 
       const html = await TemplateUtils.renderTemplate('./emailTemplates/marking-completed-email.html', {
         userName,
         assignmentName,
         projectName,
         WEBSITE_URL: websiteUrl,
-        userRole: userRole,
+        userRole: normalizedUserRole,
         currentYear: new Date().getFullYear()
       });
 
@@ -238,6 +240,7 @@ class EmailService {
   static async sendDueSoonEmail(to, userName, assignmentName, projectName, dueAt, userRole = 'marker') {
     try {
       const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
+      const normalizedUserRole = userRole ? userRole.toLowerCase() : 'marker';
 
       const html = await TemplateUtils.renderTemplate('./emailTemplates/due-soon-email.html', {
         userName,
@@ -245,7 +248,7 @@ class EmailService {
         projectName,
         dueAt,
         WEBSITE_URL: websiteUrl,
-        userRole: userRole,
+        userRole: normalizedUserRole,
         currentYear: new Date().getFullYear()
       });
 
@@ -283,7 +286,7 @@ class EmailService {
         projectName,
         dueAt,
         WEBSITE_URL: websiteUrl,
-        userRole: 'marker',
+        userRole: 'marker', // 新作业通知总是发给marker
         currentYear: new Date().getFullYear()
       });
 
@@ -300,6 +303,44 @@ class EmailService {
     } catch (error) {
       console.error('Failed to send new assignment notification email:', error);
       throw new Error('Failed to send new assignment notification email');
+    }
+  }
+
+  /**
+   * Send assignment published success notification email to coordinator
+   * @param {string} to Coordinator email address
+   * @param {string} coordinatorName Coordinator name
+   * @param {string} assignmentName Assignment name
+   * @param {string} projectName Project name
+   * @param {string} [dueAt] Optional due date
+   */
+  static async sendAssignmentPublishedNotification(to, coordinatorName, assignmentName, projectName, dueAt = null) {
+    try {
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
+
+      const html = await TemplateUtils.renderTemplate('./emailTemplates/assignment-published-notification-email.html', {
+        coordinatorName,
+        assignmentName,
+        projectName,
+        dueAt,
+        WEBSITE_URL: websiteUrl,
+        publishDate: new Date().toLocaleDateString(),
+        currentYear: new Date().getFullYear()
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: to,
+        subject: `Assignment Published Successfully - ${projectName}: ${assignmentName}`,
+        html: html
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`Assignment published notification email sent to coordinator: ${to}, Message ID: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send assignment published notification email:', error);
+      throw new Error('Failed to send assignment published notification email');
     }
   }
 

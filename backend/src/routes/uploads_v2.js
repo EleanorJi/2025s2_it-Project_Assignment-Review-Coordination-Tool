@@ -2385,26 +2385,39 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
              ORDER BY name ASC`
           );
 
-          console.log(`📧 Sending new assignment notifications to ${recipientsResult.rows.length} user(s) (markers + coordinators)`);
+          console.log(`📧 Sending assignment notifications to ${recipientsResult.rows.length} user(s) (markers + coordinators)`);
 
-          // Send emails to all markers and coordinators (don't wait for completion to avoid blocking the response)
+          // Send different emails based on user role (don't wait for completion to avoid blocking the response)
           const EmailService = require('../services/emailService');
-          const emailPromises = recipientsResult.rows.map(user => 
-            EmailService.sendNewAssignmentNotification(
-              user.email,
-              user.name,
-              assignmentName,
-              projectName,
-              dueAt
-            ).catch(err => {
-              console.error(`❌ Failed to send notification to ${user.email}:`, err.message);
-              // Continue even if one email fails
-            })
-          );
+          const emailPromises = recipientsResult.rows.map(user => {
+            if (user.role === 'MARKER') {
+              // Send new assignment notification to markers
+              return EmailService.sendNewAssignmentNotification(
+                user.email,
+                user.name,
+                assignmentName,
+                projectName,
+                dueAt
+              ).catch(err => {
+                console.error(`❌ Failed to send new assignment notification to marker ${user.email}:`, err.message);
+              });
+            } else if (user.role === 'COORDINATOR') {
+              // Send published success notification to coordinators
+              return EmailService.sendAssignmentPublishedNotification(
+                user.email,
+                user.name,
+                assignmentName,
+                projectName,
+                dueAt
+              ).catch(err => {
+                console.error(`❌ Failed to send published notification to coordinator ${user.email}:`, err.message);
+              });
+            }
+          });
 
           // Send all emails asynchronously (fire and forget)
           Promise.all(emailPromises).then(() => {
-            console.log(`✅ New assignment notification emails sent successfully`);
+            console.log(`✅ Assignment notification emails sent successfully (markers: new assignment, coordinators: published success)`);
           }).catch(err => {
             console.error(`⚠️ Some notification emails failed:`, err);
           });
