@@ -2350,6 +2350,71 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
 
     console.log(`📝 Assignment publication status updated: assignment_id=${assignment_id}, is_published=${is_published}`);
 
+    // If published successfully, send notification emails to all active markers
+    if (is_published === true) {
+      try {
+        // Get assignment details including project name
+        const assignmentDetailsResult = await db.query(
+          `SELECT a.name as assignment_name, a.due_at, a.round, p.name as project_name
+           FROM assignment a
+           JOIN project p ON a.project_id = p.project_id
+           WHERE a.assignment_id = $1`,
+          [assignment_id]
+        );
+
+        if (assignmentDetailsResult.rows.length > 0) {
+          const assignmentDetails = assignmentDetailsResult.rows[0];
+          const assignmentName = assignmentDetails.assignment_name || `Assignment ${assignmentDetails.round}`;
+          const projectName = assignmentDetails.project_name;
+          const dueAt = assignmentDetails.due_at 
+            ? new Date(assignmentDetails.due_at).toLocaleString('en-AU', { 
+                timeZone: 'Australia/Melbourne',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : null;
+
+          // Get all active markers
+          const markersResult = await db.query(
+            `SELECT user_id, name, email
+             FROM app_user
+             WHERE role = 'MARKER' AND is_active = true
+             ORDER BY name ASC`
+          );
+
+          console.log(`📧 Sending new assignment notifications to ${markersResult.rows.length} marker(s)`);
+
+          // Send emails to all markers (don't wait for completion to avoid blocking the response)
+          const EmailService = require('../services/emailService');
+          const emailPromises = markersResult.rows.map(marker => 
+            EmailService.sendNewAssignmentNotification(
+              marker.email,
+              marker.name,
+              assignmentName,
+              projectName,
+              dueAt
+            ).catch(err => {
+              console.error(`❌ Failed to send notification to ${marker.email}:`, err.message);
+              // Continue even if one email fails
+            })
+          );
+
+          // Send all emails asynchronously (fire and forget)
+          Promise.all(emailPromises).then(() => {
+            console.log(`✅ New assignment notification emails sent successfully`);
+          }).catch(err => {
+            console.error(`⚠️ Some notification emails failed:`, err);
+          });
+        }
+      } catch (emailError) {
+        // Log error but don't fail the publish operation
+        console.error('⚠️ Error sending notification emails:', emailError);
+      }
+    }
+
     return res.json({
       message: 'Assignment publish status updated',
       assignment: {

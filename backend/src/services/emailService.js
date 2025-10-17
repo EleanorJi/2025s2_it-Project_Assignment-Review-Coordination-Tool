@@ -255,6 +255,44 @@ class EmailService {
     }
   }
 
+  /**
+   * Send new assignment notification email to marker
+   * @param {string} to Marker email address
+   * @param {string} markerName Marker name
+   * @param {string} assignmentName Assignment name
+   * @param {string} projectName Project name
+   * @param {string} [dueAt] Optional due date
+   */
+  static async sendNewAssignmentNotification(to, markerName, assignmentName, projectName, dueAt = null) {
+    try {
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+      const dashboardUrl = `${websiteUrl}/dashboard/marker`;
+
+      const html = await TemplateUtils.renderTemplate('./emailTemplates/new-assignment-notification-email.html', {
+        markerName,
+        assignmentName,
+        projectName,
+        dueAt,
+        dashboardUrl,
+        currentYear: new Date().getFullYear()
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: to,
+        subject: `New Assignment Published - ${projectName}`,
+        html: html
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`New assignment notification email sent to: ${to}, Message ID: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send new assignment notification email:', error);
+      throw new Error('Failed to send new assignment notification email');
+    }
+  }
+
 }
 
 module.exports = EmailService;

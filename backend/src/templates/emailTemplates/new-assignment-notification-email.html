@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Assignment Published</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; color: #222; }
+      .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+      .title { font-size: 20px; font-weight: bold; margin: 0 0 12px; color: #0052cc; }
+      .muted { color: #666; font-size: 12px; }
+      .card { border: 1px solid #eee; border-radius: 8px; padding: 16px; background: #f9fafb; }
+      .footer { margin-top: 24px; font-size: 12px; color: #888; }
+      .highlight { font-weight: bold; color: #0052cc; }
+      .info-box { background: #fff; border-left: 4px solid #0052cc; padding: 12px; margin: 16px 0; }
+      a.button { 
+        display: inline-block; 
+        background: #0052cc; 
+        color: #fff !important; 
+        text-decoration: none; 
+        padding: 12px 24px; 
+        border-radius: 6px; 
+        margin-top: 16px;
+        font-weight: bold;
+      }
+      a.button:hover { background: #0047b3; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <p class="muted">This is an automated message. Please do not reply.</p>
+      <div class="card">
+        <p class="title">📋 New Assignment Published</p>
+        <p>Hi {{markerName}},</p>
+        <p>
+          A new assignment has been published and is ready for marking:
+        </p>
+        
+        <div class="info-box">
+          <p style="margin: 4px 0;">
+            <strong>Project:</strong> <span class="highlight">{{projectName}}</span>
+          </p>
+          <p style="margin: 4px 0;">
+            <strong>Assignment:</strong> <span class="highlight">{{assignmentName}}</span>
+          </p>
+          {{#dueAt}}
+          <p style="margin: 4px 0;">
+            <strong>Due Date:</strong> <span class="highlight">{{dueAt}}</span>
+          </p>
+          {{/dueAt}}
+        </div>
+        
+        <p>
+          Please log in to the Assignment Moderation Tool to view the assignment details and begin your marking.
+        </p>
+        
+        <p>
+          <a class="button" href="{{dashboardUrl}}" target="_blank" rel="noopener">View Assignment</a>
+        </p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{currentYear}} Assignment Moderation Tool</p>
+        <p style="margin-top: 8px; color: #999;">
+          You are receiving this email because you are registered as a marker in the Assignment Moderation Tool.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
+
