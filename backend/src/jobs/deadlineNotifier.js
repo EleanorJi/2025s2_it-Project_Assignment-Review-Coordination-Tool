@@ -166,7 +166,8 @@ async function notifyUsersForAssignment(assignment, users) {
         assignment.assignment_name,
         assignment.project_name,
         dueAtStr,
-        pendingSection  // Include pending markers info for coordinators
+        'coordinator',  // userRole
+        pendingSection  // pendingSectionHtml
       )
     )
   );
@@ -180,6 +181,7 @@ async function notifyUsersForAssignment(assignment, users) {
         assignment.assignment_name,
         assignment.project_name,
         dueAtStr,
+        'marker',  // userRole
         ''  // No pending markers info for markers
       )
     )
@@ -339,7 +341,8 @@ async function notifyDueSoonForAssignment(assignment, users) {
         u.name || 'User',
         assignment.assignment_name,
         assignment.project_name,
-        dueAtStr
+        dueAtStr,
+        u.role ? u.role.toLowerCase() : 'marker'  // Pass the correct user role
       )
     )
   );
