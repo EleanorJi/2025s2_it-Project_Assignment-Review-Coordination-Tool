@@ -81,14 +81,31 @@
         // Redirect to the corresponding dashboard based on role
         setTimeout(() => {
           let target;
-          if (data.user?.role === 'COORDINATOR') {
-            // Redirect to backend-protected route, not directly to static file!
-            target = '/dashboard/coordinator';
-          } else if (data.user?.role === 'MARKER') {
-            target = '/dashboard/marker';
+          
+          // Check if there's a redirect parameter in the URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectTo = urlParams.get('redirect');
+          
+          if (redirectTo) {
+            // If there's a redirect parameter, use it (but validate it's a safe path)
+            const safeRedirect = redirectTo.startsWith('/dashboard/') ? redirectTo : null;
+            if (safeRedirect) {
+              target = safeRedirect;
+            } else {
+              // Fallback to role-based redirect if redirect param is not safe
+              target = data.user?.role === 'COORDINATOR' ? '/dashboard/coordinator' : '/dashboard/marker';
+            }
           } else {
-            target = '/login';
+            // No redirect parameter, use role-based redirect
+            if (data.user?.role === 'COORDINATOR') {
+              target = '/dashboard/coordinator';
+            } else if (data.user?.role === 'MARKER') {
+              target = '/dashboard/marker';
+            } else {
+              target = '/login';
+            }
           }
+          
           window.location.href = target;
         }, 1000);
 
