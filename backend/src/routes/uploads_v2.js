@@ -2377,27 +2377,27 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
               })
             : null;
 
-          // Get all active markers
-          const markersResult = await db.query(
-            `SELECT user_id, name, email
+          // Get all active markers and coordinators
+          const recipientsResult = await db.query(
+            `SELECT user_id, name, email, role
              FROM app_user
-             WHERE role = 'MARKER' AND is_active = true
+             WHERE (role = 'MARKER' OR role = 'COORDINATOR') AND is_active = true
              ORDER BY name ASC`
           );
 
-          console.log(`📧 Sending new assignment notifications to ${markersResult.rows.length} marker(s)`);
+          console.log(`📧 Sending new assignment notifications to ${recipientsResult.rows.length} user(s) (markers + coordinators)`);
 
-          // Send emails to all markers (don't wait for completion to avoid blocking the response)
+          // Send emails to all markers and coordinators (don't wait for completion to avoid blocking the response)
           const EmailService = require('../services/emailService');
-          const emailPromises = markersResult.rows.map(marker => 
+          const emailPromises = recipientsResult.rows.map(user => 
             EmailService.sendNewAssignmentNotification(
-              marker.email,
-              marker.name,
+              user.email,
+              user.name,
               assignmentName,
               projectName,
               dueAt
             ).catch(err => {
-              console.error(`❌ Failed to send notification to ${marker.email}:`, err.message);
+              console.error(`❌ Failed to send notification to ${user.email}:`, err.message);
               // Continue even if one email fails
             })
           );
