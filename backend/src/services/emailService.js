@@ -42,8 +42,11 @@ class EmailService {
      */
     static async sendRevocationEmail(to) {
       try {
+        const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
+        
         // Render HTML template
         const html = await TemplateUtils.renderTemplate('./emailTemplates/revocation-email.html', {
+          WEBSITE_URL: websiteUrl,
           currentYear: new Date().getFullYear()
         });
 
@@ -110,8 +113,7 @@ class EmailService {
    */
   static async sendFeedbackNotificationEmail(to, markerName, coordinatorName, assignmentName, projectName, projectId, assignmentId, coordinatorEmail) {
     try {
-      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
-      const feedbackUrl = `${websiteUrl}/dashboard/marker/feedback?project=${projectId}&assignment_id=${assignmentId}`;
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
 
       // Render HTML template
       const html = await TemplateUtils.renderTemplate('./emailTemplates/feedback-notification-email.html', {
@@ -119,7 +121,8 @@ class EmailService {
         coordinatorName,
         assignmentName,
         projectName,
-        feedbackUrl,
+        WEBSITE_URL: websiteUrl,
+        userRole: 'marker',
         feedbackDate: new Date().toLocaleDateString(),
         currentYear: new Date().getFullYear()
       });
@@ -152,10 +155,12 @@ class EmailService {
    * @param {string} assignmentName Assignment name
    * @param {string} projectName Project name
    * @param {string} dueAt ISO string or localized string of deadline
+   * @param {string} userRole User role (coordinator or marker)
+   * @param {string} pendingSectionHtml Optional pending section HTML
    */
-  static async sendAssignmentDeadlineEmail(to, userName, assignmentName, projectName, dueAt, pendingSectionHtml = '') {
+  static async sendAssignmentDeadlineEmail(to, userName, assignmentName, projectName, dueAt, userRole = 'marker', pendingSectionHtml = '') {
     try {
-      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
 
       const html = await TemplateUtils.renderTemplate('./emailTemplates/deadline-passed-email.html', {
         userName,
@@ -163,7 +168,8 @@ class EmailService {
         projectName,
         dueAt,
         pendingSection: pendingSectionHtml,
-        websiteUrl,
+        WEBSITE_URL: websiteUrl,
+        userRole: userRole,
         currentYear: new Date().getFullYear()
       });
 
@@ -189,16 +195,18 @@ class EmailService {
    * @param {string} userName User name
    * @param {string} assignmentName Assignment name
    * @param {string} projectName Project name
+   * @param {string} userRole User role (coordinator or marker)
    */
-  static async sendMarkingCompletedEmail(to, userName, assignmentName, projectName) {
+  static async sendMarkingCompletedEmail(to, userName, assignmentName, projectName, userRole = 'coordinator') {
     try {
-      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
 
       const html = await TemplateUtils.renderTemplate('./emailTemplates/marking-completed-email.html', {
         userName,
         assignmentName,
         projectName,
-        websiteUrl,
+        WEBSITE_URL: websiteUrl,
+        userRole: userRole,
         currentYear: new Date().getFullYear()
       });
 
@@ -225,17 +233,19 @@ class EmailService {
    * @param {string} assignmentName Assignment name
    * @param {string} projectName Project name
    * @param {string} dueAt Formatted due time
+   * @param {string} userRole User role (coordinator or marker)
    */
-  static async sendDueSoonEmail(to, userName, assignmentName, projectName, dueAt) {
+  static async sendDueSoonEmail(to, userName, assignmentName, projectName, dueAt, userRole = 'marker') {
     try {
-      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
 
       const html = await TemplateUtils.renderTemplate('./emailTemplates/due-soon-email.html', {
         userName,
         assignmentName,
         projectName,
         dueAt,
-        websiteUrl,
+        WEBSITE_URL: websiteUrl,
+        userRole: userRole,
         currentYear: new Date().getFullYear()
       });
 
@@ -265,15 +275,15 @@ class EmailService {
    */
   static async sendNewAssignmentNotification(to, markerName, assignmentName, projectName, dueAt = null) {
     try {
-      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost';
-      const dashboardUrl = `${websiteUrl}/dashboard/marker`;
+      const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
 
       const html = await TemplateUtils.renderTemplate('./emailTemplates/new-assignment-notification-email.html', {
         markerName,
         assignmentName,
         projectName,
         dueAt,
-        dashboardUrl,
+        WEBSITE_URL: websiteUrl,
+        userRole: 'marker',
         currentYear: new Date().getFullYear()
       });
 

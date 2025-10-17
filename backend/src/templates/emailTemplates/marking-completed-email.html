@@ -1,42 +1,131 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Marking Completed</title>
+<head>
+    <meta charset="utf-8">
     <style>
-      body { font-family: Arial, Helvetica, sans-serif; color: #222; }
-      .container { max-width: 640px; margin: 0 auto; padding: 16px; }
-      .title { font-size: 20px; font-weight: bold; margin: 0 0 12px; }
-      .muted { color: #666; font-size: 12px; }
-      .card { border: 1px solid #eee; border-radius: 8px; padding: 16px; }
-      .footer { margin-top: 24px; font-size: 12px; color: #888; }
-      a.button { display: inline-block; background: #0052cc; color: #fff !important; text-decoration: none; padding: 10px 16px; border-radius: 6px; margin-top: 12px; }
+        body { 
+            font-family: Inter, Roboto, Arial, "PingFang SC", "Microsoft YaHei", sans-serif; 
+            line-height: 1.6; 
+            color: #0F172A; 
+            background-color: #F5F7FB;
+            margin: 0;
+            padding: 0;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 40px auto; 
+            padding: 0 24px; 
+        }
+        .panel {
+            background: #FFFFFF;
+            border: 1px solid #E6EAF2;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(15,23,42,0.08);
+            padding: 40px 56px 56px 56px;
+            position: relative;
+        }
+        .header { 
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            color: white; 
+            padding: 24px; 
+            text-align: center; 
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .content { 
+            padding: 0; 
+        }
+        .content p {
+            margin: 16px 0;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .highlight {
+            font-weight: 600;
+            color: #0F172A;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-weight: 600;
+            font-size: 15px;
+            box-shadow: 0 2px 8px rgba(15,23,42,0.2);
+            transition: all 0.2s ease;
+        }
+        .button:hover {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(15,23,42,0.3);
+        }
+        .link-box {
+            word-break: break-all; 
+            background-color: #f8fafc; 
+            padding: 16px; 
+            border-radius: 12px;
+            border: 1px solid #E6EAF2;
+            font-family: monospace;
+            font-size: 14px;
+            color: #64748b;
+            margin: 16px 0;
+        }
+        .footer {
+            margin-top: 32px;
+            padding: 24px;
+            background-color: #f8fafc;
+            text-align: center;
+            font-size: 13px;
+            color: #6B7280;
+            border-radius: 12px;
+            border: 1px solid #E6EAF2;
+        }
+        .footer p {
+            margin: 8px 0;
+        }
     </style>
-  </head>
-  <body>
-    <div class="container">
-      <p class="muted">This is an automated message. Please do not reply.</p>
-      <div class="card">
-        <p class="title">Marking Completed</p>
-        <p>Hi {{userName}},</p>
-        <p>
-          All active markers have completed marking for
-          <strong>{{assignmentName}}</strong> in project
-          <strong>{{projectName}}</strong>.
-        </p>
-        <p>
-          You can visit the site for more details.
-        </p>
-        <p>
-          <a class="button" href="{{websiteUrl}}" target="_blank" rel="noopener">Open Site</a>
-        </p>
-      </div>
-      <div class="footer">
-        <p>&copy; {{currentYear}} Assignment Moderation Tool</p>
-      </div>
+</head>
+<body>
+<div class="container">
+    <div class="panel">
+        <div class="header">
+            <h1>Marking Completed</h1>
+        </div>
+        <div class="content">
+            <p>Hi {{userName}},</p>
+            <p>
+                All active markers have completed marking for
+                <span class="highlight">{{assignmentName}}</span> in project
+                <span class="highlight">{{projectName}}</span>.
+            </p>
+            <p>
+                You can visit the site for more details.
+            </p>
+            
+            <p style="text-align: center;">
+                <a href="{{WEBSITE_URL}}/dashboard/{{userRole}}/taskManagement" class="button" target="_blank" rel="noopener">Open Site</a>
+            </p>
+            
+            <p>Or copy and paste the following link into your browser:</p>
+            <div class="link-box">
+                {{WEBSITE_URL}}/dashboard/{{userRole}}/taskManagement
+            </div>
+        </div>
+        <div class="footer">
+            <p>This email was automatically sent by the Assignment Moderation Tool. Please do not reply.</p>
+            <p>© {{currentYear}} Assignment Moderation Tool. All rights reserved.</p>
+        </div>
     </div>
-  </body>
-  </html>
+</div>
+</body>
+</html>
 
 
