@@ -322,10 +322,13 @@ router.post('/commit', async (req, res) => {
             const criterionLevels = gradeLevels.filter(level => level.criterion_seq_no === criterion.seq_no);
             
             for (const level of criterionLevels) {
+              // Ensure description is never null or empty
+              const levelDescription = (level.description && level.description.trim()) || 'No description';
+              
               await client.query(
                 `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no) 
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [criterionId, level.level_name, level.min_score, level.max_score, level.description, level.seq_no]
+                [criterionId, level.level_name, level.min_score, level.max_score, levelDescription, level.seq_no]
               );
               
               console.log(`    🏆 Saved level: ${level.level_name} (${level.min_score}-${level.max_score} points)`);
@@ -730,8 +733,8 @@ router.post('/project', async (req, res) => {
   try {
     const { name, description } = req.body;
     
-    const projectName = name || 'New Project';
-    const projectDescription = description || 'Auto-created project for uploads';
+    const projectName = (name && name.trim()) || 'New Project';
+    const projectDescription = (description && description.trim()) || 'No description';
     
     console.log(`📁 Creating new project: ${projectName}`);
 
@@ -792,14 +795,16 @@ router.put('/project/:project_id', async (req, res) => {
     let paramIndex = 1;
 
     if (name) {
+      const trimmedName = name.trim();
       updateFields.push(`name = $${paramIndex}`);
-      updateValues.push(name);
+      updateValues.push(trimmedName || 'New Project');
       paramIndex++;
     }
 
-    if (description) {
+    if (description !== undefined) {
+      const trimmedDescription = (description && description.trim()) || 'No description';
       updateFields.push(`description = $${paramIndex}`);
-      updateValues.push(description);
+      updateValues.push(trimmedDescription);
       paramIndex++;
     }
 
@@ -2074,9 +2079,13 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
 router.get('/assignment/:assignment_id/status', async (req, res) => {
   try {
     const { assignment_id } = req.params;
+    const BUSINESS_TZ = process.env.BUSINESS_TIMEZONE || 'Australia/Melbourne';
 
     const result = await db.query(
-      `SELECT assignment_id, is_published, name, round, version, project_id, due_at, created_at
+      `SELECT 
+         assignment_id, is_published, name, round, version, project_id, due_at, created_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty
        FROM assignment WHERE assignment_id = $1`,
       [assignment_id]
     );
@@ -2094,6 +2103,8 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
         version: row.version,
         project_id: row.project_id,
         due_at: row.due_at,
+        due_at_local_iso: row.due_at_local_iso,
+        due_at_pretty: row.due_at_pretty,
         created_at: row.created_at,
         is_published: row.is_published
       }
@@ -2101,6 +2112,146 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
   } catch (error) {
     console.error('❌ Failed to get assignment status:', error);
     return res.status(500).json({ error: 'Failed to get assignment status', details: error.message });
+  }
+});
+
+const { requireCoordinator } = require('../middleware/roleAuth');
+const authenticate = require('../middleware/auth');
+
+// Update assignment due date: PUT /api/uploads/assignment/:assignment_id/due
+router.put('/assignment/:assignment_id/due', authenticate, requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    const { due_at } = req.body || {};
+
+    if (!due_at) {
+      return res.status(400).json({ error: 'Missing due_at' });
+    }
+
+    // Parse to a timestamp string acceptable by Postgres timestamp without time zone
+    // Expect ISO string or datetime-local string from browser
+    const parsed = new Date(due_at);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: 'Invalid due_at format' });
+    }
+
+    // 1) Server-side rule: if original due date already passed, reject change
+    const originalDueRes = await db.query(
+      'SELECT due_at, (due_at < NOW()) AS is_past FROM assignment WHERE assignment_id = $1',
+      [assignment_id]
+    );
+    if (originalDueRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    if (originalDueRes.rows[0].is_past === true) {
+      return res.status(400).json({
+        error: 'Cannot modify due date',
+        message: 'Original due date has already passed and cannot be changed.'
+      });
+    }
+
+    // Format as 'YYYY-MM-DD HH:MM:SS'
+    const pad = (n) => String(n).padStart(2, '0');
+    const ts = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`;
+
+    const result = await db.query(
+      `UPDATE assignment SET due_at = $1 WHERE assignment_id = $2 
+       RETURNING assignment_id, due_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty`,
+      [ts, assignment_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    console.log(`✅ Updated due_at for assignment ${assignment_id} -> ${ts}`);
+    return res.json({
+      success: true,
+      assignment: {
+        assignment_id: parseInt(result.rows[0].assignment_id),
+        due_at: result.rows[0].due_at,
+        due_at_local_iso: result.rows[0].due_at_local_iso,
+        due_at_pretty: result.rows[0].due_at_pretty
+      }
+    });
+  } catch (error) {
+    console.error('❌ Failed to update assignment due date:', error);
+    return res.status(500).json({ error: 'Failed to update assignment due date', details: error.message });
+  }
+});
+
+/**
+ * Coordinator only - list active markers who have NOT submitted marks for the assignment
+ * Definition of "submitted": has at least one finalized marker_score row for this assignment
+ * GET /api/uploads/assignment/:assignment_id/pending-markers
+ */
+router.get('/assignment/:assignment_id/pending-markers', authenticate, requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    console.log(`[pending-markers] assignment_id=${assignment_id}, userId=${req.user?.id}`);
+
+    // Verify assignment and get project to resolve rubric criteria count (optional info)
+    const a = await db.query('SELECT assignment_id, project_id FROM assignment WHERE assignment_id = $1', [assignment_id]);
+    console.log('[pending-markers] assignment query rows:', a.rows.length);
+    if (a.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    const projectId = a.rows[0].project_id;
+    console.log('[pending-markers] projectId=', projectId);
+
+    // Get criteria count from latest rubric (for reference)
+    const crit = await db.query(
+      `SELECT COUNT(*) AS criteria_count
+       FROM rubric_criterion rc
+       JOIN rubric r ON rc.rubric_id = r.rubric_id
+       WHERE r.project_id = $1
+         AND r.version = (SELECT MAX(version) FROM rubric WHERE project_id = $1)`,
+      [projectId]
+    );
+    console.log('[pending-markers] criteria_count rows:', crit.rows);
+    const criteriaCount = parseInt(crit.rows[0]?.criteria_count || '0', 10);
+
+    // Aggregate marker submission status for this assignment
+    const result = await db.query(
+      `WITH ms AS (
+         SELECT marker_id,
+                COUNT(*) FILTER (WHERE finalized = true) AS finalized_count,
+                COUNT(*) AS total_count
+         FROM marker_score
+         WHERE assignment_id = $1
+         GROUP BY marker_id
+       )
+       SELECT u.user_id       AS marker_id,
+              u.name          AS marker_name,
+              u.email         AS marker_email,
+              COALESCE(ms.total_count, 0)     AS submitted_count,
+              COALESCE(ms.finalized_count, 0) AS finalized_count
+       FROM app_user u
+       LEFT JOIN ms ON ms.marker_id = u.user_id
+       WHERE u.role = 'MARKER' AND u.is_active = true
+         AND COALESCE(ms.finalized_count, 0) = 0
+       ORDER BY u.name ASC`,
+      [assignment_id]
+    );
+    console.log('[pending-markers] result count:', result.rows.length);
+
+    return res.json({
+      assignment_id: parseInt(assignment_id),
+      criteria_count: criteriaCount,
+      pending_markers: result.rows.map(r => ({
+        marker_id: parseInt(r.marker_id),
+        name: r.marker_name,
+        email: r.marker_email,
+        submitted_count: parseInt(r.submitted_count || 0, 10),
+        finalized_count: parseInt(r.finalized_count || 0, 10)
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to list pending markers:', error);
+    return res.status(500).json({ error: 'Failed to list pending markers', details: error.message });
   }
 });
 
@@ -2198,6 +2349,84 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
     }
 
     console.log(`📝 Assignment publication status updated: assignment_id=${assignment_id}, is_published=${is_published}`);
+
+    // If published successfully, send notification emails to all active markers
+    if (is_published === true) {
+      try {
+        // Get assignment details including project name
+        const assignmentDetailsResult = await db.query(
+          `SELECT a.name as assignment_name, a.due_at, a.round, p.name as project_name
+           FROM assignment a
+           JOIN project p ON a.project_id = p.project_id
+           WHERE a.assignment_id = $1`,
+          [assignment_id]
+        );
+
+        if (assignmentDetailsResult.rows.length > 0) {
+          const assignmentDetails = assignmentDetailsResult.rows[0];
+          const assignmentName = assignmentDetails.assignment_name || `Assignment ${assignmentDetails.round}`;
+          const projectName = assignmentDetails.project_name;
+          const dueAt = assignmentDetails.due_at 
+            ? new Date(assignmentDetails.due_at).toLocaleString('en-AU', { 
+                timeZone: 'Australia/Melbourne',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : null;
+
+          // Get all active markers and coordinators
+          const recipientsResult = await db.query(
+            `SELECT user_id, name, email, role
+             FROM app_user
+             WHERE (role = 'MARKER' OR role = 'COORDINATOR') AND is_active = true
+             ORDER BY name ASC`
+          );
+
+          console.log(`📧 Sending assignment notifications to ${recipientsResult.rows.length} user(s) (markers + coordinators)`);
+
+          // Send different emails based on user role (don't wait for completion to avoid blocking the response)
+          const EmailService = require('../services/emailService');
+          const emailPromises = recipientsResult.rows.map(user => {
+            if (user.role === 'MARKER') {
+              // Send new assignment notification to markers
+              return EmailService.sendNewAssignmentNotification(
+                user.email,
+                user.name,
+                assignmentName,
+                projectName,
+                dueAt
+              ).catch(err => {
+                console.error(`❌ Failed to send new assignment notification to marker ${user.email}:`, err.message);
+              });
+            } else if (user.role === 'COORDINATOR') {
+              // Send published success notification to coordinators
+              return EmailService.sendAssignmentPublishedNotification(
+                user.email,
+                user.name,
+                assignmentName,
+                projectName,
+                dueAt
+              ).catch(err => {
+                console.error(`❌ Failed to send published notification to coordinator ${user.email}:`, err.message);
+              });
+            }
+          });
+
+          // Send all emails asynchronously (fire and forget)
+          Promise.all(emailPromises).then(() => {
+            console.log(`✅ Assignment notification emails sent successfully (markers: new assignment, coordinators: published success)`);
+          }).catch(err => {
+            console.error(`⚠️ Some notification emails failed:`, err);
+          });
+        }
+      } catch (emailError) {
+        // Log error but don't fail the publish operation
+        console.error('⚠️ Error sending notification emails:', emailError);
+      }
+    }
 
     return res.json({
       message: 'Assignment publish status updated',
@@ -2713,9 +2942,11 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         rc.max_score as criterion_max_score,
         rc.seq_no,
         bs.score as baseline_score,
+        bs.comment as baseline_comment,
         ms.marker_id,
         u.name as marker_name,
-        ms.score as marker_score
+        ms.score as marker_score,
+        ms.comment as marker_comment
       FROM baseline_score bs
       JOIN rubric_criterion rc ON bs.criterion_id = rc.criterion_id  
       LEFT JOIN marker_score ms ON bs.assignment_id = ms.assignment_id 
@@ -2754,6 +2985,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           max_score: maxScore,
           seq_no: row.seq_no,
           baseline_score: baselineScore,
+          baseline_comment: row.baseline_comment || null,
           baseline_percentage: baselinePercentage, // Current score/maximum score percentage
           range_lower: Math.round(baselineScore * 0.95 * 100) / 100, // ±5%
           range_upper: Math.round(baselineScore * 1.05 * 100) / 100,
@@ -2776,6 +3008,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           marker_id: markerId,
           marker_name: row.marker_name,
           score: markerScore,
+          comment: row.marker_comment || null,
           percentage: markerPercentage, // Current score/maximum score percentage
           percentage_difference: percentageDifference, // Percentage difference from baseline, can be positive or negative
           within_range: withinRange
@@ -2807,14 +3040,17 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
     const baselineTotalRounded = Math.round(baselineTotal * 100) / 100;
     const baselineTotalPercentage = Math.round((baselineTotal / maxTotalScore) * 100 * 100) / 100;
 
-    // Calculate total score range (±2.5%)
-    const totalRangeLower = Math.round(baselineTotalRounded * 0.975 * 100) / 100;
-    const totalRangeUpper = Math.round(baselineTotalRounded * 1.025 * 100) / 100;
+    // Calculate total score range (±5% for red, ±2.5% for warning threshold)
+    const totalRangeLower = Math.round(baselineTotalRounded * 0.95 * 100) / 100;
+    const totalRangeUpper = Math.round(baselineTotalRounded * 1.05 * 100) / 100;
+    const totalWarningLower = Math.round(baselineTotalRounded * 0.975 * 100) / 100;
+    const totalWarningUpper = Math.round(baselineTotalRounded * 1.025 * 100) / 100;
 
     // Calculate marker total scores and determine if within range
     const markerTotals = Array.from(markersMap.values()).map(marker => {
       const markerTotal = Math.round(marker.total * 100) / 100;
       const withinRange = markerTotal >= totalRangeLower && markerTotal <= totalRangeUpper;
+      const withinWarningRange = markerTotal >= totalWarningLower && markerTotal <= totalWarningUpper;
       const difference = Math.abs(markerTotal - baselineTotalRounded);
       
       // Calculate total percentage and difference from baseline percentage
@@ -2828,6 +3064,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         percentage: markerTotalPercentage, // Total score percentage
         percentage_difference: totalPercentageDifference, // Percentage difference from baseline total score, can be positive or negative
         within_range: withinRange,
+        within_warning_range: withinWarningRange,
         difference: Math.round(difference * 100) / 100
       };
     });
@@ -2846,8 +3083,10 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         baseline_total: baselineTotalRounded,
         baseline_percentage: baselineTotalPercentage, // baseline total score percentage
         max_total_score: maxTotalScore, // maximum total score
-        range_lower: totalRangeLower,
+        range_lower: totalRangeLower, // ±5% range for red alert
         range_upper: totalRangeUpper,
+        warning_lower: totalWarningLower, // ±2.5% range for yellow warning
+        warning_upper: totalWarningUpper,
         marker_totals: markerTotals
       },
       summary: {
@@ -3086,5 +3325,1013 @@ router.get('/assignment/:assignment_id/files', async (req, res) => {
     return res.status(500).json({ error: 'Failed to get assignment files' });
   }
 });
+
+// ============== Rubric Modification APIs ==============
+
+/**
+ * Update criterion title
+ * PUT /api/uploads/rubric/criterion/:criterion_id/title
+ */
+router.put('/rubric/criterion/:criterion_id/title', async (req, res) => {
+  try {
+    const { criterion_id } = req.params;
+    const { title } = req.body;
+    
+    if (!title || title.trim() === '') {
+      return res.status(400).json({ 
+        error: 'Title is required and cannot be empty' 
+      });
+    }
+    
+    console.log(`📝 Updating criterion ${criterion_id} title to: ${title}`);
+    
+    // Check if criterion exists
+    const criterionCheck = await db.query(
+      'SELECT criterion_id, title FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Criterion not found' 
+      });
+    }
+    
+    // Update criterion title
+    const result = await db.query(
+      'UPDATE rubric_criterion SET title = $1 WHERE criterion_id = $2 RETURNING *',
+      [title.trim(), criterion_id]
+    );
+    
+    console.log(`✅ Updated criterion title: ${result.rows[0].title}`);
+    
+    res.json({
+      success: true,
+      message: 'Criterion title updated successfully',
+      criterion: {
+        criterion_id: result.rows[0].criterion_id,
+        title: result.rows[0].title,
+        seq_no: result.rows[0].seq_no,
+        rubric_id: result.rows[0].rubric_id
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update criterion title:', error);
+    res.status(500).json({ 
+      error: 'Failed to update criterion title',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update criterion description
+ * PUT /api/uploads/rubric/criterion/:criterion_id/description
+ * Automatically parses and updates max_score if found in description
+ */
+router.put('/rubric/criterion/:criterion_id/description', async (req, res) => {
+  try {
+    const { criterion_id } = req.params;
+    const { description } = req.body;
+    
+    console.log(`📝 Updating criterion ${criterion_id} description`);
+    
+    // Check if criterion exists
+    const criterionCheck = await db.query(
+      'SELECT criterion_id, title, max_score FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Criterion not found' 
+      });
+    }
+    
+    const currentCriterion = criterionCheck.rows[0];
+    
+    // Try to parse max score from description (e.g., "总分: 20分", "Total: 20 points")
+    const parsedMaxScore = parseMaxScoreFromDescription(description);
+    let updateFields = ['description = $1'];
+    let updateValues = [description || null];
+    let valueIndex = 2;
+    
+    let scoreUpdateInfo = null;
+    
+    if (parsedMaxScore !== null) {
+      console.log(`🔍 Auto-detected max score in description: ${parsedMaxScore}`);
+      
+      // Validate score
+      if (parsedMaxScore < 0) {
+        return res.status(400).json({ 
+          error: 'Max score must be non-negative' 
+        });
+      }
+      
+      // Automatically add max score update
+      updateFields.push(`max_score = $${valueIndex++}`);
+      updateValues.push(parsedMaxScore);
+      
+      scoreUpdateInfo = {
+        previous: {
+          max_score: parseFloat(currentCriterion.max_score)
+        },
+        updated: {
+          max_score: parsedMaxScore
+        }
+      };
+    }
+    
+    updateValues.push(criterion_id);
+    
+    // Update criterion description (and max_score if auto-detected)
+    const updateQuery = `
+      UPDATE rubric_criterion 
+      SET ${updateFields.join(', ')} 
+      WHERE criterion_id = $${valueIndex}
+      RETURNING *
+    `;
+    
+    const result = await db.query(updateQuery, updateValues);
+    const updatedCriterion = result.rows[0];
+    
+    console.log(`✅ Updated criterion description for: ${updatedCriterion.title}`);
+    if (scoreUpdateInfo) {
+      console.log(`📊 Auto-updated max score: ${scoreUpdateInfo.previous.max_score} → ${scoreUpdateInfo.updated.max_score}`);
+    }
+    
+    const response = {
+      success: true,
+      message: 'Criterion description updated successfully',
+      criterion: {
+        criterion_id: updatedCriterion.criterion_id,
+        title: updatedCriterion.title,
+        description: updatedCriterion.description,
+        max_score: parseFloat(updatedCriterion.max_score),
+        seq_no: updatedCriterion.seq_no,
+        rubric_id: updatedCriterion.rubric_id
+      }
+    };
+    
+    // Add score update information if max score was auto-updated
+    if (scoreUpdateInfo) {
+      response.message += ' (max score auto-updated from description)';
+      response.score_update = scoreUpdateInfo;
+    }
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('❌ Failed to update criterion description:', error);
+    res.status(500).json({ 
+      error: 'Failed to update criterion description',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update criterion max score
+ * PUT /api/uploads/rubric/criterion/:criterion_id/max-score
+ */
+router.put('/rubric/criterion/:criterion_id/max-score', async (req, res) => {
+  try {
+    const { criterion_id } = req.params;
+    const { max_score } = req.body;
+    
+    if (max_score === undefined || max_score === null) {
+      return res.status(400).json({ 
+        error: 'Max score is required' 
+      });
+    }
+    
+    const scoreValue = parseFloat(max_score);
+    if (isNaN(scoreValue) || scoreValue < 0) {
+      return res.status(400).json({ 
+        error: 'Max score must be a valid positive number' 
+      });
+    }
+    
+    console.log(`📝 Updating criterion ${criterion_id} max score to: ${scoreValue}`);
+    
+    // Check if criterion exists
+    const criterionCheck = await db.query(
+      'SELECT criterion_id, title, max_score FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Criterion not found' 
+      });
+    }
+    
+    // Update criterion max score
+    const result = await db.query(
+      'UPDATE rubric_criterion SET max_score = $1 WHERE criterion_id = $2 RETURNING *',
+      [scoreValue, criterion_id]
+    );
+    
+    console.log(`✅ Updated criterion max score: ${result.rows[0].title} -> ${result.rows[0].max_score}`);
+    
+    res.json({
+      success: true,
+      message: 'Criterion max score updated successfully',
+      criterion: {
+        criterion_id: result.rows[0].criterion_id,
+        title: result.rows[0].title,
+        max_score: parseFloat(result.rows[0].max_score),
+        seq_no: result.rows[0].seq_no,
+        rubric_id: result.rows[0].rubric_id
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update criterion max score:', error);
+    res.status(500).json({ 
+      error: 'Failed to update criterion max score',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update grade level name
+ * PUT /api/uploads/rubric/grade-level/:grade_level_id/name
+ */
+router.put('/rubric/grade-level/:grade_level_id/name', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    const { level_name } = req.body;
+    
+    if (!level_name || level_name.trim() === '') {
+      return res.status(400).json({ 
+        error: 'Level name is required and cannot be empty' 
+      });
+    }
+    
+    console.log(`📝 Updating grade level ${grade_level_id} name to: ${level_name}`);
+    
+    // Check if grade level exists
+    const gradeLevelCheck = await db.query(
+      'SELECT grade_level_id, level_name, criterion_id FROM criterion_grade_level WHERE grade_level_id = $1',
+      [grade_level_id]
+    );
+    
+    if (gradeLevelCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    // Update grade level name
+    const result = await db.query(
+      'UPDATE criterion_grade_level SET level_name = $1 WHERE grade_level_id = $2 RETURNING *',
+      [level_name.trim(), grade_level_id]
+    );
+    
+    console.log(`✅ Updated grade level name: ${result.rows[0].level_name}`);
+    
+    res.json({
+      success: true,
+      message: 'Grade level name updated successfully',
+      grade_level: {
+        grade_level_id: result.rows[0].grade_level_id,
+        level_name: result.rows[0].level_name,
+        criterion_id: result.rows[0].criterion_id,
+        seq_no: result.rows[0].seq_no,
+        min_score: parseFloat(result.rows[0].min_score),
+        max_score: parseFloat(result.rows[0].max_score)
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update grade level name:', error);
+    res.status(500).json({ 
+      error: 'Failed to update grade level name',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Parse score range from description text
+ * Supports formats like: "优秀 (8-10分)", "Good (5-7 points)", "Level 1 (0-2)"
+ */
+function parseScoreRangeFromDescription(description) {
+  if (!description) return null;
+  
+  // Match patterns like: (8-10), (5-7分), (0-2 points), (10-15分)
+  const scorePatterns = [
+    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*分?\)/i,  // Chinese format: (8-10分)
+    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*points?\)/i,  // English format: (5-7 points)
+    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\)/i  // Simple format: (0-2)
+  ];
+  
+  for (const pattern of scorePatterns) {
+    const match = description.match(pattern);
+    if (match) {
+      const minScore = parseFloat(match[1]);
+      const maxScore = parseFloat(match[2]);
+      
+      if (!isNaN(minScore) && !isNaN(maxScore) && minScore <= maxScore) {
+        return { min_score: minScore, max_score: maxScore };
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Parse max score from criterion description text
+ * Supports formats like: "总分: 20分", "Total: 20 points", "Max: 15"
+ */
+function parseMaxScoreFromDescription(description) {
+  if (!description) return null;
+  
+  // Match patterns like: 总分: 20分, Total: 20 points, Max: 15, 最高分: 25分
+  const maxScorePatterns = [
+    /total[：:]\s*(\d+(?:\.\d+)?)\s*points?/i,  // English format: Total: 20 points
+    /max[：:]\s*(\d+(?:\.\d+)?)/i,  // English format: Max: 15
+    /(\d+(?:\.\d+)?)\s*points?\s*total/i  // English format: 20 points total
+  ];
+  
+  for (const pattern of maxScorePatterns) {
+    const match = description.match(pattern);
+    if (match) {
+      const maxScore = parseFloat(match[1]);
+      
+      if (!isNaN(maxScore) && maxScore >= 0) {
+        return maxScore;
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Update grade level description
+ * PUT /api/uploads/rubric/grade-level/:grade_level_id/description
+ * Automatically parses and updates min_score/max_score if found in description
+ */
+router.put('/rubric/grade-level/:grade_level_id/description', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    const { description } = req.body;
+    
+    console.log(`📝 Updating grade level ${grade_level_id} description`);
+    
+    // Check if grade level exists
+    const gradeLevelCheck = await db.query(
+      'SELECT grade_level_id, level_name, criterion_id, min_score, max_score FROM criterion_grade_level WHERE grade_level_id = $1',
+      [grade_level_id]
+    );
+    
+    if (gradeLevelCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    const currentLevel = gradeLevelCheck.rows[0];
+    
+    // Always try to parse score range from description
+    // Ensure description is never null or empty
+    const cleanDescription = (description && description.trim()) || 'No description';
+    const parsedScores = parseScoreRangeFromDescription(cleanDescription);
+    let updateFields = ['description = $1'];
+    let updateValues = [cleanDescription];
+    let valueIndex = 2;
+    
+    let scoreUpdateInfo = null;
+    
+    if (parsedScores) {
+      console.log(`🔍 Auto-detected score range in description: ${parsedScores.min_score}-${parsedScores.max_score}`);
+      
+      // Validate scores
+      if (parsedScores.min_score < 0 || parsedScores.max_score < 0) {
+        return res.status(400).json({ 
+          error: 'Scores must be non-negative' 
+        });
+      }
+      
+      if (parsedScores.min_score > parsedScores.max_score) {
+        return res.status(400).json({ 
+          error: 'Min score cannot be greater than max score' 
+        });
+      }
+      
+      // Automatically add score updates
+      updateFields.push(`min_score = $${valueIndex++}`);
+      updateFields.push(`max_score = $${valueIndex++}`);
+      updateValues.push(parsedScores.min_score);
+      updateValues.push(parsedScores.max_score);
+      
+      scoreUpdateInfo = {
+        previous: {
+          min_score: parseFloat(currentLevel.min_score),
+          max_score: parseFloat(currentLevel.max_score)
+        },
+        updated: {
+          min_score: parsedScores.min_score,
+          max_score: parsedScores.max_score
+        }
+      };
+    }
+    
+    updateValues.push(grade_level_id);
+    
+    // Update grade level description (and scores if auto-detected)
+    const updateQuery = `
+      UPDATE criterion_grade_level 
+      SET ${updateFields.join(', ')} 
+      WHERE grade_level_id = $${valueIndex}
+      RETURNING *
+    `;
+    
+    const result = await db.query(updateQuery, updateValues);
+    const updatedLevel = result.rows[0];
+    
+    console.log(`✅ Updated grade level description for: ${updatedLevel.level_name}`);
+    if (scoreUpdateInfo) {
+      console.log(`📊 Auto-updated scores: ${scoreUpdateInfo.previous.min_score}-${scoreUpdateInfo.previous.max_score} → ${scoreUpdateInfo.updated.min_score}-${scoreUpdateInfo.updated.max_score}`);
+    }
+    
+    const response = {
+      success: true,
+      message: 'Grade level description updated successfully',
+      grade_level: {
+        grade_level_id: updatedLevel.grade_level_id,
+        level_name: updatedLevel.level_name,
+        description: updatedLevel.description,
+        criterion_id: updatedLevel.criterion_id,
+        seq_no: updatedLevel.seq_no,
+        min_score: parseFloat(updatedLevel.min_score),
+        max_score: parseFloat(updatedLevel.max_score)
+      }
+    };
+    
+    // Add score update information if scores were auto-updated
+    if (scoreUpdateInfo) {
+      response.message += ' (scores auto-updated from description)';
+      response.score_update = scoreUpdateInfo;
+    }
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('❌ Failed to update grade level description:', error);
+    res.status(500).json({ 
+      error: 'Failed to update grade level description',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update grade level scores (min_score and max_score)
+ * PUT /api/uploads/rubric/grade-level/:grade_level_id/scores
+ */
+router.put('/rubric/grade-level/:grade_level_id/scores', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    const { min_score, max_score } = req.body;
+    
+    if (min_score === undefined || max_score === undefined) {
+      return res.status(400).json({ 
+        error: 'Both min_score and max_score are required' 
+      });
+    }
+    
+    const minScoreValue = parseFloat(min_score);
+    const maxScoreValue = parseFloat(max_score);
+    
+    if (isNaN(minScoreValue) || isNaN(maxScoreValue)) {
+      return res.status(400).json({ 
+        error: 'Scores must be valid numbers' 
+      });
+    }
+    
+    if (minScoreValue < 0 || maxScoreValue < 0) {
+      return res.status(400).json({ 
+        error: 'Scores must be non-negative' 
+      });
+    }
+    
+    if (minScoreValue > maxScoreValue) {
+      return res.status(400).json({ 
+        error: 'Min score cannot be greater than max score' 
+      });
+    }
+    
+    console.log(`📝 Updating grade level ${grade_level_id} scores: ${minScoreValue} - ${maxScoreValue}`);
+    
+    // Check if grade level exists
+    const gradeLevelCheck = await db.query(
+      'SELECT grade_level_id, level_name, criterion_id FROM criterion_grade_level WHERE grade_level_id = $1',
+      [grade_level_id]
+    );
+    
+    if (gradeLevelCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    // Update grade level scores
+    const result = await db.query(
+      'UPDATE criterion_grade_level SET min_score = $1, max_score = $2 WHERE grade_level_id = $3 RETURNING *',
+      [minScoreValue, maxScoreValue, grade_level_id]
+    );
+    
+    console.log(`✅ Updated grade level scores: ${result.rows[0].level_name} -> ${result.rows[0].min_score}-${result.rows[0].max_score}`);
+    
+    res.json({
+      success: true,
+      message: 'Grade level scores updated successfully',
+      grade_level: {
+        grade_level_id: result.rows[0].grade_level_id,
+        level_name: result.rows[0].level_name,
+        criterion_id: result.rows[0].criterion_id,
+        seq_no: result.rows[0].seq_no,
+        min_score: parseFloat(result.rows[0].min_score),
+        max_score: parseFloat(result.rows[0].max_score),
+        description: result.rows[0].description
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update grade level scores:', error);
+    res.status(500).json({ 
+      error: 'Failed to update grade level scores',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Get grade level details by ID
+ * GET /api/uploads/rubric/grade-level/:grade_level_id
+ */
+router.get('/rubric/grade-level/:grade_level_id', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    
+    console.log(`🔍 Getting grade level details: ${grade_level_id}`);
+    
+    const result = await db.query(`
+      SELECT 
+        cgl.grade_level_id,
+        cgl.criterion_id,
+        cgl.level_name,
+        cgl.min_score,
+        cgl.max_score,
+        cgl.description,
+        cgl.seq_no,
+        rc.title as criterion_title,
+        rc.rubric_id
+      FROM criterion_grade_level cgl
+      JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+      WHERE cgl.grade_level_id = $1
+    `, [grade_level_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    const gradeLevel = result.rows[0];
+    
+    res.json({
+      success: true,
+      grade_level: {
+        grade_level_id: gradeLevel.grade_level_id,
+        level_name: gradeLevel.level_name,
+        criterion_id: gradeLevel.criterion_id,
+        criterion_title: gradeLevel.criterion_title,
+        rubric_id: gradeLevel.rubric_id,
+        seq_no: gradeLevel.seq_no,
+        min_score: parseFloat(gradeLevel.min_score),
+        max_score: parseFloat(gradeLevel.max_score),
+        description: gradeLevel.description
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to get grade level details:', error);
+    res.status(500).json({ 
+      error: 'Failed to get grade level details',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Add new criterion (row) to rubric
+ * POST /api/uploads/rubric/:rubric_id/add-criterion
+ */
+router.post('/rubric/:rubric_id/add-criterion', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id } = req.params;
+    const { title, description, max_score } = req.body;
+    
+    console.log(`➕ Adding new criterion to rubric: ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Verify rubric exists
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "row", "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentRows = rubricCheck.rows[0].row || 0;
+    
+    // Get next sequence number
+    const seqResult = await client.query(
+      'SELECT COALESCE(MAX(seq_no), 0) + 1 as next_seq FROM rubric_criterion WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    const nextSeq = seqResult.rows[0].next_seq;
+    
+    // Create new criterion
+    const criterionResult = await client.query(
+      `INSERT INTO rubric_criterion (rubric_id, seq_no, title, description, max_score)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING criterion_id, seq_no, title, description, max_score`,
+      [
+        rubric_id,
+        nextSeq,
+        title || `New Criterion ${nextSeq}`,
+        description || null,
+        max_score || 0
+      ]
+    );
+    
+    const newCriterion = criterionResult.rows[0];
+    console.log(`✅ Created new criterion: ${newCriterion.criterion_id}`);
+    
+    // Get all existing grade levels from other criteria in this rubric
+    const existingLevels = await client.query(
+      `SELECT DISTINCT cgl.level_name, cgl.min_score, cgl.max_score, cgl.seq_no
+       FROM criterion_grade_level cgl
+       JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+       WHERE rc.rubric_id = $1
+       ORDER BY cgl.seq_no`,
+      [rubric_id]
+    );
+    
+    // Create grade level entries for this new criterion
+    const createdLevels = [];
+    for (const level of existingLevels.rows) {
+      const levelResult = await client.query(
+        `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING grade_level_id, level_name, min_score, max_score, seq_no`,
+        [
+          newCriterion.criterion_id,
+          level.level_name,
+          level.min_score || 0,
+          level.max_score || 0,
+          'No description', // Default description for new criterion
+          level.seq_no
+        ]
+      );
+      createdLevels.push(levelResult.rows[0]);
+    }
+    
+    console.log(`✅ Created ${createdLevels.length} grade levels for new criterion`);
+    
+    // Update rubric row count
+    await client.query(
+      'UPDATE rubric SET "row" = $1 WHERE rubric_id = $2',
+      [currentRows + 1, rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'New criterion added successfully',
+      criterion: {
+        criterion_id: newCriterion.criterion_id,
+        seq_no: newCriterion.seq_no,
+        title: newCriterion.title,
+        description: newCriterion.description,
+        max_score: parseFloat(newCriterion.max_score),
+        grade_levels: createdLevels.map(level => ({
+          grade_level_id: level.grade_level_id,
+          level_name: level.level_name,
+          min_score: parseFloat(level.min_score),
+          max_score: parseFloat(level.max_score),
+          seq_no: level.seq_no
+        }))
+      },
+      rubric_updated: {
+        new_row_count: currentRows + 1
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to add new criterion:', error);
+    res.status(500).json({
+      error: 'Failed to add new criterion',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Delete criterion (row) from rubric
+ * DELETE /api/uploads/rubric/criterion/:criterion_id
+ */
+router.delete('/rubric/criterion/:criterion_id', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { criterion_id } = req.params;
+    
+    console.log(`🗑️ Deleting criterion: ${criterion_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Get criterion and rubric info
+    const criterionCheck = await client.query(
+      `SELECT rc.criterion_id, rc.title, rc.rubric_id, r."row"
+       FROM rubric_criterion rc
+       JOIN rubric r ON rc.rubric_id = r.rubric_id
+       WHERE rc.criterion_id = $1`,
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Criterion not found' });
+    }
+    
+    const criterion = criterionCheck.rows[0];
+    const rubricId = criterion.rubric_id;
+    const currentRows = criterion.row || 0;
+    
+    // Delete all grade levels for this criterion
+    const deletedLevels = await client.query(
+      'DELETE FROM criterion_grade_level WHERE criterion_id = $1 RETURNING grade_level_id',
+      [criterion_id]
+    );
+    
+    console.log(`✅ Deleted ${deletedLevels.rows.length} grade levels`);
+    
+    // Delete the criterion itself
+    await client.query(
+      'DELETE FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    console.log(`✅ Deleted criterion: ${criterion.title}`);
+    
+    // Update rubric row count
+    await client.query(
+      'UPDATE rubric SET "row" = $1 WHERE rubric_id = $2',
+      [Math.max(0, currentRows - 1), rubricId]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Criterion deleted successfully',
+      deleted: {
+        criterion_id: parseInt(criterion_id),
+        title: criterion.title,
+        grade_levels_deleted: deletedLevels.rows.length
+      },
+      rubric_updated: {
+        rubric_id: rubricId,
+        new_row_count: Math.max(0, currentRows - 1)
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to delete criterion:', error);
+    res.status(500).json({
+      error: 'Failed to delete criterion',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Delete grade level (column) from rubric
+ * DELETE /api/uploads/rubric/:rubric_id/grade-level/:level_name
+ */
+router.delete('/rubric/:rubric_id/grade-level/:level_name', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id, level_name } = req.params;
+    const decodedLevelName = decodeURIComponent(level_name);
+    
+    console.log(`🗑️ Deleting grade level: ${decodedLevelName} from rubric ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Get rubric info
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentColumns = rubricCheck.rows[0].column || 0;
+    
+    // Delete all grade level entries with this level_name for this rubric's criteria
+    const deletedLevels = await client.query(
+      `DELETE FROM criterion_grade_level cgl
+       USING rubric_criterion rc
+       WHERE cgl.criterion_id = rc.criterion_id
+         AND rc.rubric_id = $1
+         AND cgl.level_name = $2
+       RETURNING cgl.grade_level_id, cgl.criterion_id`,
+      [rubric_id, decodedLevelName]
+    );
+    
+    if (deletedLevels.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ 
+        error: 'Grade level not found',
+        message: `No grade level with name "${decodedLevelName}" found in this rubric`
+      });
+    }
+    
+    console.log(`✅ Deleted ${deletedLevels.rows.length} grade level entries`);
+    
+    // Update rubric column count
+    await client.query(
+      'UPDATE rubric SET "column" = $1 WHERE rubric_id = $2',
+      [Math.max(0, currentColumns - 1), rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Grade level deleted successfully',
+      deleted: {
+        level_name: decodedLevelName,
+        entries_deleted: deletedLevels.rows.length
+      },
+      rubric_updated: {
+        rubric_id: parseInt(rubric_id),
+        new_column_count: Math.max(0, currentColumns - 1)
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to delete grade level:', error);
+    res.status(500).json({
+      error: 'Failed to delete grade level',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Add new grade level (column) to rubric
+ * POST /api/uploads/rubric/:rubric_id/add-grade-level
+ */
+router.post('/rubric/:rubric_id/add-grade-level', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id } = req.params;
+    const { level_name, min_score, max_score } = req.body;
+    
+    console.log(`➕ Adding new grade level to rubric: ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Verify rubric exists
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "row", "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentColumns = rubricCheck.rows[0].column || 0;
+    
+    // Get next sequence number for grade levels
+    const seqResult = await client.query(
+      `SELECT COALESCE(MAX(cgl.seq_no), 0) + 1 as next_seq
+       FROM criterion_grade_level cgl
+       JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+       WHERE rc.rubric_id = $1`,
+      [rubric_id]
+    );
+    const nextSeq = seqResult.rows[0].next_seq;
+    
+    // Get all criteria for this rubric
+    const criteriaResult = await client.query(
+      'SELECT criterion_id FROM rubric_criterion WHERE rubric_id = $1 ORDER BY seq_no',
+      [rubric_id]
+    );
+    
+    if (criteriaResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Cannot add grade level: no criteria exist in this rubric',
+        message: 'Please add at least one criterion first'
+      });
+    }
+    
+    // Create new grade level for each criterion
+    const createdLevels = [];
+    for (const criterion of criteriaResult.rows) {
+      const levelResult = await client.query(
+        `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING grade_level_id, criterion_id, level_name, min_score, max_score, seq_no`,
+        [
+          criterion.criterion_id,
+          level_name || `New Level ${nextSeq}`,
+          min_score || 0,
+          max_score || 0,
+          'No description', // Default description for new grade level
+          nextSeq
+        ]
+      );
+      createdLevels.push(levelResult.rows[0]);
+    }
+    
+    console.log(`✅ Created ${createdLevels.length} grade level entries`);
+    
+    // Update rubric column count
+    await client.query(
+      'UPDATE rubric SET "column" = $1 WHERE rubric_id = $2',
+      [currentColumns + 1, rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'New grade level added successfully',
+      grade_level: {
+        level_name: level_name || `New Level ${nextSeq}`,
+        min_score: parseFloat(min_score || 0),
+        max_score: parseFloat(max_score || 0),
+        seq_no: nextSeq,
+        entries_created: createdLevels.map(level => ({
+          grade_level_id: level.grade_level_id,
+          criterion_id: level.criterion_id,
+          level_name: level.level_name,
+          min_score: parseFloat(level.min_score),
+          max_score: parseFloat(level.max_score)
+        }))
+      },
+      rubric_updated: {
+        new_column_count: currentColumns + 1
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to add new grade level:', error);
+    res.status(500).json({
+      error: 'Failed to add new grade level',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 
 module.exports = router;

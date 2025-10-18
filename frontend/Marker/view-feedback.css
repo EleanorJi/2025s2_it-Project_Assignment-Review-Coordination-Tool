@@ -1,7 +1,7 @@
 :root{
-    --bg:#f8f9fa; --panel:#fff; --border:#dee2e6; --text:#212529; --muted:#6c757d;
-    --primary:#2d3748; --radius:4px; --shadow:0 2px 4px rgba(0,0,0,0.1);
-    --success:#28a745; --warning:#ffc107; --danger:#dc3545; --info:#17a2b8;
+    --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
+    --primary:#0F172A; --warn:#F59E0B; --bad:#DC2626; --good:#16a34a;
+    --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
   }
   
   *{box-sizing:border-box}
@@ -9,34 +9,40 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font:14px/1.6 "Lato",system-ui,-apple-system,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+    font:14px/1.6 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
   }
   
-  /* Top bar */
+  /* Top bar - Professional Design */
   .topbar{
-    height:64px;display:flex;align-items:center;justify-content:space-between;
-    padding:0 18px;background:#fff;border-bottom:1px solid var(--border);
+    height:70px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;background:#fff;border-bottom:1px solid var(--border);
+    box-shadow:0 2px 8px rgba(15,23,42,0.04);
+    position:sticky;top:0;z-index:100;
+    backdrop-filter:blur(10px);
   }
-  .brand{display:flex;align-items:center;gap:12px}
-  .brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
-  .brand-title{font-weight:800}
-  .brand-sub{font-size:12px;color:var(--muted)}
-  .account{color:var(--text);font-weight:600;position:relative;cursor:pointer;display:flex;align-items:center;padding:4px 8px;border-radius:4px;transition:background-color 0.2s}
-  .account:hover{background-color:#f5f5f5}
-  .caret{margin-left:4px;color:var(--muted)}
+  .brand{display:flex;align-items:center;gap:14px;position:relative}
+  .brand::before{content:'';width:4px;height:28px;background:linear-gradient(180deg,#0F172A 0%,#334155 100%);border-radius:2px;margin-right:2px}
+  .brand img{width:38px;height:38px;border-radius:10px;border:2px solid var(--border);background:#fff;box-shadow:0 2px 6px rgba(15,23,42,0.1)}
+  .brand-title{font-weight:800;font-size:16px;color:var(--text);letter-spacing:-0.3px}
+  .brand-sub{font-size:12px;color:var(--muted);font-weight:500}
+  .account{color:var(--text);font-weight:600;position:relative;cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;transition:all 0.2s ease;border:1px solid transparent;font-size:14px}
+  .account:hover{background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border-color:var(--border);transform:translateY(-1px);box-shadow:0 2px 8px rgba(15,23,42,0.08)}
+  .caret{margin-left:2px;color:var(--muted);transition:transform 0.2s ease;font-size:10px}
+  .account:hover .caret{transform:translateY(1px)}
   .dropdown-trigger{cursor:pointer}
 
   .dropdown-menu{
-    position:absolute;top:100%;right:0;background:#fff;border:1px solid var(--border);
-    border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);
-    min-width:120px;z-index:1000;display:none;
+    position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid var(--border);
+    border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,0.12), 0 2px 6px rgba(15,23,42,0.08);
+    min-width:160px;z-index:1000;display:none;overflow:hidden;animation:dropdownFadeIn 0.15s ease;
   }
+  @keyframes dropdownFadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
   .dropdown-menu.show{display:block}
   .dropdown-item{
-    display:block;padding:10px 16px;color:var(--text);text-decoration:none;
-    font-weight:600;transition:background-color 0.2s;
+    display:block;padding:12px 18px;color:var(--text);text-decoration:none;
+    font-weight:600;transition:all 0.15s ease;font-size:14px;border-left:3px solid transparent;
   }
-  .dropdown-item:hover{background-color:#f5f5f5;text-decoration:none}
+  .dropdown-item:hover{background:linear-gradient(90deg,#f8fafc 0%,#fff 100%);border-left-color:#0F172A;text-decoration:none;padding-left:20px}
   
   .back{
     height:36px; padding:0 10px; border-radius:10px; border:1px solid var(--border);
@@ -45,7 +51,10 @@
   
   /* Layout */
   .app {
-    padding: 0;
+    padding: 16px;
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
   }
 
   /* Title row with Back button */
@@ -57,9 +66,10 @@
   }
 
   .title-row h1 {
-    font-size: 22px;
+    font-size: 32px;
     margin: 0;
-    font-weight: 600;
+    font-weight: 800;
+    letter-spacing:-0.5px;
   }
 
   .back-btn {
@@ -80,7 +90,7 @@
   }
 
   .main-content {
-    padding: 0 18px 18px;
+    padding: 18px;
   }
 
   /* Assignment details */
@@ -100,8 +110,8 @@
   }
 
   .panel{
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
-    box-shadow:var(--shadow); padding:12px;
+    background:#fff; border-radius:var(--radius);
+    padding:12px;
   }
 
   /* Score Summary */
@@ -177,26 +187,7 @@
     min-width: 60px;
   }
 
-  .difference-value.positive {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-  }
-
-  .difference-value.negative {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-  }
-
-  .difference-value.large-diff {
-    background: #f8d7da;
-    color: #721c24;
-    border: 2px solid var(--danger);
-    font-weight: 900;
-  }
-
-  .difference-value.neutral {
+  .difference-value {
     background: #e2e3e5;
     color: #383d41;
     border: 1px solid #d6d8db;
@@ -266,25 +257,11 @@
     font-size: 14px;
   }
 
-  .difference-positive {
-    color: var(--success);
-  }
-
-  .difference-negative {
-    color: var(--danger);
-  }
-
-  .difference-large {
-    color: var(--danger);
-    background: #fff5f5;
-    border: 1px solid #fed7d7;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-weight: 900;
-  }
-
-  .difference-neutral {
-    color: var(--muted);
+  .difference-cell {
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
   }
 
   /* Feedback text */

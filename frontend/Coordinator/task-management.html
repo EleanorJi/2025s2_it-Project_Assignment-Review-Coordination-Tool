@@ -9,6 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/Coordinator/task-management.css">
+  
+  <!-- Libraries for file preview -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
 </head>
 <body>
@@ -40,8 +44,23 @@
   <main class="main">
     <section class="tm-panel">
       <div class="tm-header">
-        <h1>Task Management</h1>
-        <button id="btnAdd" class="btn primary">Add New Task</button>
+        <div class="tm-header-content">
+          <h1>Task Management</h1>
+          <p class="tm-header-subtitle">Manage assignments, rubrics, and marking tasks</p>
+          <div class="tm-header-stats" id="headerStats" style="display:none;">
+            <div class="tm-stat">
+              <span class="tm-stat-value" id="statTotal">0</span>
+              <span class="tm-stat-label">Total Tasks</span>
+            </div>
+            <div class="tm-stat">
+              <span class="tm-stat-value" id="statActive">0</span>
+              <span class="tm-stat-label">Active</span>
+            </div>
+          </div>
+        </div>
+        <button id="btnAdd" class="btn primary">
+          <span>Add New Task</span>
+        </button>
       </div>
 
       <!-- Task Sections Container -->
@@ -76,7 +95,7 @@
     </div>
 
     <div class="tm-dialog-ft">
-      <button id="rubricSubmit" class="btn primary" style="min-width:160px">Submit</button>
+      <button id="rubricPreview" class="btn primary" style="min-width:160px;display:none;">Preview & Upload</button>
     </div>
   </div>
 </div>
@@ -111,7 +130,7 @@
     </div>
 
     <div class="tm-dialog-ft">
-      <button id="assignment1Submit" class="btn primary" style="min-width:160px">Submit</button>
+      <button id="assignment1Preview" class="btn primary" style="min-width:160px;display:none;">Preview & Upload</button>
     </div>
   </div>
 </div>
@@ -146,7 +165,7 @@
     </div>
 
     <div class="tm-dialog-ft">
-      <button id="assignment2Submit" class="btn primary" style="min-width:160px">Submit</button>
+      <button id="assignment2Preview" class="btn primary" style="min-width:160px;display:none;">Preview & Upload</button>
     </div>
   </div>
 </div>

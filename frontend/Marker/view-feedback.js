@@ -118,7 +118,8 @@ async function fetchBaselineData(assignmentId) {
     const res = await fetch(`/api/uploads/scoring/baseline/${assignmentId}`);
     if (!res.ok) throw new Error('Failed to fetch baseline data');
     const data = await res.json();
-    return data.baseline_scores || [];
+    // 只返回 finalized 为 true 的 baseline 分数
+    return (data.baseline_scores || []).filter(score => score.finalized === true);
 }
 
 // 获取marker分数
@@ -166,7 +167,8 @@ function transformData(assignmentData, projectData, baselineData, markerData, fe
       max: r.max_score || baseline?.criterion_max_score || 0,
       // 用 null 表示缺失（便于后续判断），存在则为 number
       markerScore: typeof marker?.score === 'number' ? marker.score : null,
-      coordinatorScore: typeof baseline?.score === 'number' ? baseline.score : null,
+      // 只有当 baseline 存在且 finalized 时才显示 coordinator 分数
+      coordinatorScore: (baseline && baseline.finalized && typeof baseline.score === 'number') ? baseline.score : null,
       coordinatorFeedback: baseline?.comment || '',
       markerComments: marker?.comment || ''
     };
@@ -219,8 +221,8 @@ async function loadFeedback(data){
   const coordinatorTotal = data.criteria.reduce((sum, c) => sum + (typeof c.coordinatorScore === 'number' ? c.coordinatorScore : 0), 0);
   const totalMax = data.criteria.reduce((sum, c) => sum + (c.max || 0), 0);
 
-  // 是否至少有一个 baseline 存在（用于决定顶部 coordinator 总分是否显示）
-  const hasAnyBaseline = data.criteria.some(c => typeof c.coordinatorScore === 'number');
+  // 是否至少有一个 finalized 的 baseline 存在
+  const hasAnyBaseline = data.criteria.some(c => c.coordinatorScore !== null);
 
   // 更新顶部总分显示
   markerScoreEl.textContent = `${markerTotal}/${totalMax}`;
@@ -228,22 +230,12 @@ async function loadFeedback(data){
 
   // 更新总体分差显示（只有在存在 baseline 时才计算差值）
   if (hasAnyBaseline) {
-    const difference = coordinatorTotal - markerTotal;
+    const difference = markerTotal - coordinatorTotal;
     scoreDifferenceEl.textContent = difference > 0 ? `+${difference}` : `${difference}`;
     scoreDifferenceEl.className = 'difference-value';
-    scoreDifferenceEl.classList.remove('difference-large','positive','negative','neutral');
-    if (Math.abs(difference) > 5) {
-      scoreDifferenceEl.classList.add('large-diff');
-    } else if (difference > 0) {
-      scoreDifferenceEl.classList.add('positive');
-    } else if (difference < 0) {
-      scoreDifferenceEl.classList.add('negative');
-    } else {
-      scoreDifferenceEl.classList.add('neutral');
-    }
   } else {
     scoreDifferenceEl.textContent = "-";
-    scoreDifferenceEl.className = "difference-value difference-neutral";
+    scoreDifferenceEl.className = "difference-value";
   }
 
   // --- 渲染表格行 ---
@@ -278,12 +270,12 @@ async function loadFeedback(data){
     const td3 = td();
     td3.className = 'difference-cell';
     if (typeof c.coordinatorScore !== 'number') {
-      td3.innerHTML = `<span class="difference-neutral">-</span>`;
+      td3.innerHTML = `<span>-</span>`;
     } else {
       const markerValForDiff = (typeof c.markerScore === 'number') ? c.markerScore : 0;
-      const diff = c.coordinatorScore - markerValForDiff;
+      const diff = markerValForDiff - c.coordinatorScore;
       const diffText = diff > 0 ? `+${diff}` : `${diff}`;
-      td3.innerHTML = `<span class="${getDifferenceClass(diff)}">${diffText}</span>`;
+      td3.innerHTML = `<span>${diffText}</span>`;
     }
     tr.appendChild(td3);
 
@@ -320,19 +312,6 @@ async function loadFeedback(data){
   } else {
       coordinatorFeedbackEl.textContent = 'No detailed feedback provided.';
       coordinatorFeedbackEl.classList.add('empty');
-  }
-}
-
-
-function getDifferenceClass(diff) {
-  if (Math.abs(diff) > 5) {
-    return 'difference-large';
-  } else if (diff > 0) {
-    return 'difference-positive';
-  } else if (diff < 0) {
-    return 'difference-negative';
-  } else {
-    return 'difference-neutral';
   }
 }
 

@@ -307,11 +307,13 @@ exports.inviteMarkersBatch = async (req, res) => {
 // List invitations
 exports.listInvitations = async (req, res) => {
   const createdBy = req.user.id;
+  const currentUserEmail = req.user.email; // Get current user's email to exclude
+  
   try {
     const result = await db.query(
       `WITH latest_invitations AS (
          SELECT DISTINCT ON (email) 
-           id, email, expires_at, created_at,
+           id, email, expires_at, created_at, used_at,
            ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at DESC) as rn
          FROM invitations 
          WHERE created_by = $1
@@ -322,6 +324,9 @@ exports.listInvitations = async (req, res) => {
          CASE
            WHEN u.user_id IS NOT NULL THEN
              CASE WHEN u.is_active = true THEN 'active' ELSE 'closed' END
+           WHEN li.used_at IS NOT NULL AND NOT EXISTS (
+             SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
+           ) THEN 'revoked'  -- This will be filtered out
            WHEN li.expires_at < NOW() AND NOT EXISTS (
              SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
            ) THEN 'expired'
@@ -330,9 +335,13 @@ exports.listInvitations = async (req, res) => {
          to_char(COALESCE(u.last_login, li.created_at), 'Mon DD, YYYY') as sent_at
        FROM latest_invitations li
        FULL OUTER JOIN app_user u ON li.email = u.email AND u.role = 'MARKER'
-       WHERE li.rn = 1 OR u.user_id IS NOT NULL
+       WHERE (li.rn = 1 OR u.user_id IS NOT NULL)
+         AND NOT (li.used_at IS NOT NULL AND NOT EXISTS (
+           SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
+         ))  -- Exclude revoked invitations that haven't been accepted
+         AND COALESCE(u.email, li.email) != $2  -- Exclude current user's email
        ORDER BY sent_at DESC`,
-      [createdBy]
+      [createdBy, currentUserEmail]
     );
     console.log('Data returned to frontend:');
     result.rows.forEach((row, index) => {
@@ -397,25 +406,27 @@ exports.resendInvite = async (req, res) => {
 // Revoke invitation
 exports.revokeInvite = async (req, res) => {
   const { email } = req.body;
+  const currentUserId = req.user.id;
 
   if (!email) {
     return res.status(400).json({ success: false, message: 'Email is required' });
   }
 
   try {
+    // Mark invitation as revoked (used_at = NOW) and add revoked flag
     const result = await db.query(
       `UPDATE invitations
-       SET used_at = NOW()   -- Mark as void
-       WHERE email = $1 AND used_at IS NULL
+       SET used_at = NOW()   -- Mark as revoked
+       WHERE email = $1 AND used_at IS NULL AND created_by = $2
        RETURNING id`,
-      [email]
+      [email, currentUserId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Invitation not found or already used' });
     }
 
-    console.log(`Revoked invitation for ${email}`);
+    console.log(`Revoked invitation for ${email} by coordinator ${req.user.name}`);
 
     // Send revocation notification email
     try {
@@ -436,32 +447,54 @@ exports.revokeInvite = async (req, res) => {
 // Close user
 // Close user permissions
 exports.closeUser = async (req, res) => {
-  const { userId } = req.params;
+  const { email } = req.body;
   const currentUserId = req.user.id; // From authenticate middleware user.id
+  
+  console.log('🔴 closeUser called with email:', email, 'by user ID:', currentUserId);
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
 
   try {
-    // Check if the user to be operated exists and was invited by current user
-    const userCheck = await db.query(
-      `SELECT id FROM app_user
-       WHERE id = $1 AND invited_by = $2 AND role = 'MARKER'`,
-      [userId, currentUserId]
+    // First check if user exists
+    const userExists = await db.query(
+      `SELECT user_id, email, is_active FROM app_user 
+       WHERE email = $1 AND role = 'MARKER'`,
+      [email]
     );
 
-    if (userCheck.rows.length === 0) {
+    if (userExists.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在或没有操作权限'
+        message: 'User not found'
+      });
+    }
+
+    // Check if current coordinator has permission (invited this user)
+    const permissionCheck = await db.query(
+      `SELECT 1 FROM invitations 
+       WHERE email = $1 AND created_by = $2`,
+      [email, currentUserId]
+    );
+
+    if (permissionCheck.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'No permission to operate on this user'
       });
     }
 
     // Update user status to closed
     const result = await db.query(
       `UPDATE app_user
-       SET is_active = false, updated_at = NOW()
-       WHERE id = $1
-       RETURNING id, email, is_active as status`,
-      [userId]
+       SET is_active = false
+       WHERE email = $1 AND role = 'MARKER'
+       RETURNING user_id as id, email, is_active`,
+      [email]
     );
+
+    console.log(`Coordinator ${req.user.name} closed user ${email}`);
 
     res.json({
       success: true,
@@ -470,6 +503,89 @@ exports.closeUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Close user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Reopen user
+exports.reopenUser = async (req, res) => {
+  const { email } = req.body;
+  const currentUserId = req.user.id;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  try {
+    // Find user by email and check if they were invited by current coordinator
+    const userCheck = await db.query(
+      `SELECT DISTINCT u.user_id FROM app_user u
+       WHERE u.email = $1 AND u.role = 'MARKER'
+       AND EXISTS (
+         SELECT 1 FROM invitations i 
+         WHERE i.email = u.email AND i.created_by = $2
+       )`,
+      [email, currentUserId]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found or no permission to operate'
+      });
+    }
+
+    // Update user status to active
+    const result = await db.query(
+      `UPDATE app_user
+       SET is_active = true
+       WHERE email = $1 AND role = 'MARKER'
+       RETURNING user_id as id, email, is_active as status`,
+      [email]
+    );
+
+    console.log(`Coordinator ${req.user.name} reopened user ${email}`);
+
+    res.json({
+      success: true,
+      message: 'User permissions have been reopened',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Reopen user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Get marker email suggestions
+exports.getMarkerSuggestions = async (req, res) => {
+  const { q } = req.query;
+  const createdBy = req.user.id;
+
+  if (!q || q.length < 2) {
+    return res.json({ emails: [] });
+  }
+
+  try {
+    // Search in existing markers from this coordinator's invitations
+    const result = await db.query(
+      `SELECT DISTINCT email FROM (
+        SELECT email FROM app_user WHERE role = 'MARKER' AND email ILIKE $1
+        UNION
+        SELECT email FROM invitations WHERE created_by = $2 AND email ILIKE $1
+      ) suggestions
+      WHERE email NOT IN (
+        SELECT email FROM app_user WHERE email = suggestions.email AND role != 'MARKER'
+      )
+      ORDER BY email
+      LIMIT 10`,
+      [`%${q}%`, createdBy]
+    );
+
+    const emails = result.rows.map(row => row.email);
+    res.json({ emails });
+  } catch (error) {
+    console.error('Marker suggestions error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

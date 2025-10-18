@@ -9,12 +9,15 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const { startDeadlineNotifier } = require('./jobs/deadlineNotifier');
 
 app.use(express.json());
 app.use(cookieParser());
 
 // Static file service
 app.use(express.static(path.join(__dirname, '../../frontend'))); // Frontend static files
+// Serve frontend static files新增
+
 app.use('/static', express.static(path.join(__dirname, '../../uploads')));
 
 // Routes
@@ -50,5 +53,8 @@ app.listen(port, () => {
   console.log('   POST /api/invitations/complete-signup - Complete registration');
   console.log('   GET  /api/health              - Health check');
   console.log('\n🔒 Authentication: Using cookies for user authentication');});
+
+// Start background jobs
+startDeadlineNotifier();
 
 module.exports = app;

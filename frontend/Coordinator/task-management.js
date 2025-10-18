@@ -181,16 +181,19 @@
         let assignment2Status = 'unpublished';
         let assignment1Finalized = false;
         let assignment2Finalized = false;
+        let assignment1HasFile = false;
+        let assignment2HasFile = false;
 
         try {
           // 1. First get the latest assignment IDs for the project
           const latestIdsResponse = await fetch(`/api/uploads/project/${project.project_id}/latest-ids`);
           if (latestIdsResponse.ok) {
             const latestIds = await latestIdsResponse.json();
-            console.log('📦 Retrieved latest IDs:', latestIds);
+            console.log('Retrieved latest IDs:', latestIds);
 
             // 2. Get assignment1 status
             if (latestIds.assignment1) {
+              assignment1HasFile = true;
               const statusResponse1 = await fetch(`/api/uploads/assignment/${latestIds.assignment1.assignment_id}/status`);
               if (statusResponse1.ok) {
                 const statusData1 = await statusResponse1.json();
@@ -217,6 +220,7 @@
 
             // 3. Get assignment2 status
             if (latestIds.assignment2) {
+              assignment2HasFile = true;
               const statusResponse2 = await fetch(`/api/uploads/assignment/${latestIds.assignment2.assignment_id}/status`);
               if (statusResponse2.ok) {
                 const statusData2 = await statusResponse2.json();
@@ -279,13 +283,15 @@
               id: 'assignment1',
               title: 'Assignment 1',
               status: assignment1Status,
-              finalized: assignment1Finalized
+              finalized: assignment1Finalized,
+              hasFile: assignment1HasFile
             },
             {
               id: 'assignment2',
               title: 'Assignment 2',
               status: assignment2Status,
-              finalized: assignment2Finalized
+              finalized: assignment2Finalized,
+              hasFile: assignment2HasFile
             }
           ]
         });
@@ -374,20 +380,13 @@
     // no Draft option
     toggleBtn.addEventListener('click', (e)=>{ 
       e.stopPropagation(); 
-      const rect = toggleBtn.getBoundingClientRect();
-      menu.style.top = `${Math.round(rect.bottom + window.scrollY + 4)}px`;
-      menu.style.left = `${Math.round(rect.left + window.scrollX)}px`;
       menu.classList.toggle('show');
       console.log('Menu toggled, show class:', menu.classList.contains('show'));
-      console.log('Menu position:', menu.style.top, menu.style.left);
     });
     document.addEventListener('click', ()=> menu.classList.remove('show'));
 
     statusWrap.appendChild(toggleBtn);
     statusWrap.appendChild(menu);
-    
-    // Ensure menu is attached to document body for proper positioning
-    document.body.appendChild(menu);
 
     // Add delete button
     const deleteBtn = document.createElement('button');
@@ -401,7 +400,6 @@
     titleContainer.appendChild(title);
     titleContainer.appendChild(status);
     titleContainer.appendChild(statusWrap);
-    titleContainer.appendChild(deleteBtn);
 
     const chevron = document.createElement('div');
     chevron.className = 'tm-task-chevron';
@@ -411,6 +409,7 @@
     header.addEventListener('click', () => toggleTaskSection(section));
 
     header.appendChild(titleContainer);
+    header.appendChild(deleteBtn);
     header.appendChild(chevron);
 
     // Task content
@@ -551,9 +550,12 @@
       }
     });
 
+    const previewAssignmentBtn = createButton('Preview', () => {
+      previewAssignmentFile(task.project_id, assignment.id, assignment.title);
+    });
 
     const publishBtn = createButton('Publish Assignment', () => {
-      publishAssignment(task.project_id, assignment.id);
+      showPublishConfirmation(task.project_id, assignment.id, assignment.title);
     });
 
     const markBtn = createButton('Mark Assignment', () => {
@@ -568,33 +570,34 @@
       location.href = `/dashboard/coordinator/feedback?project=${task.project_id}&assignment=${assignment.id}`;
     });
 
-    console.log(`🔄 Setting buttons for ${assignment.title}: status=${assignment.status}, file_counts=${task.file_counts?.assignment}`);
+    console.log(`Setting buttons for ${assignment.title}: status=${assignment.status}, hasFile=${assignment.hasFile}`);
 
     // Display different buttons based on assignment status
     if (assignment.status === 'published') {
 
-      // 如果已提交评分，只显示View Marks按钮和Feedback按钮
+      // If finalized, show View Marks and Feedback buttons
       if (assignment.finalized) {
         actions.appendChild(viewMarksBtn);
         actions.appendChild(feedbackBtn);
-        console.log(`🔘 ${assignment.title} 显示按钮: View Marks, Feedback (已发布且已提交评分)`);
+        console.log(`${assignment.title} buttons: View Marks, Feedback (published & finalized)`);
       } else {
-        // 未提交评分：显示Mark Assignment按钮和Feedback按钮
+        // Not finalized: show Mark Assignment and Feedback buttons
         actions.appendChild(markBtn);
         actions.appendChild(feedbackBtn);
-        console.log(`🔘 ${assignment.title} 显示按钮: Mark Assignment, Feedback (已发布但未提交评分)`);
+        console.log(`${assignment.title} buttons: Mark Assignment, Feedback (published but not finalized)`);
       }
     } else {
       // Unpublished: Display Upload button
       actions.appendChild(uploadBtn);
 
-      // Only display View button and Publish button when assignment files exist
-      if (task.file_counts?.assignment > 0) {
+      // Display Preview and Publish buttons when assignment file exists
+      if (assignment.hasFile) {
+        actions.appendChild(previewAssignmentBtn);
         actions.appendChild(publishBtn);
-        console.log(`🔘 ${assignment.title} display buttons: Upload, View, Publish`);
+        console.log(`${assignment.title} display buttons: Upload, Preview, Publish`);
       } else {
         actions.appendChild(publishBtn);
-        console.log(`🔘 ${assignment.title} display buttons: Upload, Publish`);
+        console.log(`${assignment.title} display buttons: Upload, Publish`);
       }
     }
 
@@ -778,6 +781,179 @@
     saveExpandedStates();
   }
 
+  // Preview assignment file (read-only mode in mark interface)
+  function previewAssignmentFile(projectId, assignmentId, assignmentTitle) {
+    // Navigate to mark page in preview mode (read-only)
+    location.href = `/dashboard/coordinator/mark?project=${projectId}&assignment=${assignmentId}&preview=true`;
+  }
+
+  // Show publish confirmation modal
+  async function showPublishConfirmation(projectId, assignmentId, assignmentTitle) {
+    try {
+      // Get latest IDs
+      const idsResponse = await fetch(`/api/uploads/project/${projectId}/latest-ids`);
+      if (!idsResponse.ok) {
+        throw new Error('Failed to fetch project information');
+      }
+      const idsData = await idsResponse.json();
+
+      // Get assignment details
+      let targetAssignmentId, assignmentData;
+      if (assignmentId === 'assignment1') {
+        targetAssignmentId = idsData.assignment1?.assignment_id;
+      } else if (assignmentId === 'assignment2') {
+        targetAssignmentId = idsData.assignment2?.assignment_id;
+      }
+
+      if (!targetAssignmentId) {
+        toast(`${assignmentTitle} has no file uploaded. Please upload first.`);
+        return;
+      }
+
+      // Get assignment file info
+      const assignmentResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/files`);
+      if (assignmentResponse.ok) {
+        assignmentData = await assignmentResponse.json();
+      }
+
+      // Get rubric info
+      let rubricData = null;
+      if (idsData.rubric) {
+        const rubricResponse = await fetch(`/api/uploads/rubric/${idsData.rubric.rubric_id}/details`);
+        if (rubricResponse.ok) {
+          rubricData = await rubricResponse.json();
+        }
+      }
+
+      // Create modal
+      const modal = document.createElement('div');
+      modal.className = 'tm-modal show';
+      modal.id = 'publishConfirmModal';
+
+      // Build content
+      let rubricInfo = '<div style="color:var(--muted);font-style:italic;">No rubric uploaded</div>';
+      if (rubricData && rubricData.criteria) {
+        rubricInfo = `
+          <div style="font-size:14px;color:var(--text);">
+            <div style="margin-bottom:8px;"><strong>Criteria Count:</strong> ${rubricData.criteria.length}</div>
+            <div style="margin-bottom:12px;"><strong>Grade Levels:</strong> ${rubricData.rubric.columns || 0}</div>
+            <div style="max-height:150px;overflow-y:auto;background:#f8fafc;padding:12px;border-radius:8px;">
+              ${rubricData.criteria.map((c, i) => `
+                <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+                  <strong>${i + 1}. ${c.title}</strong>
+                  <span style="color:var(--muted);margin-left:8px;">(Max: ${c.max_score} points)</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      let assignmentInfo = '<div style="color:var(--muted);font-style:italic;">No assignment information</div>';
+      if (assignmentData && assignmentData.files && assignmentData.files.length > 0) {
+        const file = assignmentData.files[0];
+        const dueDate = file.due_at ? new Date(file.due_at).toLocaleString() : 'Not set';
+        assignmentInfo = `
+          <div style="font-size:14px;color:var(--text);">
+            <div style="margin-bottom:8px;"><strong>File:</strong> ${file.file_name || 'Assignment file'}</div>
+            <div style="margin-bottom:8px;"><strong>Due Date:</strong> ${dueDate}</div>
+            <div style="margin-bottom:8px;"><strong>Round:</strong> ${file.round}</div>
+          </div>
+        `;
+      }
+
+      modal.innerHTML = `
+        <div class="tm-dialog" style="max-width:700px;">
+          <div class="tm-dialog-hd">
+            <h3>Confirm Publication</h3>
+            <button class="btn tm-close-btn" id="publishConfirmClose">Close</button>
+          </div>
+          <div class="tm-dialog-bd">
+            <div style="margin-bottom:24px;padding:16px;background:#fef3c7;border:2px solid #fde68a;border-radius:12px;">
+              <div style="font-size:16px;font-weight:700;color:#92400e;margin-bottom:8px;">Important Notice</div>
+              <div style="font-size:14px;color:#92400e;">
+                Once published, the rubric cannot be edited. Please ensure all information is correct before proceeding.
+              </div>
+            </div>
+
+            <div style="margin-bottom:24px;">
+              <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+                ${assignmentTitle}
+              </div>
+              ${assignmentInfo}
+            </div>
+
+            <div style="margin-bottom:24px;">
+              <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">
+                Rubric Information
+              </div>
+              ${rubricInfo}
+            </div>
+
+            <div style="display:flex;gap:12px;padding:16px;background:#f8fafc;border-radius:12px;border:1px solid var(--border);">
+              <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#3b82f6;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">i</div>
+              <div style="font-size:13px;color:var(--text);line-height:1.6;">
+                You can preview the assignment and rubric before publishing. Click the "Preview Assignment" button below to open a preview in a new tab.
+              </div>
+            </div>
+          </div>
+          <div class="tm-dialog-ft">
+            <button class="btn" id="publishConfirmCancel">Cancel</button>
+            <button class="btn" style="background:#3b82f6;color:white;border:1px solid #3b82f6;" id="publishConfirmPreview">Preview Assignment</button>
+            <button class="btn primary" id="publishConfirmSubmit">Confirm & Publish</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Bind events
+      const closeBtn = modal.querySelector('#publishConfirmClose');
+      const cancelBtn = modal.querySelector('#publishConfirmCancel');
+      const previewBtn = modal.querySelector('#publishConfirmPreview');
+      const submitBtn = modal.querySelector('#publishConfirmSubmit');
+
+      const closeModal = () => {
+        modal.remove();
+      };
+
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      previewBtn.addEventListener('click', () => {
+        window.open(`/dashboard/coordinator/mark?project=${projectId}&assignment=${assignmentId}&preview=true`, '_blank');
+      });
+
+      submitBtn.addEventListener('click', async () => {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Publishing...';
+        try {
+          await publishAssignment(projectId, assignmentId);
+          closeModal();
+        } catch (error) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm & Publish';
+        }
+      });
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+          document.removeEventListener('keydown', escapeHandler);
+        }
+      };
+      document.addEventListener('keydown', escapeHandler);
+
+    } catch (error) {
+      console.error('Failed to show publish confirmation:', error);
+      toast('Failed to load assignment information. Please try again.');
+    }
+  }
+
   // Publish assignment
   async function publishAssignment(taskId, assignmentId) {
     try {
@@ -857,36 +1033,60 @@
 
       projectModal = document.createElement('div');
       projectModal.id = 'project-modal';
-      projectModal.style.position = 'fixed';
-      projectModal.style.inset = '0';
-      projectModal.style.display = 'none';
-      projectModal.style.placeItems = 'center';
-      projectModal.style.background = 'rgba(15,23,42,.38)';
-      projectModal.style.padding = '16px';
-      projectModal.style.zIndex = '10000';
+      projectModal.className = 'tm-modal';
       projectModal.setAttribute('aria-hidden', 'true');
 
       projectModal.innerHTML = `
-          <div role="dialog" aria-modal="true" aria-labelledby="pm-title"
-              style="width:min(520px,92vw);background:#fff;border:1px solid #E6EAF2;border-radius:16px;box-shadow:0 6px 24px rgba(2,6,23,0.06);overflow:hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E6EAF2">
-              <h3 id="pm-title" style="margin:0;font-weight:800">Create New Project</h3>
-              <button id="pm-close" class="btn" style="background:transparent;border-color:transparent;color:#6B7280">✕</button>
-          </div>
-          <form id="pm-form" style="padding:14px;display:flex;flex-direction:column;gap:12px">
-              <label class="label" for="project-name">Project name</label>
-              <input id="project-name" class="input" placeholder="e.g., 2025 · Semester 1" autocomplete="off" />
-
-              <label class="label" for="project-description">Task description</label>
-              <textarea id="project-description" class="input" placeholder="Enter task description (optional)"
-                  style="height:80px;padding:10px;resize:vertical" autocomplete="off"></textarea>
-
-              <div style="display:flex;gap:10px;justify-content:flex-end">
-              <button type="button" class="btn" id="pm-cancel">Cancel</button>
-              <button type="submit" class="btn primary" id="pm-create">Create</button>
+          <div class="tm-dialog tm-project-dialog" role="dialog" aria-modal="true" aria-labelledby="pm-title">
+              <div class="tm-dialog-hd">
+                  <h3 id="pm-title">Add New Task</h3>
+                  <button id="pm-close" class="btn tm-close-btn" type="button">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                  </button>
               </div>
-              <div class="msg" id="pm-msg"></div>
-          </form>
+              
+              <form id="pm-form" class="tm-dialog-bd">
+                  <div class="tm-form-group">
+                      <label class="tm-label" for="project-name">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:text-bottom;margin-right:6px">
+                              <path d="M9 2L3 8V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V8L15 2H9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M9 2V8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          Task Name
+                      </label>
+                      <input id="project-name" class="tm-input tm-input-enhanced" type="text" 
+                             placeholder="e.g., HPS302 Assignment - Semester 1, 2025" 
+                             autocomplete="off" required />
+                  </div>
+
+                  <div class="tm-form-group">
+                      <label class="tm-label" for="project-description">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:text-bottom;margin-right:6px">
+                              <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          Task Description
+                          <span style="color:var(--muted);font-weight:500;font-size:11px;margin-left:6px">(Optional)</span>
+                      </label>
+                      <textarea id="project-description" class="tm-input tm-textarea-enhanced" 
+                                placeholder="Add a brief description of this task..." 
+                                autocomplete="off" rows="4"></textarea>
+                  </div>
+
+                  <div id="pm-msg" class="tm-form-msg"></div>
+              </form>
+              
+              <div class="tm-dialog-ft">
+                  <button type="button" class="btn tm-btn-cancel" id="pm-cancel">Cancel</button>
+                  <button type="submit" class="btn primary tm-btn-submit" id="pm-create">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right:6px">
+                          <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Create Task
+                  </button>
+              </div>
           </div>
       `;
       document.body.appendChild(projectModal);
@@ -902,12 +1102,22 @@
           if (e.target === projectModal) closeProjectModal();
       });
       document.addEventListener('keydown', (e) => {
-          if (projectModal.style.display !== 'none' && e.key === 'Escape') {
+          if (projectModal.classList.contains('show') && e.key === 'Escape') {
               closeProjectModal();
           }
       });
 
-      $('#pm-form', projectModal).addEventListener('submit', onCreateProjectSubmit);
+      $('#pm-form', projectModal).addEventListener('submit', (e) => {
+          console.log('Create Task form submitted');
+          onCreateProjectSubmit(e);
+      });
+      
+      // Also bind click event to the Create Task button as backup
+      $('#pm-create', projectModal).addEventListener('click', (e) => {
+          console.log('Create Task button clicked directly');
+          e.preventDefault();
+          onCreateProjectSubmit(e);
+      });
   }
 
   function openProjectModal() {
@@ -916,15 +1126,15 @@
       projectInput.value = '';
       descriptionInput.value = '';
       setProjectMsg('');
-      projectModal.style.display = 'grid';
+      projectModal.classList.add('show');
       projectModal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
-      setTimeout(() => projectInput.focus(), 0);
+      setTimeout(() => projectInput.focus(), 100);
   }
 
   function closeProjectModal() {
       if (!projectModal) return;
-      projectModal.style.display = 'none';
+      projectModal.classList.remove('show');
       projectModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
       if (lastFocusEl && typeof lastFocusEl.focus === 'function') {
@@ -933,11 +1143,21 @@
   }
 
   async function onCreateProjectSubmit(e) {
+      console.log('onCreateProjectSubmit called');
       e.preventDefault();
       const name = (projectInput.value || '').trim();
       const description = (descriptionInput.value || '').trim();
 
+      console.log('Project name:', name, 'Description:', description);
+
+      if (!name) {
+          console.log('No project name provided');
+          setProjectMsg('Please enter a project name');
+          return;
+      }
+
       try {
+          console.log('Creating project...');
           setProjectMsg('Creating…', true);
           const res = await fetch(API.createProject, {
               method: 'POST',
@@ -947,7 +1167,10 @@
                   description: description
               }),
           });
+          console.log('Response status:', res.status);
           const data = await res.json();
+          console.log('Response data:', data);
+          
           if (!res.ok) throw new Error(data.error || 'Create failed');
 
           setProjectMsg('Created', true);
@@ -957,6 +1180,7 @@
               fetchProjects(); // Refresh project list
           }, 250);
       } catch (err) {
+          console.error('Error creating project:', err);
           setProjectMsg(err.message || 'Create failed');
       }
   }
@@ -964,7 +1188,8 @@
   function setProjectMsg(text, ok) {
       if (!projectMsg) return;
       projectMsg.textContent = text || '';
-      projectMsg.className = 'msg' + (text ? (ok ? ' ok' : ' err') : '');
+      projectMsg.className = 'tm-form-msg' + (text ? (ok ? ' tm-msg-success' : ' tm-msg-error') : '');
+      projectMsg.style.display = text ? 'block' : 'none';
   }
 
   // ---------- toast ----------
@@ -1072,7 +1297,261 @@
   // 将 Add New Assignment 按钮改为打开项目创建弹窗
   const btnAdd = $('#btnAdd');
   if (btnAdd) {
-      btnAdd.addEventListener('click', openProjectModal);
+      console.log('Add New Task button found, binding event listener');
+      btnAdd.addEventListener('click', (e) => {
+          console.log('Add New Task button clicked');
+          e.preventDefault();
+          openProjectModal();
+      });
+  } else {
+      console.error('Add New Task button not found!');
+  }
+
+  // ---------- File Preview Functions ----------
+  
+  // Format file size
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  // Get file icon based on file type
+  function getFileIcon(type) {
+    if (type.startsWith('image/')) return '[IMG]';
+    if (type === 'application/pdf') return '[PDF]';
+    if (type.startsWith('video/')) return '[VIDEO]';
+    if (type.startsWith('audio/')) return '[AUDIO]';
+    if (type.includes('word') || type.includes('document')) return '[DOC]';
+    if (type.includes('sheet') || type.includes('excel') || type.includes('csv')) return '[XLS]';
+    if (type.includes('presentation') || type.includes('powerpoint')) return '[PPT]';
+    if (type.includes('zip') || type.includes('rar') || type.includes('archive')) return '[ZIP]';
+    return '[FILE]';
+  }
+
+  // Preview file in modal
+  function previewFile(file, modalType) {
+    if (!file) return;
+
+    const type = file.type;
+    const name = file.name;
+    const size = formatFileSize(file.size);
+    const url = URL.createObjectURL(file);
+
+    console.log('Previewing file:', { name, type, size });
+
+    // Create preview modal
+    const modal = document.createElement('div');
+    modal.className = 'tm-modal show';
+    modal.id = 'filePreviewModal';
+    
+    // Generate preview content based on file type
+    let previewHTML = '';
+    
+    if (type.startsWith('image/')) {
+      previewHTML = `<img src="${url}" alt="Preview" style="max-width:100%;max-height:400px;border-radius:8px;">`;
+    } else if (type === 'application/pdf') {
+      previewHTML = `<iframe src="${url}" title="PDF Preview" style="width:100%;height:500px;border:none;border-radius:8px;"></iframe>`;
+    } else if (type.startsWith('video/')) {
+      previewHTML = `<video controls src="${url}" style="max-width:100%;max-height:400px;border-radius:8px;"></video>`;
+    } else if (type.startsWith('audio/')) {
+      previewHTML = `
+        <div class="tm-preview-file-info">
+          <div class="tm-preview-file-icon">[AUDIO]</div>
+          <audio controls src="${url}" style="width:100%;max-width:400px;margin:16px 0;"></audio>
+          <div class="tm-preview-file-name">${name}</div>
+          <div class="tm-preview-file-size">${size}</div>
+        </div>
+      `;
+    } else if (name.endsWith('.csv')) {
+      // CSV preview - read and display as table
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        const lines = content.split('\n').slice(0, 100);
+        const rows = lines.map(line => line.split(',').map(cell => cell.trim()));
+        
+        let tableHTML = '<div style="width:100%;max-height:500px;overflow:auto;"><div style="margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;"><strong style="color:var(--text)">CSV Preview</strong><span style="color:var(--muted);margin-left:12px;font-size:12px">' + name + ' (' + size + ')</span></div><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        rows.forEach((row, idx) => {
+          const tag = idx === 0 ? 'th' : 'td';
+          tableHTML += '<tr>';
+          row.forEach(cell => {
+            tableHTML += '<' + tag + ' style="border:1px solid #E6EAF2;padding:8px;text-align:left;background:' + (idx === 0 ? '#f8fafc' : '#fff') + '">' + (cell || '') + '</' + tag + '>';
+          });
+          tableHTML += '</tr>';
+        });
+        tableHTML += '</table>';
+        if (lines.length >= 100) tableHTML += '<p style="margin-top:12px;color:var(--muted);font-size:13px;text-align:center">Showing first 100 rows</p>';
+        tableHTML += '</div>';
+        
+        const previewContent = modal.querySelector('.tm-preview-content');
+        if (previewContent) previewContent.innerHTML = tableHTML;
+      };
+      reader.readAsText(file);
+      previewHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Loading CSV...</div>';
+    } else if (type.includes('sheet') || type.includes('excel') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      // Excel preview using SheetJS library
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const htmlTable = XLSX.utils.sheet_to_html(worksheet);
+          
+          let tableHTML = `
+            <div style="width:100%;max-height:500px;overflow:auto;">
+              <div style="margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+                <div><strong style="color:var(--text);">Sheet: ${firstSheetName}</strong><span style="color:var(--muted);margin-left:12px;font-size:13px;">${workbook.SheetNames.length} sheet(s)</span></div>
+                <span style="color:var(--muted);font-size:12px;">${name} (${size})</span>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:8px;overflow:auto;">${htmlTable}</div>
+            </div>
+          `;
+          
+          const previewContent = modal.querySelector('.tm-preview-content');
+          if (previewContent) {
+            previewContent.innerHTML = tableHTML;
+            const table = previewContent.querySelector('table');
+            if (table) {
+              table.style.cssText = 'width:100%;border-collapse:collapse;fontSize:12px;background:#fff';
+              table.querySelectorAll('td, th').forEach(cell => {
+                cell.style.cssText = 'border:1px solid #E6EAF2;padding:8px;text-align:left';
+              });
+              table.querySelectorAll('th').forEach(th => {
+                th.style.cssText += ';background:#f8fafc;font-weight:600';
+              });
+            }
+          }
+        } catch (error) {
+          const previewContent = modal.querySelector('.tm-preview-content');
+          if (previewContent) {
+            previewContent.innerHTML = `<div class="tm-preview-file-info"><div class="tm-preview-file-icon" style="font-size:48px">[EXCEL]</div><div class="tm-preview-file-name">${name}</div><div class="tm-preview-file-size">${size}</div><p style="margin-top:20px;color:var(--bad)">Failed to preview Excel file</p></div>`;
+          }
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      previewHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Loading Excel preview...</div>';
+    } else if (type.includes('word') || type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) {
+      // Word preview using Mammoth library
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        if (typeof mammoth !== 'undefined') {
+          mammoth.convertToHtml({ arrayBuffer: e.target.result })
+            .then(function(result) {
+              let html = `
+                <div style="width:100%;max-height:500px;overflow:auto;">
+                  <div style="margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+                    <strong style="color:var(--text)">Word Document Preview</strong>
+                    <span style="color:var(--muted);font-size:12px">${name} (${size})</span>
+                  </div>
+                  <div style="background:#fff;padding:24px;border:1px solid var(--border);border-radius:8px;line-height:1.6">${result.value}</div>
+                </div>
+              `;
+              const previewContent = modal.querySelector('.tm-preview-content');
+              if (previewContent) previewContent.innerHTML = html;
+            })
+            .catch(function(error) {
+              const previewContent = modal.querySelector('.tm-preview-content');
+              if (previewContent) {
+                previewContent.innerHTML = `<div class="tm-preview-file-info"><div class="tm-preview-file-icon" style="font-size:48px">[WORD]</div><div class="tm-preview-file-name">${name}</div><div class="tm-preview-file-size">${size}</div><p style="margin-top:20px;color:var(--bad)">Failed to preview Word document</p><p style="color:var(--muted);font-size:13px;margin-top:8px">Only .docx format is supported</p></div>`;
+              }
+            });
+        } else {
+          const previewContent = modal.querySelector('.tm-preview-content');
+          if (previewContent) {
+            previewContent.innerHTML = `<div class="tm-preview-file-info"><div class="tm-preview-file-icon" style="font-size:48px">[WORD]</div><div class="tm-preview-file-name">${name}</div><div class="tm-preview-file-size">${size}</div><p style="margin-top:20px;color:var(--bad)">Preview library not loaded</p></div>`;
+          }
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      previewHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Loading Word preview...</div>';
+    } else if (type.includes('text/') || type.includes('json') || name.endsWith('.txt') || name.endsWith('.json')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        const truncated = content.length > 5000 ? content.substring(0, 5000) + '\n\n... (truncated)' : content;
+        const previewContent = modal.querySelector('.tm-preview-content');
+        if (previewContent) {
+          previewContent.innerHTML = `
+            <div style="width:100%;max-height:400px;overflow:auto;">
+              <pre style="background:#f8fafc;padding:16px;border-radius:8px;font-size:12px;line-height:1.5;margin:0;white-space:pre-wrap;word-wrap:break-word;">${truncated}</pre>
+            </div>
+          `;
+        }
+      };
+      reader.readAsText(file);
+      previewHTML = '<div style="padding:40px;text-align:center;color:var(--muted);">Loading...</div>';
+    } else {
+      previewHTML = `
+        <div class="tm-preview-file-info">
+          <div class="tm-preview-file-icon" style="font-size:48px;margin-bottom:16px;">${getFileIcon(type)}</div>
+          <div class="tm-preview-file-name">${name}</div>
+          <div class="tm-preview-file-size">${size}</div>
+          <div class="tm-preview-file-type">${type || 'Unknown type'}</div>
+          <p style="margin-top:20px;color:var(--muted);font-size:14px;">File ready for upload</p>
+        </div>
+      `;
+    }
+    
+    modal.innerHTML = `
+      <div class="tm-dialog" style="max-width:900px;">
+        <div class="tm-dialog-hd">
+          <h3>File Preview</h3>
+          <button class="btn tm-close-btn" id="previewCloseBtn">Close</button>
+        </div>
+        <div class="tm-dialog-bd">
+          <div class="tm-preview-content" style="min-height:200px;display:flex;justify-content:center;align-items:center;">
+            ${previewHTML}
+          </div>
+        </div>
+        <div class="tm-dialog-ft">
+          <button class="btn" id="previewCancelBtn">Cancel</button>
+          <button class="btn primary" id="confirmUploadBtn">Upload File</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Bind close button events
+    const closeBtn = modal.querySelector('#previewCloseBtn');
+    const cancelBtn = modal.querySelector('#previewCancelBtn');
+    
+    const removeModal = () => {
+      modal.remove();
+      URL.revokeObjectURL(url);
+    };
+    
+    if (closeBtn) {
+      closeBtn.addEventListener('click', removeModal);
+    }
+    
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', removeModal);
+    }
+    
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        removeModal();
+      }
+    });
+    
+    // Close on Escape key
+    const escapeHandler = (e) => {
+      if (e.key === 'Escape') {
+        removeModal();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    };
+    document.addEventListener('keydown', escapeHandler);
+    
+    // Return the modal so we can bind upload button later
+    return modal;
   }
 
   // ---------- Date Processing Functions ----------
@@ -1112,6 +1591,10 @@
     $('#rubricFile').value = '';
     $('#rubricText').textContent = 'Upload rubric...';
     $('#rubricErrLine').style.display = 'none';
+    
+    // Hide preview button
+    const previewBtn = $('#rubricPreview');
+    if (previewBtn) previewBtn.style.display = 'none';
 
     // Show modal
     modal.classList.add('show');
@@ -1124,16 +1607,19 @@
   function bindRubricModalEvents(projectId) {
     const modal = $('#rubricModal');
     const closeBtn = $('#rubricClose');
-    const submitBtn = $('#rubricSubmit');
+    const previewBtn = $('#rubricPreview');
     const fileInput = $('#rubricFile');
     const dropArea = $('#rubricDrop');
     const textDisplay = $('#rubricText');
     const errLine = $('#rubricErrLine');
+    
+    let selectedFile = null;
 
     // Close modal
     const closeModal = () => {
       modal.classList.remove('show');
       document.body.style.overflow = '';
+      selectedFile = null;
     };
 
     closeBtn.addEventListener('click', closeModal);
@@ -1144,8 +1630,11 @@
     // File upload handling
     const handleFileSelect = (file) => {
       if (file) {
+        selectedFile = file;
         textDisplay.textContent = file.name;
         errLine.style.display = 'none';
+        // Show preview button
+        previewBtn.style.display = 'inline-flex';
       }
     };
 
@@ -1172,25 +1661,39 @@
       }
     });
 
-    // Submit
-    submitBtn.addEventListener('click', async () => {
-      const file = fileInput.files[0];
-      if (!file) {
+    // Preview button click
+    previewBtn.addEventListener('click', async () => {
+      if (!selectedFile) {
         errLine.style.display = 'block';
+        errLine.textContent = 'Please select a file first.';
         return;
       }
 
-      try {
+      // Open preview modal
+      const previewModal = previewFile(selectedFile, 'rubric');
+      
+      // Bind upload button in preview modal
+      const uploadBtn = previewModal.querySelector('#confirmUploadBtn');
+      if (uploadBtn) {
+        uploadBtn.addEventListener('click', async () => {
+          try {
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            
+            const draft = await uploadDraftFile(selectedFile, 'rubric');
+            await commitFile(draft.temp_name, 'rubric', null, null, projectId);
 
-        const draft = await uploadDraftFile(file, 'rubric');
-        await commitFile(draft.temp_name, 'rubric', null, null, projectId);
-
-        toast('Rubric uploaded successfully!');
-        closeModal();
-        await fetchProjects(); // Refresh data
-      } catch (error) {
-        console.error('Upload error:', error);
-        toast('Failed to upload rubric. Please try again.');
+            toast('Rubric uploaded successfully!');
+            previewModal.remove();
+            closeModal();
+            await fetchProjects();
+          } catch (error) {
+            console.error('Upload error:', error);
+            toast('Failed to upload rubric. Please try again.');
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload File';
+          }
+        });
       }
     });
   }
@@ -1202,9 +1705,14 @@
 
     // Reset form
     $('#assignment1Due').value = '';
+    $('#assignment1Time').value = '';
     $('#assignment1File').value = '';
     $('#assignment1Text').textContent = 'Upload assignment...';
     $('#assignment1ErrLine').style.display = 'none';
+    
+    // Hide preview button
+    const previewBtn = $('#assignment1Preview');
+    if (previewBtn) previewBtn.style.display = 'none';
 
     // Show modal
     modal.classList.add('show');
@@ -1217,18 +1725,21 @@
   function bindAssignment1ModalEvents(projectId) {
     const modal = $('#assignment1Modal');
     const closeBtn = $('#assignment1Close');
-    const submitBtn = $('#assignment1Submit');
+    const previewBtn = $('#assignment1Preview');
     const dueInput = $('#assignment1Due');
     const timeInput = $('#assignment1Time');
     const fileInput = $('#assignment1File');
     const dropArea = $('#assignment1Drop');
     const textDisplay = $('#assignment1Text');
     const errLine = $('#assignment1ErrLine');
+    
+    let selectedFile = null;
 
     // Close modal
     const closeModal = () => {
       modal.classList.remove('show');
       document.body.style.overflow = '';
+      selectedFile = null;
     };
 
     closeBtn.addEventListener('click', closeModal);
@@ -1239,8 +1750,11 @@
     // File upload handling
     const handleFileSelect = (file) => {
       if (file) {
+        selectedFile = file;
         textDisplay.textContent = file.name;
         errLine.style.display = 'none';
+        // Show preview button
+        previewBtn.style.display = 'inline-flex';
       }
     };
 
@@ -1267,14 +1781,13 @@
       }
     });
 
-    // Submit
-    submitBtn.addEventListener('click', async () => {
+    // Preview button click
+    previewBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
       const time = timeInput.value.trim();
-      const file = fileInput.files[0];
 
       // Form validation
-      if (!due || !file) {
+      if (!due || !selectedFile) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please complete all required fields.';
         return;
@@ -1287,38 +1800,50 @@
         return;
       }
 
-      // 组合日期和时间
-      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`; // 如果没有选择时间，默认为当天23:59:59
+      // Combine date and time
+      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`;
       const selectedDateTime = new Date(dueDateTime);
       const now = new Date();
 
-      // 验证日期时间不能是过去的
+      // Validate date is not in the past
       if (selectedDateTime < now) {
         errLine.style.display = 'block';
         errLine.textContent = 'Due date cannot be in the past.';
         return;
       }
 
-      try {
-        // 组合日期和时间
-        let combinedDateTime;
-        if (time) {
-          // 如果有选择时间，组合日期和时间
-          combinedDateTime = `${due}T${time}:00`;
-        } else {
-          // 如果没有选择时间，设置为当天的23:59:59
-          combinedDateTime = `${due}T23:59:59`;
-        }
+      // Open preview modal
+      const previewModal = previewFile(selectedFile, 'assignment1');
+      
+      // Bind upload button in preview modal
+      const uploadBtn = previewModal.querySelector('#confirmUploadBtn');
+      if (uploadBtn) {
+        uploadBtn.addEventListener('click', async () => {
+          try {
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            
+            let combinedDateTime;
+            if (time) {
+              combinedDateTime = `${due}T${time}:00`;
+            } else {
+              combinedDateTime = `${due}T23:59:59`;
+            }
 
-        const draft = await uploadDraftFile(file, 'assignment1');
-        await commitFile(draft.temp_name, 'assignment', 1, combinedDateTime, projectId);
+            const draft = await uploadDraftFile(selectedFile, 'assignment1');
+            await commitFile(draft.temp_name, 'assignment', 1, combinedDateTime, projectId);
 
-        toast('Assignment 1 uploaded successfully!');
-        closeModal();
-        await fetchProjects(); // Refresh data
-      } catch (error) {
-        console.error('Upload error:', error);
-        toast('Failed to upload assignment. Please try again.');
+            toast('Assignment 1 uploaded successfully!');
+            previewModal.remove();
+            closeModal();
+            await fetchProjects();
+          } catch (error) {
+            console.error('Upload error:', error);
+            toast('Failed to upload assignment. Please try again.');
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload File';
+          }
+        });
       }
     });
   }
@@ -1330,9 +1855,14 @@
 
     // Reset form
     $('#assignment2Due').value = '';
+    $('#assignment2Time').value = '';
     $('#assignment2File').value = '';
     $('#assignment2Text').textContent = 'Upload assignment...';
     $('#assignment2ErrLine').style.display = 'none';
+    
+    // Hide preview button
+    const previewBtn = $('#assignment2Preview');
+    if (previewBtn) previewBtn.style.display = 'none';
 
     // Show modal
     modal.classList.add('show');
@@ -1345,18 +1875,21 @@
   function bindAssignment2ModalEvents(projectId) {
     const modal = $('#assignment2Modal');
     const closeBtn = $('#assignment2Close');
-    const submitBtn = $('#assignment2Submit');
+    const previewBtn = $('#assignment2Preview');
     const dueInput = $('#assignment2Due');
     const timeInput = $('#assignment2Time');
     const fileInput = $('#assignment2File');
     const dropArea = $('#assignment2Drop');
     const textDisplay = $('#assignment2Text');
     const errLine = $('#assignment2ErrLine');
+    
+    let selectedFile = null;
 
     // Close modal
     const closeModal = () => {
       modal.classList.remove('show');
       document.body.style.overflow = '';
+      selectedFile = null;
     };
 
     closeBtn.addEventListener('click', closeModal);
@@ -1367,8 +1900,11 @@
     // File upload handling
     const handleFileSelect = (file) => {
       if (file) {
+        selectedFile = file;
         textDisplay.textContent = file.name;
         errLine.style.display = 'none';
+        // Show preview button
+        previewBtn.style.display = 'inline-flex';
       }
     };
 
@@ -1395,14 +1931,13 @@
       }
     });
 
-    // Submit
-    submitBtn.addEventListener('click', async () => {
+    // Preview button click
+    previewBtn.addEventListener('click', async () => {
       const due = dueInput.value.trim();
       const time = timeInput.value.trim();
-      const file = fileInput.files[0];
 
       // Form validation
-      if (!due || !file) {
+      if (!due || !selectedFile) {
         errLine.style.display = 'block';
         errLine.textContent = 'Please complete all required fields.';
         return;
@@ -1415,38 +1950,50 @@
         return;
       }
 
-      // 组合日期和时间
-      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`; // 如果没有选择时间，默认为当天23:59:59
+      // Combine date and time
+      const dueDateTime = time ? `${due}T${time}:00` : `${due}T23:59:59`;
       const selectedDateTime = new Date(dueDateTime);
       const now = new Date();
 
-      // 验证日期时间不能是过去的
+      // Validate date is not in the past
       if (selectedDateTime < now) {
         errLine.style.display = 'block';
         errLine.textContent = 'Due date cannot be in the past.';
         return;
       }
 
-      try {
-        // 组合日期和时间
-        let combinedDateTime;
-        if (time) {
-          // 如果有选择时间，组合日期和时间
-          combinedDateTime = `${due}T${time}:00`;
-        } else {
-          // 如果没有选择时间，设置为当天的23:59:59
-          combinedDateTime = `${due}T23:59:59`;
-        }
+      // Open preview modal
+      const previewModal = previewFile(selectedFile, 'assignment2');
+      
+      // Bind upload button in preview modal
+      const uploadBtn = previewModal.querySelector('#confirmUploadBtn');
+      if (uploadBtn) {
+        uploadBtn.addEventListener('click', async () => {
+          try {
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            
+            let combinedDateTime;
+            if (time) {
+              combinedDateTime = `${due}T${time}:00`;
+            } else {
+              combinedDateTime = `${due}T23:59:59`;
+            }
 
-        const draft = await uploadDraftFile(file, 'assignment2');
-        await commitFile(draft.temp_name, 'assignment', 2, combinedDateTime, projectId);
+            const draft = await uploadDraftFile(selectedFile, 'assignment2');
+            await commitFile(draft.temp_name, 'assignment', 2, combinedDateTime, projectId);
 
-        toast('Assignment 2 uploaded successfully!');
-        closeModal();
-        await fetchProjects(); // Refresh data
-      } catch (error) {
-        console.error('Upload error:', error);
-        toast('Failed to upload assignment. Please try again.');
+            toast('Assignment 2 uploaded successfully!');
+            previewModal.remove();
+            closeModal();
+            await fetchProjects();
+          } catch (error) {
+            console.error('Upload error:', error);
+            toast('Failed to upload assignment. Please try again.');
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload File';
+          }
+        });
       }
     });
   }

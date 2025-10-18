@@ -13,6 +13,12 @@
   const btnSend   = document.getElementById('btnSend');
   const statusEl  = document.getElementById('status');
   const tbody     = document.getElementById('inviteTbody');
+  
+  // Data overview elements
+  const totalMarkersEl = document.getElementById('totalMarkers');
+  const activeMarkersEl = document.getElementById('activeMarkers');
+  const pendingMarkersEl = document.getElementById('pendingMarkers');
+  const closedMarkersEl = document.getElementById('closedMarkers');
 
   // --- ensure pill styles for new statuses (safe if CSS already defines them) ---
   (function ensurePillStyles(){
@@ -28,6 +34,7 @@
   let history = loadHistory();  // local history
   let suggest = [];             // current suggestions
   let activeIdx = -1;           // dropdown highlight index
+  let currentData = { items: [] }; // current invitation data
 
   // ========= helpers =========
   function isValidEmail(e){
@@ -93,12 +100,45 @@
   inputEl.addEventListener('input', async ()=>{
     const q = inputEl.value.trim().toLowerCase();
     if (!q){ closeSuggest(); return; }
-    let local = history.filter(e=> e.startsWith(q) && !emails.includes(e));
+    
+    // Enhanced email recognition - detect partial emails and suggest completions
+    let local = history.filter(e=> e.toLowerCase().includes(q) && !emails.includes(e));
+    
+    // Auto-complete common email patterns
+    if (q.includes('@')) {
+      // If user typed @, suggest common domains
+      const domain = q.split('@')[1];
+      if (domain && domain.length > 0) {
+        const commonDomains = ['deakin.edu.au', 'gmail.com', 'outlook.com', 'yahoo.com'];
+        const matchingDomains = commonDomains.filter(d => d.startsWith(domain));
+        matchingDomains.forEach(d => {
+          const fullEmail = q.split('@')[0] + '@' + d;
+          if (!local.includes(fullEmail) && !emails.includes(fullEmail)) {
+            local.push(fullEmail);
+          }
+        });
+      }
+    } else if (q.length >= 2) {
+      // Suggest common email prefixes with @deakin.edu.au
+      const commonPrefixes = ['john', 'jane', 'alex', 'sarah', 'mike', 'emma', 'david', 'lisa'];
+      commonPrefixes.forEach(prefix => {
+        if (prefix.startsWith(q)) {
+          const email = prefix + '@deakin.edu.au';
+          if (!local.includes(email) && !emails.includes(email)) {
+            local.push(email);
+          }
+        }
+      });
+    }
+    
     let remote = [];
     try{
-      const res = await fetch(`/api/markers/suggest?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/invitations/suggest?q=${encodeURIComponent(q)}`, {
+        credentials: 'include'
+      });
       if (res.ok){ const data = await res.json(); remote = (data.emails || []).map(String); }
     }catch{}
+    
     const merged = unique([...local, ...remote]).filter(e=> !emails.includes(e));
     showSuggest(merged.slice(0,8));
     bindSuggestClicks();
@@ -119,14 +159,55 @@
     saveHistory();
     setStatus('Sending invites…');
     try{
-      let res = await fetch('/api/invitations/batch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emails }) });
-      if (!res.ok){ // fallback: per-email
-        for (const email of emails){
-          const r = await fetch('/api/invitations', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
-          if (!r.ok) throw new Error('Invite failed for ' + email);
+      let res = await fetch('/api/invitations/batch', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ emails }) 
+      });
+      
+      if (res.ok) {
+        // Handle batch response with detailed results
+        const data = await res.json();
+        if (data.success && data.results) {
+          const invited = data.results.filter(r => r.status === 'invited' || r.status === 'renewed').length;
+          const alreadySent = data.results.filter(r => r.status === 'skipped' && r.reason === 'Active invitation already exists').length;
+          const userExists = data.results.filter(r => r.status === 'skipped' && r.reason === 'User already exists').length;
+          
+          let message = '';
+          if (invited > 0 && alreadySent > 0) {
+            message = `${invited} invites sent, ${alreadySent} already sent.`;
+          } else if (invited > 0) {
+            message = 'Invites sent.';
+          } else if (alreadySent > 0) {
+            message = 'Already sent.';
+          } else if (userExists > 0) {
+            message = 'Users already exist.';
+          } else {
+            message = 'No invites processed.';
+          }
+          
+          setStatus(message, 'ok');
+        } else {
+          setStatus('Invites sent.', 'ok');
         }
+      } else { 
+        // fallback: per-email
+        for (const email of emails){
+          const r = await fetch('/api/invitations', { 
+            method:'POST', 
+            headers:{'Content-Type':'application/json'}, 
+            credentials: 'include',
+            body: JSON.stringify({ email }) 
+          });
+          if (!r.ok) {
+            const data = await r.json().catch(() => ({}));
+            throw new Error(data.message || 'Invite failed for ' + email);
+          }
+        }
+        setStatus('Invites sent.', 'ok');
       }
-      setStatus('Invites sent.', 'ok');
+      
       emails = []; renderChips(); inputEl.value='';
       await refreshTable();
     }catch(err){ setStatus(err.message || 'Failed to send invites', 'err'); }
@@ -137,9 +218,15 @@
   // ========= table =========
   async function refreshTable(){
     try{
-      const res = await fetch('/api/invitations');
+      const res = await fetch('/api/invitations', {
+        credentials: 'include'
+      });
       let data;
-      if (res.ok){ data = await res.json(); }
+      if (res.ok){ 
+        data = await res.json(); 
+        currentData = data; // Store current data for stats
+        updateDataOverview(data.items || []);
+      }
       else{
         // demo data (with new statuses)
         data = { items: [
@@ -148,9 +235,73 @@
           {email:'eric@deakin.edu.au',  status:'expired', sent_at:'Jun 3, 2025'},
           {email:'alex@deakin.edu.au',  status:'close',   sent_at:'Jun 4, 2025'},
         ]};
+        currentData = data;
+        updateDataOverview(data.items || []);
       }
       renderTable(data.items || []);
-    }catch{ renderTable([]); }
+    }catch{ 
+      renderTable([]); 
+      updateDataOverview([]);
+    }
+  }
+
+  // Update data overview statistics
+  function updateDataOverview(items) {
+    const stats = {
+      total: 0, // Total registered markers (only active ones)
+      active: 0,
+      pending: 0,
+      closed: 0
+    };
+
+    items.forEach(item => {
+      const status = (item.status || '').toLowerCase();
+      switch(status) {
+        case 'active':
+        case 'accepted':
+          stats.active++;
+          stats.total++; // Only count active markers as total
+          break;
+        case 'pending':
+          stats.pending++;
+          break;
+        case 'close':
+        case 'closed':
+          stats.closed++;
+          break;
+      }
+    });
+
+    // Update DOM elements
+    if (totalMarkersEl) totalMarkersEl.textContent = stats.total;
+    if (activeMarkersEl) activeMarkersEl.textContent = stats.active;
+    if (pendingMarkersEl) pendingMarkersEl.textContent = stats.pending;
+    if (closedMarkersEl) closedMarkersEl.textContent = stats.closed;
+    
+    // Fetch total markers from coordinator dashboard API to get accurate count
+    fetchTotalMarkersFromDashboard();
+  }
+
+  // Fetch total markers count from coordinator dashboard API
+  async function fetchTotalMarkersFromDashboard() {
+    try {
+      const response = await fetch('/dashboard/api/coordinator/data', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.kpi && data.kpi.totalMarkers !== undefined) {
+          // Update total markers with accurate count from database
+          if (totalMarkersEl) {
+            totalMarkersEl.textContent = data.kpi.totalMarkers;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch total markers from dashboard:', error);
+      // Keep the current count if API call fails
+    }
   }
 
   function renderTable(items){
@@ -171,21 +322,26 @@
       const tdDate  = document.createElement('td');  tdDate.textContent = item.sent_at || '—';
 
       const tdAct   = document.createElement('td');
+      // Create action buttons container
+      const actionContainer = document.createElement('div');
+      actionContainer.className = 'action-buttons';
+      
       // Actions by status
       if(s === 'pending'){
-        tdAct.appendChild(actionLink('Resend', ()=>resend(item.email)));
-        tdAct.appendChild(spacer());
-        tdAct.appendChild(actionLink('Revoke', ()=>revoke(item.email)));
+        actionContainer.appendChild(actionButton('Resend', 'resend', ()=>resend(item.email)));
+        actionContainer.appendChild(actionButton('Revoke', 'revoke', ()=>revoke(item.email)));
       } else if(s === 'active' || s === 'accepted'){ // accepted → active
-        tdAct.appendChild(actionLink('Close', ()=>closeInvite(item.email)));
+        actionContainer.appendChild(actionButton('Close', 'close', ()=>closeInvite(item.email)));
       } else if(s === 'expired'){
         // Expired supports Resend
-        tdAct.appendChild(actionLink('Resend', ()=>resend(item.email)));
+        actionContainer.appendChild(actionButton('Resend', 'resend', ()=>resend(item.email)));
       } else if(s === 'close' || s === 'closed'){
-        tdAct.appendChild(actionLink('Reopen', ()=>reopenInvite(item.email)));
+        actionContainer.appendChild(actionButton('Reopen', 'reopen', ()=>reopenInvite(item.email)));
       } else {
-        tdAct.appendChild(document.createTextNode('—'));
+        actionContainer.appendChild(document.createTextNode('—'));
       }
+      
+      tdAct.appendChild(actionContainer);
 
       tr.append(tdEmail, tdStatus, tdDate, tdAct);
       tbody.appendChild(tr);
@@ -206,60 +362,154 @@
 
   function actionLink(text, handler){ const a=document.createElement('a'); a.href='#'; a.textContent=text; a.addEventListener('click', e=>{ e.preventDefault(); handler(); }); return a; }
   function spacer(){ return document.createTextNode('  '); }
+  
+  // New styled action button function
+  function actionButton(text, type, handler) {
+    const button = document.createElement('button');
+    button.className = `action-btn ${type}`;
+    button.textContent = text;
+    button.addEventListener('click', e => {
+      e.preventDefault();
+      handler();
+    });
+    return button;
+  }
 
   async function resend(email){
-    try{ const r = await fetch('/api/invitations/resend', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Resent to ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to resend to ' + email, 'err'); }
+    try{ 
+      const r = await fetch('/api/invitations/resend', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to resend');
+      }
+      setStatus('Resent to ' + email, 'ok'); 
+      await refreshTable(); 
+    }
+    catch(err){ setStatus(err.message || 'Failed to resend to ' + email, 'err'); }
   }
   async function revoke(email){
-    try{ const r = await fetch('/api/invitations/revoke', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Revoked ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to revoke ' + email, 'err'); }
+    try{ 
+      const r = await fetch('/api/invitations/revoke', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to revoke');
+      }
+      setStatus('Revoked ' + email, 'ok'); 
+      await refreshTable(); 
+    }
+    catch(err){ setStatus(err.message || 'Failed to revoke ' + email, 'err'); }
   }
   async function closeInvite(email){
-    try{ const r = await fetch('/api/invitations/close', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Closed ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to close ' + email, 'err'); }
+    try{ 
+      const r = await fetch('/api/invitations/close', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to close');
+      }
+      setStatus('Closed ' + email, 'ok'); 
+      await refreshTable(); 
+    }
+    catch(err){ setStatus(err.message || 'Failed to close ' + email, 'err'); }
   }
   async function reopenInvite(email){
-    try{ const r = await fetch('/api/invitations/reopen', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); if (!r.ok) throw new Error('Failed'); setStatus('Reopened ' + email, 'ok'); await refreshTable(); }
-    catch{ setStatus('Failed to reopen ' + email, 'err'); }
-  }
-
-  // init
-    try {
-      const rawUser = localStorage.getItem("user");
-      if (rawUser) {
-        const user = JSON.parse(rawUser);
-        if (user && user.name) {
-          document.getElementById("username").textContent = user.name;
-        }
+    try{ 
+      const r = await fetch('/api/invitations/reopen', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to reopen');
       }
-    } catch (err) {
-      console.error("Failed to load username:", err);
+      setStatus('Reopened ' + email, 'ok'); 
+      await refreshTable(); 
     }
-  renderChips();
-  refreshTable();
-
-  // 初始化dropdown和logout功能
-  const accountEl = document.querySelector('.account');
-  const dropdown = document.querySelector('.dropdown-menu');
-  const logoutBtn = document.querySelector('.dropdown-item');
-
-  if (accountEl && dropdown) {
-    accountEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle('show');
-    });
-
-    // 点击其他地方关闭下拉菜单
-    document.addEventListener('click', () => {
-      dropdown.classList.remove('show');
-    });
+    catch(err){ setStatus(err.message || 'Failed to reopen ' + email, 'err'); }
   }
 
-  // 登出功能
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
+  // ========= initialization =========
+  function initCommonNav() {
+    // Get user info from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const usernameEl = document.getElementById('username');
+        if (usernameEl && user.name) {
+          usernameEl.textContent = user.name || user.email || 'User';
+        }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+  }
+
+  function initDropdownAndLogout() {
+    const accountEl = document.querySelector('.account');
+    const dropdown = document.querySelector('.dropdown-menu');
+    const logoutBtn = document.querySelector('.dropdown-item');
+
+    if (accountEl && dropdown) {
+      accountEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+
+      // 点击其他地方关闭下拉菜单
+      document.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+      });
+    }
+
+    // 登出功能
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/login';
+          } else {
+            alert("Logout failed: " + data.message);
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        }
+      });
+    }
+
+    // 全局logout函数
+    window.logout = async function() {
       try {
         const response = await fetch('/api/auth/logout', {
           method: 'POST',
@@ -283,33 +533,14 @@
         document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         window.location.href = '/login';
       }
-    });
+    };
   }
 
-  // 全局logout函数
-  window.logout = async function() {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        window.location.href = '/login';
-      } else {
-        alert("Logout failed: " + data.message);
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      localStorage.removeItem('user');
-      localStorage.removeItem('userRole');
-      document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      window.location.href = '/login';
-    }
-  };
+  // Initialize everything when DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    initCommonNav();
+    initDropdownAndLogout();
+    renderChips();
+    refreshTable();
+  });
 })();

@@ -25,4 +25,8 @@ router.get('/marker/past-task', authenticate, dashboardController.getMarkerPastT
 // Universal dashboard entry, automatically redirect based on user role
 router.get('/', authenticate, dashboardController.redirectToRoleDashboard);
 
+// API endpoints for dashboard data
+router.get('/api/coordinator/data', authenticate, dashboardController.getCoordinatorDashboardData);
+router.get('/api/marker/data', authenticate, dashboardController.getMarkerDashboardData);
+
 module.exports = router;
