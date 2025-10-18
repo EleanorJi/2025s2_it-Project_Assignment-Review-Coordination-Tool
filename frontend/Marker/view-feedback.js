@@ -1,4 +1,10 @@
 // view-feedback.js — 显示Marker的分数对比和反馈
+
+/* ===== 全局变量 ===== */
+let currentProjectId = null; // 保存当前项目ID
+let currentAssignmentInfo = null; // 保存当前assignment信息
+let currentRubricData = null; // 保存当前rubric的详细数据
+
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('backBtn')?.addEventListener('click', () => history.back());
     init();
@@ -94,6 +100,11 @@ async function fetchRubricDetails(rubricId) {
     const res = await fetch(`/api/uploads/rubric/${rubricId}/details`);
     if (!res.ok) throw new Error('Failed to fetch rubric details');
     const data = await res.json();
+    
+    // 保存完整的rubric数据
+    currentRubricData = data;
+    console.log("✅ Full rubric data loaded:", currentRubricData);
+    
     return data.criteria || [];
 }
 
@@ -110,6 +121,20 @@ async function fetchProjectData(projectId) {
     const res = await fetch(`/api/uploads/project/${projectId}/status`);
     if (!res.ok) throw new Error('Failed to fetch project data');
     const data = await res.json();
+    
+    // 保存项目ID和assignment信息
+    currentProjectId = projectId;
+    if (data?.assignments && data.assignments.length > 0) {
+        const assignmentId = getQueryParams().assignmentId;
+        if (assignmentId) {
+            const assignment = data.assignments.find(a => a.assignment_id == assignmentId);
+            if (assignment?.file) {
+                currentAssignmentInfo = assignment.file;
+                console.log("✅ Assignment file info loaded:", currentAssignmentInfo);
+            }
+        }
+    }
+    
     return data;
 }
 
@@ -488,4 +513,143 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = '/login';
     }
   };
+});
+
+/* ===== Excel生成和下载功能 ===== */
+function generateExcelFromRubric(rubricData) {
+  // 创建新的工作簿
+  const wb = XLSX.utils.book_new();
+  
+  // 准备数据
+  const worksheetData = [];
+  
+  // 添加标题行 - Max Score列移到最后
+  const headers = ['Criterion', 'Description'];
+  
+  // 获取所有grade levels
+  const allGradeLevels = [];
+  rubricData.criteria.forEach(criterion => {
+    criterion.grade_levels.forEach(level => {
+      if (!allGradeLevels.find(gl => gl.level_name === level.level_name)) {
+        allGradeLevels.push({
+          level_name: level.level_name,
+          min_score: level.min_score,
+          max_score: level.max_score,
+          seq_no: level.seq_no
+        });
+      }
+    });
+  });
+  
+  // 按seq_no排序
+  allGradeLevels.sort((a, b) => a.seq_no - b.seq_no);
+  
+  // 添加grade level列标题
+  allGradeLevels.forEach(level => {
+    headers.push(`${level.level_name} (${level.min_score}-${level.max_score})`);
+  });
+  
+  // 添加Criteria Score列标题（在最后）
+  headers.push('Criteria Score');
+  
+  worksheetData.push(headers);
+  
+  // 添加每个criterion的数据
+  rubricData.criteria.forEach(criterion => {
+    const row = [
+      criterion.title,
+      criterion.description || ''
+    ];
+    
+    // 为每个grade level添加描述
+    allGradeLevels.forEach(level => {
+      const gradeLevel = criterion.grade_levels.find(gl => gl.level_name === level.level_name);
+      row.push(gradeLevel ? gradeLevel.description : '');
+    });
+    
+    // 添加Criteria Score（在最后，添加"/"前缀）
+    row.push(`/${criterion.max_score}`);
+    
+    worksheetData.push(row);
+  });
+  
+  // 创建工作表
+  const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+  
+  // 设置列宽
+  const colWidths = [
+    { wch: 20 }, // Criterion
+    { wch: 30 }, // Description
+  ];
+  
+  // 为grade level列设置宽度
+  allGradeLevels.forEach(() => {
+    colWidths.push({ wch: 25 });
+  });
+  
+  // 为Criteria Score列设置宽度
+  colWidths.push({ wch: 15 }); // Criteria Score
+  
+  ws['!cols'] = colWidths;
+  
+  // 添加工作表到工作簿
+  XLSX.utils.book_append_sheet(wb, ws, 'Rubric');
+  
+  // 生成Excel文件
+  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  
+  return excelBuffer;
+}
+
+/* ===== 下载Excel文件 ===== */
+function downloadExcelFile(excelBuffer, filename) {
+  const blob = new Blob([excelBuffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+/* ===== 下载功能事件处理器 ===== */
+document.addEventListener('DOMContentLoaded', () => {
+  // Download Rubric按钮
+  document.getElementById('downloadRubric')?.addEventListener('click', () => {
+    if (!currentRubricData) {
+      alert('Rubric data not found. Please ensure the rubric has been uploaded and processed.');
+      return;
+    }
+    
+    try {
+      // 生成Excel文件
+      const excelBuffer = generateExcelFromRubric(currentRubricData);
+      
+      // 生成文件名
+      const filename = `rubric_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      
+      // 下载Excel文件
+      downloadExcelFile(excelBuffer, filename);
+      
+      console.log("✅ Rubric Excel file generated and downloaded");
+    } catch (error) {
+      console.error("❌ Failed to generate rubric Excel:", error);
+      alert('Failed to generate rubric Excel file. Please try again.');
+    }
+  });
+
+  // Download Assignment按钮
+  document.getElementById('downloadAssignment')?.addEventListener('click', () => {
+    if (!currentAssignmentInfo) {
+      alert('Assignment file not found. Please ensure the assignment has been uploaded.');
+      return;
+    }
+    
+    // 创建下载链接
+    const link = document.createElement('a');
+    link.href = currentAssignmentInfo.download_url;
+    link.download = currentAssignmentInfo.file_name;
+    link.click();
+  });
 });

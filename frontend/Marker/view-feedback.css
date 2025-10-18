@@ -89,6 +89,35 @@
     background: #1a202c;
   }
 
+  /* Button group styles */
+  .button-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .btn:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+  }
+
+  .btn:active {
+    transform: translateY(1px);
+  }
+
   .main-content {
     padding: 18px;
   }
