@@ -341,6 +341,14 @@
     title.className = 'tm-task-title';
     title.textContent = task.title;
 
+    // Add description if it exists
+    if (task.description && task.description.trim()) {
+      const description = document.createElement('div');
+      description.className = 'tm-task-description';
+      description.textContent = task.description;
+      title.appendChild(description);
+    }
+
     const status = document.createElement('span');
     status.className = `tm-task-status ${task.status}`;
     status.textContent = (task.status === 'draft')? 'Draft' : (task.status === 'active' ? 'Active' : (task.status === 'completed' ? 'Completed' : 'Archived'));

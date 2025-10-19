@@ -312,6 +312,18 @@ body {
 .tm-task-title {
     font-weight:800; color:var(--text); font-size:18px;
     letter-spacing:-0.3px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.tm-task-description {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 4px;
+    line-height: 1.4;
+    max-width: 400px;
 }
 .tm-task-status {
     margin-left:8px;
