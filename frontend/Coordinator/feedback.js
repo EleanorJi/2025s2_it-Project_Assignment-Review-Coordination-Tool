@@ -712,7 +712,11 @@ markerSelect.addEventListener('change', e=>{
     document.getElementById('diffSection').classList.remove('hidden');
     document.getElementById('allDiffSection').classList.add('hidden');
     document.getElementById('allFeedback').classList.add('hidden');
-    document.getElementById('fbTitle').textContent = `Feedback for Marker ${currentMarkerId}`;
+    
+    // 获取marker的实际姓名
+    const selectedMarker = markersInfo.find(m => m.id == currentMarkerId);
+    const markerName = selectedMarker ? selectedMarker.name : `Marker ${currentMarkerId}`;
+    document.getElementById('fbTitle').textContent = `Feedback for ${markerName}`;
   } else {
     console.log('📋 Showing all markers view');
     document.getElementById('feedback').classList.add('hidden');
@@ -743,6 +747,10 @@ fbSend.addEventListener('click', async () => {
       throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
     }
 
+    // 获取marker的实际姓名
+    const selectedMarker = markersInfo.find(m => m.id == currentMarkerId);
+    const markerName = selectedMarker ? selectedMarker.name : `Marker ${currentMarkerId}`;
+    
     // 发送feedback到后端API
     const response = await fetch('/api/feedback', {
       method: 'POST',
@@ -753,7 +761,7 @@ fbSend.addEventListener('click', async () => {
         assignment_id: assignmentId,
         marker_id: currentMarkerId,
         content: content,
-        title: `Feedback for Marker ${currentMarkerId}`,
+        title: `Feedback for ${markerName}`,
         created_by: getCurrentUserId() // 假设你有这个函数获取当前用户ID
       })
     });
@@ -801,6 +809,10 @@ allFbSend.addEventListener('click', async () => {
       throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
     }
 
+    // 获取marker的实际姓名
+    const selectedMarker = markersInfo.find(m => m.id == markerId);
+    const markerName = selectedMarker ? selectedMarker.name : `Marker ${markerId}`;
+
     // 发送feedback到后端API
     const response = await fetch('/api/feedback', {
       method: 'POST',
@@ -811,7 +823,7 @@ allFbSend.addEventListener('click', async () => {
         assignment_id: assignmentId,
         marker_id: markerId,
         content: content,
-        title: `Feedback for Marker ${markerId}`,
+        title: `Feedback for ${markerName}`,
         created_by: getCurrentUserId()
       })
     });
