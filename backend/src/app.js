@@ -9,19 +9,22 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const { startDeadlineNotifier } = require('./jobs/deadlineNotifier');
 
 app.use(express.json());
 app.use(cookieParser());
 
-// 静态文件服务
-app.use(express.static(path.join(__dirname, '../../frontend'))); // 前端静态文件
+// Static file service
+app.use(express.static(path.join(__dirname, '../../frontend'))); // Frontend static files
+// Serve frontend static files新增
+
 app.use('/static', express.static(path.join(__dirname, '../../uploads')));
 
-// 路由
+// Routes
 app.use('/api', apiRoutes);
 app.use('/', pageRoutes);
 
-// 健康检查端点
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -30,13 +33,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 错误处理中间件
+// Error handling middleware
 app.use(errorHandler);
 
 
-// 在 app.js 中添加测试路由
+// Add test route in app.js
 app.get('/test-cookie', (req, res) => {
-  console.log('收到的Cookies:', req.cookies);
+  console.log('Received Cookies:', req.cookies);
   res.json({ cookies: req.cookies });
 });
 
@@ -49,7 +52,9 @@ app.listen(port, () => {
   console.log('   GET  /api/invitations/verify  - Verify invitation token');
   console.log('   POST /api/invitations/complete-signup - Complete registration');
   console.log('   GET  /api/health              - Health check');
-  console.log('\n🔒 认证方式: 在请求头中添加 x-user-id: <用户ID>');
-});
+  console.log('\n🔒 Authentication: Using cookies for user authentication');});
+
+// Start background jobs
+startDeadlineNotifier();
 
 module.exports = app;

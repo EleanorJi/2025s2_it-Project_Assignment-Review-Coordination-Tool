@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Coordinator Dashboard – Deakin Moderation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/Coordinator/coordinator-dashboard.css" />
 </head>
 <body>
@@ -11,10 +14,10 @@
     <div class="brand">
       <div class="brand-title">HPS302 Assignment Moderation Tool</div>
     </div>
-    <div class="account">
-      <span id="username" class="username-clickable"></span><span class="caret">▾</span>
-      <div class="dropdown-menu" id="userDropdown">
-        <a href="#" id="logoutBtn">Logout</a>
+    <div class="account dropdown">
+      <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
+      <div class="dropdown-menu">
+        <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
       </div>
     </div>
   </header>
@@ -36,48 +39,102 @@
       <section class="panel" aria-labelledby="title-overview">
         <h1 id="title-overview">Overview</h1>
 
-        <!-- Function Overview -->
-        <div class="function-overview">
-          <h2>Function Overview</h2>
-          <div class="function-cards">
-            <div class="function-card" data-page="invite">
-              <div class="function-icon">👥</div>
-              <div class="function-content">
-                <div class="function-title">Markers Management</div>
-                <div class="function-desc">Invite and manage markers for assignments</div>
-                <div class="function-stats">10 Active Markers</div>
-              </div>
-              <div class="function-arrow">→</div>
+        <!-- KPI Cards -->
+        <div class="kpi-row">
+          <div class="kpi card">
+            <div class="muted">Active Projects</div>
+            <div class="kpi-num" id="active-projects-count">-</div>
+            <div class="kpi-hint">Currently running</div>
+          </div>
+          <div class="kpi card">
+            <div class="muted">Total Markers</div>
+            <div class="kpi-num" id="total-markers-count">-</div>
+            <div class="kpi-hint">Registered markers</div>
+          </div>
+          <div class="kpi card">
+            <div class="muted">Pending Invitations</div>
+            <div class="kpi-num" id="pending-invitations-count">-</div>
+            <div class="kpi-hint">Awaiting response</div>
+          </div>
+          <div class="kpi card">
+            <div class="muted">Completed Assignments</div>
+            <div class="kpi-num" id="completed-assignments-count">-</div>
+            <div class="kpi-hint">Finished marking</div>
+          </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="dashboard-grid">
+          <!-- Recent Assignments -->
+          <div class="panel inner">
+            <div class="section-header">
+              <div class="group-title">Recent Assignments</div>
+              <a href="/dashboard/coordinator/taskManagement" class="view-all-link">View All</a>
             </div>
-            
-            <div class="function-card" data-page="taskManagement">
-              <div class="function-icon">📋</div>
-              <div class="function-content">
-                <div class="function-title">Task Management</div>
-                <div class="function-desc">Create and manage assignment tasks</div>
-                <div class="function-stats">2 Active Assignments</div>
-              </div>
-              <div class="function-arrow">→</div>
+            <div id="recent-assignments-list" class="assignment-list">
+              <div class="loading-state">Loading assignments...</div>
             </div>
-            
-            <div class="function-card" data-page="past">
-              <div class="function-icon">📚</div>
-              <div class="function-content">
-                <div class="function-title">Past Tasks</div>
-                <div class="function-desc">View and manage completed assignments</div>
-                <div class="function-stats">5 Archived Tasks</div>
-              </div>
-              <div class="function-arrow">→</div>
+          </div>
+
+          <!-- Monitoring & Feedback -->
+          <div class="panel inner">
+            <div class="section-header">
+              <div class="group-title">Monitoring & Feedback</div>
+              <a href="/dashboard/coordinator/feedback" class="view-all-link">View All</a>
             </div>
-            
-            <div class="function-card" data-page="feedback">
-              <div class="function-icon">💬</div>
-              <div class="function-content">
-                <div class="function-title">Feedback</div>
-                <div class="function-desc">Monitor marker feedback and quality</div>
-                <div class="function-stats">3 Outliers Detected</div>
+            <div id="outliers-list" class="outliers-list">
+              <div class="loading-state">Loading data...</div>
+            </div>
+          </div>
+
+          <!-- Marker Management -->
+          <div class="panel inner">
+            <div class="section-header">
+              <div class="group-title">Marker Management</div>
+              <a href="/dashboard/coordinator/invite" class="view-all-link">Manage</a>
+            </div>
+            <div class="marker-stats">
+              <div class="stat-item">
+                <div class="stat-label">Pending Invitations</div>
+                <div class="stat-value" id="pending-invitations-stat">-</div>
               </div>
-              <div class="function-arrow">→</div>
+              <div class="stat-item">
+                <div class="stat-label">Active Markers</div>
+                <div class="stat-value" id="active-markers-stat">-</div>
+              </div>
+            </div>
+            <div class="quick-actions">
+              <button class="btn primary" onclick="window.location.href='/dashboard/coordinator/invite'">Send Invitations</button>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="panel inner">
+            <div class="group-title">Quick Actions</div>
+            <div class="quick-actions-grid">
+              <a href="/dashboard/coordinator/taskManagement" class="action-card">
+                <div class="action-title">Task Management</div>
+                <div class="action-desc">Manage assignments</div>
+              </a>
+              <a href="/dashboard/coordinator/invite" class="action-card">
+                <div class="action-title">Invite Markers</div>
+                <div class="action-desc">Send invitations</div>
+              </a>
+              <a href="/dashboard/coordinator/feedback" class="action-card">
+                <div class="action-title">View Analytics</div>
+                <div class="action-desc">Check feedback</div>
+              </a>
+              <a href="/dashboard/coordinator/past" class="action-card">
+                <div class="action-title">Past Tasks</div>
+                <div class="action-desc">View archive</div>
+              </a>
             </div>
           </div>
         </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/Coordinator/coordinator.js"></script>
+</body>
+</html>

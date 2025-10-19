@@ -1,10 +1,10 @@
 const { Pool } = require('pg');
 
-//console.log('database.js 加载时 DB_USER:', process.env.DB_USER ? '存在' : '不存在');
-//console.log('database.js 加载时 DB_HOST:', process.env.DB_HOST ? '存在' : '不存在');
-//console.log('database.js 加载时 DB_NAME:', process.env.DB_NAME ? '存在' : '不存在');
-//console.log('database.js 加载时 DB_PASSWORD:', process.env.DB_PASSWORD ? '存在' : '不存在');
-//console.log('database.js 加载时 DB_PORT:', process.env.DB_PORT ? '存在' : '不存在');
+//console.log('database.js loading DB_USER:', process.env.DB_USER ? 'exists' : 'not found');
+//console.log('database.js loading DB_HOST:', process.env.DB_HOST ? 'exists' : 'not found');
+//console.log('database.js loading DB_NAME:', process.env.DB_NAME ? 'exists' : 'not found');
+//console.log('database.js loading DB_PASSWORD:', process.env.DB_PASSWORD ? 'exists' : 'not found');
+//console.log('database.js loading DB_PORT:', process.env.DB_PORT ? 'exists' : 'not found');
 
 const pool = new Pool({
   user: process.env.DB_USER,

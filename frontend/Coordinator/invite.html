@@ -40,7 +40,7 @@
         <h1 id="title-invite">Invite Markers</h1>
 
         <div class="card group">
-          <div class="sub-title">Marker emails</div>
+          <div class="sub-title">Input Marker emails</div>
 
           <!-- Chips Input -->
           <div id="chips" class="chips" aria-label="Add marker emails">
@@ -52,15 +52,25 @@
             <div id="suggest" class="suggest hidden" role="listbox" aria-label="Suggestions"></div>
           </div>
 
-          <!-- Assignment / Expiry -->
-          <div class="filters">
-            <div class="field">
-              <label class="label">Assignment</label>
-              <input id="assignmentSel" class="input" value="Assignment 1 · Round 2 ▾" />
-            </div>
-            <div class="field">
-              <label class="label">Expiry</label>
-              <input id="expirySel" class="input" value="7 days ▾" />
+          <!-- Data Overview -->
+          <div class="data-overview">
+            <div class="overview-stats">
+              <div class="stat-card">
+                <div class="stat-number" id="totalMarkers">0</div>
+                <div class="stat-label">Total Markers</div>
+              </div>
+              <div class="stat-card active-highlight">
+                <div class="stat-number" id="activeMarkers">0</div>
+                <div class="stat-label">Active Markers</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="pendingMarkers">0</div>
+                <div class="stat-label">Pending</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="closedMarkers">0</div>
+                <div class="stat-label">Closed</div>
+              </div>
             </div>
             <div class="action-row">
               <button id="btnClear" class="btn">Clear</button>

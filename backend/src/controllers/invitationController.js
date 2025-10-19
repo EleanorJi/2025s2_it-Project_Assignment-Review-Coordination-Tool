@@ -3,7 +3,7 @@ const db = require('../config/database');
 const { INVITATION_EXPIRY_HOURS } = require('../config/constants');
 const EmailService = require('../services/emailService');
 
-// 邀请一位评分员
+// Invite a marker
 exports.inviteMarker = async (req, res) => {
   const { email } = req.body;
   const createdBy = req.user.id;
@@ -18,7 +18,7 @@ exports.inviteMarker = async (req, res) => {
   try {
     const existingUser = await db.query('SELECT * FROM app_user WHERE email = $1', [email]);
 
-    // 检查是否存在未过期的邀请
+    // Check if there's an unexpired invitation
     const existingActiveInvite = await db.query(
       'SELECT * FROM invitations WHERE email = $1 AND used_at IS NULL AND expires_at > NOW()',
       [email]
@@ -38,7 +38,7 @@ exports.inviteMarker = async (req, res) => {
       });
     }
 
-    // 检查是否存在已过期的邀请
+    // Check if there's an expired invitation
     const expiredInvite = await db.query(
       'SELECT * FROM invitations WHERE email = $1 AND used_at IS NULL AND expires_at <= NOW()',
       [email]
@@ -48,7 +48,7 @@ exports.inviteMarker = async (req, res) => {
     let isRenewed = false;
 
     if (expiredInvite.rows.length > 0) {
-      // 更新已过期的邀请
+      // Update expired invitation
       token = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -60,7 +60,7 @@ exports.inviteMarker = async (req, res) => {
       console.log(`Coordinator ${req.user.name} renewed invitation for ${email}. New token: ${token}`);
       isRenewed = true;
     } else {
-      // 创建全新的邀请
+      // Create brand new invitation
       token = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -72,24 +72,24 @@ exports.inviteMarker = async (req, res) => {
       console.log(`Coordinator ${req.user.name} invited ${email}. Token: ${token}`);
     }
 
-    // 发送邀请邮件
+    // Send invitation email
     try {
       await EmailService.sendInvitationEmail(email, token, req.user.name);
-      console.log(`邀请邮件已成功发送至: ${email}`);
+      console.log(`Invitation email sent successfully to: ${email}`);
 
       res.json({
         success: true,
         message: isRenewed ? 'Invitation renewed and sent successfully' : 'Invitation sent successfully'
       });
     } catch (emailError) {
-      console.error('发送邮件失败，但邀请已创建:', emailError);
-      // 即使邮件发送失败，也返回成功，但提示用户可能需要手动发送链接
+      console.error('Email sending failed, but invitation created:', emailError);
+      // Even if email sending fails, return success but prompt user may need to manually send link
       return res.json({
         success: true,
         message: isRenewed ?
           'Invitation renewed but email sending failed. Please manually send the registration link.' :
           'Invitation created but email sending failed. Please manually send the registration link.',
-        token: token // 返回token以便手动发送
+        token: token // Return token for manual sending
       });
     }
 
@@ -102,7 +102,7 @@ exports.inviteMarker = async (req, res) => {
   }
 };
 
-// 验证 token
+// Verify token
 exports.verifyInvite = async (req, res) => {
   const { token } = req.query;
 
@@ -180,7 +180,7 @@ exports.completeSignup = async (req, res) => {
       `INSERT INTO app_user (email, name, password_hash, role, is_active)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING user_id as id, email, name, role`,
-      [invitation.email, name, password, 'MARKER', true] // TODO: 密码应该加密
+      [invitation.email, name, password, 'MARKER', true] // TODO: Password should be encrypted
     );
 
     await db.query(
@@ -202,7 +202,7 @@ exports.completeSignup = async (req, res) => {
   }
 };
 
-// 批量邀请
+// Batch invitation
 exports.inviteMarkersBatch = async (req, res) => {
   const { emails } = req.body;
   const createdBy = req.user.id;
@@ -215,27 +215,27 @@ exports.inviteMarkersBatch = async (req, res) => {
     const results = [];
 
     for (const email of emails) {
-      // 跳过空值
+      // Skip empty values
       if (!email) {
         results.push({ email, status: 'skipped', reason: 'Empty email' });
         continue;
       }
 
-      // 检查是否已有用户
+      // Check if user already exists
       const existingUser = await db.query('SELECT 1 FROM app_user WHERE email = $1', [email]);
       if (existingUser.rows.length > 0) {
         results.push({ email, status: 'skipped', reason: 'User already exists' });
         continue;
       }
 
-      // 检查是否存在未过期的邀请
+      // Check if unexpired invitation exists
       const existingInvite = await db.query(
         'SELECT token, expires_at FROM invitations WHERE email = $1 AND used_at IS NULL AND expires_at > NOW()',
         [email]
       );
 
       if (existingInvite.rows.length > 0) {
-        // 存在未过期的邀请，不需要重新生成token或发送邮件
+        // Unexpired invitation exists, no need to regenerate token or send email
         results.push({
           email,
           status: 'skipped',
@@ -246,7 +246,7 @@ exports.inviteMarkersBatch = async (req, res) => {
         continue;
       }
 
-      // 检查是否存在已过期的邀请
+      // Check if expired invitation exists
       const expiredInvite = await db.query(
         'SELECT id FROM invitations WHERE email = $1 AND used_at IS NULL AND expires_at <= NOW()',
         [email]
@@ -254,7 +254,7 @@ exports.inviteMarkersBatch = async (req, res) => {
 
       let token;
       if (expiredInvite.rows.length > 0) {
-        // 更新已过期的邀请：生成新token和过期时间
+        // Update expired invitation: generate new token and expiry time
         token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -265,7 +265,7 @@ exports.inviteMarkersBatch = async (req, res) => {
 
         console.log(`Updated expired invitation for ${email}. New token: ${token}`);
       } else {
-        // 创建全新的邀请
+        // Create brand new invitation
         token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -277,22 +277,22 @@ exports.inviteMarkersBatch = async (req, res) => {
         console.log(`Created new invitation for ${email}. Token: ${token}`);
       }
 
-      // 发送邀请邮件
+      // Send invitation email
       try {
         await EmailService.sendInvitationEmail(email, token, req.user.name);
-        console.log(`邀请邮件已成功发送至: ${email}`);
+        console.log(`Invitation email sent successfully to: ${email}`);
         results.push({
           email,
           status: expiredInvite.rows.length > 0 ? 'renewed' : 'invited',
           emailSent: true
         });
       } catch (emailError) {
-        console.error(`发送邮件至 ${email} 失败:`, emailError);
+        console.error(`Email sending to ${email} failed:`, emailError);
         results.push({
           email,
           status: expiredInvite.rows.length > 0 ? 'renewed' : 'invited',
           emailSent: false,
-          token: token // 返回token以便手动发送
+          token: token // Return token for manual sending
         });
       }
     }
@@ -304,14 +304,16 @@ exports.inviteMarkersBatch = async (req, res) => {
   }
 };
 
-// 列表
+// List invitations
 exports.listInvitations = async (req, res) => {
   const createdBy = req.user.id;
+  const currentUserEmail = req.user.email; // Get current user's email to exclude
+  
   try {
     const result = await db.query(
       `WITH latest_invitations AS (
          SELECT DISTINCT ON (email) 
-           id, email, expires_at, created_at,
+           id, email, expires_at, created_at, used_at,
            ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at DESC) as rn
          FROM invitations 
          WHERE created_by = $1
@@ -322,6 +324,9 @@ exports.listInvitations = async (req, res) => {
          CASE
            WHEN u.user_id IS NOT NULL THEN
              CASE WHEN u.is_active = true THEN 'active' ELSE 'closed' END
+           WHEN li.used_at IS NOT NULL AND NOT EXISTS (
+             SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
+           ) THEN 'revoked'  -- This will be filtered out
            WHEN li.expires_at < NOW() AND NOT EXISTS (
              SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
            ) THEN 'expired'
@@ -330,13 +335,17 @@ exports.listInvitations = async (req, res) => {
          to_char(COALESCE(u.last_login, li.created_at), 'Mon DD, YYYY') as sent_at
        FROM latest_invitations li
        FULL OUTER JOIN app_user u ON li.email = u.email AND u.role = 'MARKER'
-       WHERE li.rn = 1 OR u.user_id IS NOT NULL
+       WHERE (li.rn = 1 OR u.user_id IS NOT NULL)
+         AND NOT (li.used_at IS NOT NULL AND NOT EXISTS (
+           SELECT 1 FROM app_user u2 WHERE u2.email = li.email AND u2.role = 'MARKER'
+         ))  -- Exclude revoked invitations that haven't been accepted
+         AND COALESCE(u.email, li.email) != $2  -- Exclude current user's email
        ORDER BY sent_at DESC`,
-      [createdBy]
+      [createdBy, currentUserEmail]
     );
-    console.log('返回给前端的数据：');
+    console.log('Data returned to frontend:');
     result.rows.forEach((row, index) => {
-      console.log(`记录 ${index + 1}: email=${row.email}, status=${row.status}, sent_at=${row.sent_at}`);
+      console.log(`Record ${index + 1}: email=${row.email}, status=${row.status}, sent_at=${row.sent_at}`);
     });
 
     res.json({ items: result.rows });
@@ -347,7 +356,7 @@ exports.listInvitations = async (req, res) => {
 };
 
 
-// 重发
+// Resend invitation
 exports.resendInvite = async (req, res) => {
   const { email } = req.body;
   const createdBy = req.user.id;
@@ -357,7 +366,7 @@ exports.resendInvite = async (req, res) => {
   }
 
   try {
-    // 更新 token & expires_at
+    // Update token & expires_at
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -375,13 +384,13 @@ exports.resendInvite = async (req, res) => {
 
     console.log(`Coordinator ${req.user.name} resent invite to ${email}. Token: ${token}`);
 
-    // 发送新的邀请邮件
+    // Send new invitation email
     try {
       await EmailService.sendInvitationEmail(email, token, req.user.name);
-      console.log(`重新发送的邀请邮件已成功发送至: ${email}`);
+      console.log(`Resent invitation email sent successfully to: ${email}`);
       res.json({ success: true, message: 'Resent successfully' });
     } catch (emailError) {
-      console.error('发送重新邀请邮件失败:', emailError);
+      console.error('Resend invitation email failed:', emailError);
       res.json({
         success: true,
         message: 'Invitation updated but email sending failed. Please manually send the registration link.',
@@ -394,36 +403,38 @@ exports.resendInvite = async (req, res) => {
   }
 };
 
-// 撤销
+// Revoke invitation
 exports.revokeInvite = async (req, res) => {
   const { email } = req.body;
+  const currentUserId = req.user.id;
 
   if (!email) {
     return res.status(400).json({ success: false, message: 'Email is required' });
   }
 
   try {
+    // Mark invitation as revoked (used_at = NOW) and add revoked flag
     const result = await db.query(
       `UPDATE invitations
-       SET used_at = NOW()   -- 相当于作废
-       WHERE email = $1 AND used_at IS NULL
+       SET used_at = NOW()   -- Mark as revoked
+       WHERE email = $1 AND used_at IS NULL AND created_by = $2
        RETURNING id`,
-      [email]
+      [email, currentUserId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Invitation not found or already used' });
     }
 
-    console.log(`Revoked invitation for ${email}`);
+    console.log(`Revoked invitation for ${email} by coordinator ${req.user.name}`);
 
-    // 发送撤销通知邮件
+    // Send revocation notification email
     try {
       await EmailService.sendRevocationEmail(email);
-      console.log(`撤销通知邮件已成功发送至: ${email}`);
+      console.log(`Revocation notification email sent successfully to: ${email}`);
     } catch (emailError) {
-      console.error('发送撤销通知邮件失败:', emailError);
-      // 即使邮件发送失败，也返回成功，因为邀请已被撤销
+      console.error('Send revocation notification email failed:', emailError);
+      // Even if email sending fails, return success since invitation was revoked
     }
 
     res.json({ success: true, message: 'Revoked successfully' });
@@ -433,43 +444,148 @@ exports.revokeInvite = async (req, res) => {
   }
 };
 
-// 关闭用户
-// 关闭用户权限
+// Close user
+// Close user permissions
 exports.closeUser = async (req, res) => {
-  const { userId } = req.params;
-  const currentUserId = req.user.id; // 从 authenticate 拿到的 user.id
+  const { email } = req.body;
+  const currentUserId = req.user.id; // From authenticate middleware user.id
+  
+  console.log('🔴 closeUser called with email:', email, 'by user ID:', currentUserId);
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
 
   try {
-    // 检查要操作的用户是否存在且是由当前用户邀请的
+    // First check if user exists
+    const userExists = await db.query(
+      `SELECT user_id, email, is_active FROM app_user 
+       WHERE email = $1 AND role = 'MARKER'`,
+      [email]
+    );
+
+    if (userExists.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if current coordinator has permission (invited this user)
+    const permissionCheck = await db.query(
+      `SELECT 1 FROM invitations 
+       WHERE email = $1 AND created_by = $2`,
+      [email, currentUserId]
+    );
+
+    if (permissionCheck.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'No permission to operate on this user'
+      });
+    }
+
+    // Update user status to closed
+    const result = await db.query(
+      `UPDATE app_user
+       SET is_active = false
+       WHERE email = $1 AND role = 'MARKER'
+       RETURNING user_id as id, email, is_active`,
+      [email]
+    );
+
+    console.log(`Coordinator ${req.user.name} closed user ${email}`);
+
+    res.json({
+      success: true,
+      message: 'User permissions have been closed',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Close user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Reopen user
+exports.reopenUser = async (req, res) => {
+  const { email } = req.body;
+  const currentUserId = req.user.id;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  try {
+    // Find user by email and check if they were invited by current coordinator
     const userCheck = await db.query(
-      `SELECT id FROM app_user
-       WHERE id = $1 AND invited_by = $2 AND role = 'MARKER'`,
-      [userId, currentUserId]
+      `SELECT DISTINCT u.user_id FROM app_user u
+       WHERE u.email = $1 AND u.role = 'MARKER'
+       AND EXISTS (
+         SELECT 1 FROM invitations i 
+         WHERE i.email = u.email AND i.created_by = $2
+       )`,
+      [email, currentUserId]
     );
 
     if (userCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在或没有操作权限'
+        message: 'User not found or no permission to operate'
       });
     }
 
-    // 更新用户状态为关闭
+    // Update user status to active
     const result = await db.query(
       `UPDATE app_user
-       SET is_active = false, updated_at = NOW()
-       WHERE id = $1
-       RETURNING id, email, is_active as status`,
-      [userId]
+       SET is_active = true
+       WHERE email = $1 AND role = 'MARKER'
+       RETURNING user_id as id, email, is_active as status`,
+      [email]
     );
+
+    console.log(`Coordinator ${req.user.name} reopened user ${email}`);
 
     res.json({
       success: true,
-      message: '用户权限已关闭',
+      message: 'User permissions have been reopened',
       user: result.rows[0]
     });
   } catch (error) {
-    console.error('Close user error:', error);
+    console.error('Reopen user error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Get marker email suggestions
+exports.getMarkerSuggestions = async (req, res) => {
+  const { q } = req.query;
+  const createdBy = req.user.id;
+
+  if (!q || q.length < 2) {
+    return res.json({ emails: [] });
+  }
+
+  try {
+    // Search in existing markers from this coordinator's invitations
+    const result = await db.query(
+      `SELECT DISTINCT email FROM (
+        SELECT email FROM app_user WHERE role = 'MARKER' AND email ILIKE $1
+        UNION
+        SELECT email FROM invitations WHERE created_by = $2 AND email ILIKE $1
+      ) suggestions
+      WHERE email NOT IN (
+        SELECT email FROM app_user WHERE email = suggestions.email AND role != 'MARKER'
+      )
+      ORDER BY email
+      LIMIT 10`,
+      [`%${q}%`, createdBy]
+    );
+
+    const emails = result.rows.map(row => row.email);
+    res.json({ emails });
+  } catch (error) {
+    console.error('Marker suggestions error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

@@ -1,17 +1,17 @@
 // coordinator.js
 (() => {
   document.addEventListener('DOMContentLoaded', () => {
-    // 其他页面的初始化写在这里
+    // Other page initialization goes here
     initCommonNav();
 
-    // 仅在上传页执行（依赖 <body data-page="upload">）
+    // Execute only on upload page (depends on <body data-page="upload">)
     if (document.body.dataset.page === 'upload') {
       initUploadPage();
     }
   });
 
 function initCommonNav() {
-  // 从 localStorage 取用户信息
+  // Get user info from localStorage
   const userStr = localStorage.getItem('user');
   if (userStr) {
     try {
@@ -24,86 +24,29 @@ function initCommonNav() {
       console.error('Error parsing user data:', e);
     }
   }
-
-  // 用户名下拉菜单
-  const usernameEl = document.getElementById('username');
-  const dropdown = document.getElementById('userDropdown');
-  const logoutBtn = document.getElementById('logoutBtn');
-
-  if (usernameEl && dropdown) {
-    usernameEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle('show');
-    });
-
-    // 点击其他地方关闭下拉菜单
-    document.addEventListener('click', () => {
-      dropdown.classList.remove('show');
-    });
-  }
-
-  // 登出功能
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        const response = await fetch('/api/auth/logout', {
-          method: 'POST',
-          credentials: 'include'
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          localStorage.removeItem('user');
-          localStorage.removeItem('userRole');
-          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-          window.location.href = '/login';
-        } else {
-          alert("Logout failed: " + data.message);
-        }
-      } catch (error) {
-        console.error('Logout error:', error);
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        window.location.href = '/login';
-      }
-    });
-  }
-
-  // 功能卡片点击导航
-  document.querySelectorAll('.function-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const page = card.dataset.page;
-      if (page) {
-        window.location.href = `/dashboard/coordinator/${page}`;
-      }
-    });
-  });
 }
 
-  // ====== 原 upload.js 合并过来的逻辑 ======
+  // ====== Logic merged from original upload.js ======
   function initUploadPage() {
-    // 1) 选择文件后把文案改为文件名（视觉反馈）
+    // 1) After selecting files, change text to filename (visual feedback)
     document.querySelectorAll('.drop input[type="file"]').forEach(input => {
-      const label = input.parentElement.querySelector('div'); // drop > div 文案容器
+      const label = input.parentElement.querySelector('div'); // drop > div text container
       input.addEventListener('change', () => {
         if (input.files && input.files[0]) {
           label.innerHTML = `${input.files[0].name}<div class="hint">Selected</div>`;
-          refreshValidation(input.closest('.assign')); // 选中文件后刷新校验
+          refreshValidation(input.closest('.assign')); // Refresh validation after selecting file
         }
       });
     });
 
-    // 2) 监听日期/数值输入，实时刷新校验
+    // 2) Listen for date/numeric input, refresh validation in real time
     document.querySelectorAll('.assign .input').forEach(inp => {
       inp.addEventListener('input', () => {
         refreshValidation(inp.closest('.assign'));
       });
     });
 
-    // 3) 保存草稿 / 发布（示例：拿到表单数据 -> 你可以 fetch 到后端）
+    // 3) Save draft / publish (example: get form data -> you can fetch to backend)
     document.querySelectorAll('.assign').forEach(card => {
       const saveBtn    = card.querySelector('.btn:not(.primary)');
       const publishBtn = card.querySelector('.btn.primary');
@@ -113,7 +56,7 @@ function initCommonNav() {
         const payload = collectCardData(card);
         console.log('[draft]', payload);
         // fetch('/api/assignments/draft', {method:'POST', body: toFormData(payload)})
-        alert('Draft saved (console 有 payload)');
+        alert('Draft saved (payload in console)');
       });
 
       publishBtn?.addEventListener('click', (e) => {
@@ -123,12 +66,13 @@ function initCommonNav() {
         if (!ok) { alert('Please complete required files and due date.'); return; }
         console.log('[publish]', payload);
         // fetch('/api/assignments/publish', {method:'POST', body: toFormData(payload)})
-        alert('Published (console 有 payload)');
+        alert('Published (payload in console)');
       });
     });
   }
 
-  // ====== 工具函数 ======
+    
+  // ====== Utility Functions ======
   function collectCardData(card) {
     const [roundEl, dueEl, devEl] = card.querySelectorAll('.form-row .input');
     const files = card.querySelectorAll('.drop input[type="file"]');
@@ -161,12 +105,187 @@ function initCommonNav() {
     `;
   }
 
-  // 可选：把 JSON 转成 FormData（方便文件上传）
+  
+  // Optional: Convert JSON to FormData (convenient for file upload)
   function toFormData(obj) {
     const fd = new FormData();
     Object.entries(obj).forEach(([k,v]) => {
       if (v !== undefined && v !== null) fd.append(k, v);
     });
     return fd;
+  }
+
+  // 初始化dropdown和logout功能
+  function initDropdownAndLogout() {
+    const accountEl = document.querySelector('.account');
+    const dropdown = document.querySelector('.dropdown-menu');
+    const logoutBtn = document.querySelector('.dropdown-item');
+
+    if (accountEl && dropdown) {
+      accountEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+
+      // 点击其他地方关闭下拉菜单
+      document.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+      });
+    }
+
+    // 登出功能
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/login';
+          } else {
+            alert("Logout failed: " + data.message);
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        }
+      });
+    }
+
+    // 全局logout函数
+    window.logout = async function() {
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          window.location.href = '/login';
+        } else {
+          alert("Logout failed: " + data.message);
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = '/login';
+      }
+    };
+  }
+
+  // 在页面加载时初始化dropdown和logout功能
+  document.addEventListener('DOMContentLoaded', () => {
+    initDropdownAndLogout();
+    // Load dashboard data if on dashboard page
+    if (window.location.pathname.includes('/dashboard/coordinator') && !window.location.pathname.includes('/invite') && !window.location.pathname.includes('/taskManagement') && !window.location.pathname.includes('/feedback') && !window.location.pathname.includes('/past')) {
+      loadDashboardData();
+    }
+  });
+
+  // Dashboard data loading function
+  async function loadDashboardData() {
+    try {
+      console.log('🔄 Loading coordinator dashboard data...');
+      const response = await fetch('/dashboard/api/coordinator/data', {
+        credentials: 'include'
+      });
+
+      console.log('📡 Response status:', response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
+        throw new Error(`Failed to fetch dashboard data: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Dashboard data loaded:', data);
+      
+      // Update KPI counters
+      document.getElementById('active-projects-count').textContent = data.kpi.activeProjects || 0;
+      document.getElementById('total-markers-count').textContent = data.kpi.totalMarkers || 0;
+      document.getElementById('pending-invitations-count').textContent = data.kpi.pendingInvitations || 0;
+      document.getElementById('completed-assignments-count').textContent = data.kpi.completedAssignments || 0;
+
+      // Update marker stats
+      document.getElementById('pending-invitations-stat').textContent = data.kpi.pendingInvitations || 0;
+      document.getElementById('active-markers-stat').textContent = (data.kpi.totalMarkers - data.kpi.pendingInvitations) || 0;
+
+      // Update recent assignments list
+      const recentAssignmentsList = document.getElementById('recent-assignments-list');
+      if (data.recentAssignments && data.recentAssignments.length > 0) {
+        recentAssignmentsList.innerHTML = data.recentAssignments.map(assignment => `
+          <div class="assignment-item">
+            <div class="assignment-meta">
+              <div class="assignment-title">${assignment.name}</div>
+              <div class="assignment-subtitle">${assignment.project_name} • Round ${assignment.round} • Due ${formatDate(assignment.due_at)}</div>
+            </div>
+            <div class="assignment-actions">
+              <span class="assignment-status ${assignment.is_published ? 'active' : 'draft'}">${getStatusText(assignment.is_published)}</span>
+              <button class="btn primary sm" onclick="window.location.href='/dashboard/coordinator/taskManagement'">Manage</button>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        recentAssignmentsList.innerHTML = '<div class="empty-state">No recent assignments</div>';
+      }
+
+      // Update outliers list
+      const outliersList = document.getElementById('outliers-list');
+      if (data.outliers && data.outliers.length > 0) {
+        outliersList.innerHTML = data.outliers.map(outlier => `
+          <div class="outlier-item">
+            <div class="outlier-title">${outlier.marker_name} • ${outlier.assignment_name}</div>
+            <div class="outlier-content">${outlier.criterion_name}: ${outlier.score}/${outlier.max_score}</div>
+            <div class="outlier-meta">
+              Deviation: <span class="outlier-deviation ${outlier.deviation_percent > 0 ? 'positive' : 'negative'}">
+                ${outlier.deviation_percent > 0 ? '+' : ''}${outlier.deviation_percent}%
+              </span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        outliersList.innerHTML = '<div class="empty-state">No outliers detected</div>';
+      }
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      
+      // Show error states
+      document.getElementById('recent-assignments-list').innerHTML = '<div class="empty-state">Error loading assignments</div>';
+      document.getElementById('outliers-list').innerHTML = '<div class="empty-state">Error loading data</div>';
+    }
+  }
+
+  // Helper functions
+  function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-AU', { 
+      day: 'numeric', 
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  function getStatusText(isPublished) {
+    return isPublished ? 'Published' : 'Draft';
   }
 })();

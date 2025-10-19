@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.app_user
     role text COLLATE pg_catalog."default" NOT NULL,
     is_active boolean DEFAULT true,
     last_login timestamp with time zone NOT NULL DEFAULT now(),
+	reset_token VARCHAR(64),                    -- 新增
+    reset_token_expiry TIMESTAMP WITH TIME ZONE, -- 新增
     CONSTRAINT app_user_pkey PRIMARY KEY (user_id),
     CONSTRAINT uq_app_user_email UNIQUE (email)
 );
@@ -296,5 +298,19 @@ ALTER TABLE IF EXISTS public.upload
     ON DELETE NO ACTION;
 CREATE INDEX IF NOT EXISTS idx_upload_rubric
     ON public.upload(rubric_id);
+CREATE TABLE IF NOT EXISTS public.notification_log
+(
+    id bigserial NOT NULL,
+    assignment_id bigint NOT NULL,
+    notified_at timestamp without time zone DEFAULT now(),
+    notification_type text NOT NULL DEFAULT 'deadline_passed',
+    CONSTRAINT notification_log_pkey PRIMARY KEY (id),
+    CONSTRAINT notification_log_assignment_id_fkey FOREIGN KEY (assignment_id)
+        REFERENCES public.assignment (assignment_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_log_assignment_type
+  ON public.notification_log(assignment_id, notification_type);
 
 END;

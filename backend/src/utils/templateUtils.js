@@ -3,17 +3,17 @@ const path = require('path');
 
 class TemplateUtils {
   /**
-   * 加载并渲染HTML模板
-   * @param {string} templateName 模板文件名
-   * @param {Object} data 模板数据
-   * @returns {Promise<string>} 渲染后的HTML
+   * Load and render HTML template
+   * @param {string} templateName Template file name
+   * @param {Object} data Template data
+   * @returns {Promise<string>} Rendered HTML
    */
   static async renderTemplate(templateName, data) {
     try {
       const templatePath = path.join(__dirname, '..', 'templates', templateName);
       let html = await fs.readFile(templatePath, 'utf8');
 
-      // 替换所有模板变量
+      // Replace all template variables
       Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
         html = html.replace(regex, data[key]);
@@ -21,8 +21,8 @@ class TemplateUtils {
 
       return html;
     } catch (error) {
-      console.error('模板渲染失败:', error);
-      throw new Error('无法加载邮件模板');
+      console.error('Template rendering failed:', error);
+      throw new Error('Unable to load email template');
     }
   }
 }

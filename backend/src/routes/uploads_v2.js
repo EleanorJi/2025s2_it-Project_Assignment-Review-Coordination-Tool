@@ -12,13 +12,13 @@ const { parseRubricWithDetails } = require('../utils/enhanced_rubric_parser');
 
 const router = express.Router();
 
-// 目录设置
+// Directory setup
 const TEMP_DIR = path.join(__dirname, '../../temp_uploads');
 const PERM_ROOT = path.join(__dirname, '../../uploads');
 fs.mkdirSync(TEMP_DIR, { recursive: true });
 fs.mkdirSync(PERM_ROOT, { recursive: true });
 
-// 临时文件存储配置 (类似原来的drafts)
+// Temporary file storage configuration (similar to original drafts)
 const tempStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, TEMP_DIR),
   filename: (req, file, cb) => {
@@ -32,7 +32,7 @@ const draftUpload = multer({
   limits: { fileSize: 200 * 1024 * 1024 },
 });
 
-// 1) 上传草稿文件：POST /api/uploads/drafts (保持与原API一致)
+// 1) Upload draft file: POST /api/uploads/drafts (consistent with original API)
 router.post('/drafts', draftUpload.single('file'), async (req, res) => {
   try {
     const slot = req.body.slot;
@@ -41,10 +41,10 @@ router.post('/drafts', draftUpload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'invalid slot' });
     }
     
-    // 验证文件类型
+    // Validate file type
     const fileType = req.file.mimetype;
     
-    // Assignment只能PDF
+    // Assignment can only be PDF
     if (slot === 'assignment1' || slot === 'assignment2') {
       if (fileType !== 'application/pdf') {
         await fsp.unlink(req.file.path).catch(()=>{});
@@ -55,7 +55,7 @@ router.post('/drafts', draftUpload.single('file'), async (req, res) => {
       }
     }
     
-    // Rubric不能PDF，允许DOCX、XLSX、CSV等
+    // Rubric cannot be PDF, allow DOCX, XLSX, CSV etc.
     if (slot === 'rubric') {
       if (fileType === 'application/pdf') {
         await fsp.unlink(req.file.path).catch(()=>{});
@@ -66,9 +66,9 @@ router.post('/drafts', draftUpload.single('file'), async (req, res) => {
       }
     }
 
-    console.log(`📋 草稿上传: ${slot}, ${req.file.originalname}, ${fileType}`);
+    console.log(`📋 Draft upload: ${slot}, ${req.file.originalname}, ${fileType}`);
 
-    // 设置过期时间为24小时
+    // Set expiry time to 24 hours
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     
     const draftInfo = {
@@ -81,22 +81,22 @@ router.post('/drafts', draftUpload.single('file'), async (req, res) => {
       expires_at: expiresAt.toISOString()
     };
 
-    // 保存metadata文件以便后续解析时使用
+    // Save metadata file for later parsing use
     const metadataPath = path.join(TEMP_DIR, `${draftInfo.temp_name}.metadata.json`);
     await fsp.writeFile(metadataPath, JSON.stringify(draftInfo, null, 2));
 
-    console.log(`✅ 草稿保存: ${draftInfo.temp_name}`);
+    console.log(`✅ Draft saved: ${draftInfo.temp_name}`);
 
     res.json(draftInfo);
     
   } catch (error) {
-    console.error('❌ 草稿上传失败:', error);
+    console.error('❌ Draft upload failed:', error);
     await fsp.unlink(req.file.path).catch(() => {});
     res.status(500).json({ error: 'Draft upload failed' });
   }
 });
 
-// 2) 删除草稿文件：DELETE /api/uploads/drafts/:tempName (保持与原API一致)
+// 2) Delete draft file: DELETE /api/uploads/drafts/:tempName (consistent with original API)
 router.delete('/drafts/:tempName', async (req, res) => {
   try {
     const { tempName } = req.params;
@@ -107,27 +107,27 @@ router.delete('/drafts/:tempName', async (req, res) => {
     }
     
     await fsp.unlink(tempPath);
-    // 尝试删除metadata文件
+    // Try to delete metadata file
     const metadataPath = path.join(TEMP_DIR, `${tempName}.metadata.json`);
-    await fsp.unlink(metadataPath).catch(() => {}); // 忽略metadata文件删除失败
-    console.log(`🗑️ 草稿删除: ${tempName}`);
+    await fsp.unlink(metadataPath).catch(() => {}); // Ignore metadata file deletion failure
+    console.log(`🗑️ Draft deleted: ${tempName}`);
     
     res.json({ message: 'Draft deleted successfully' });
     
   } catch (error) {
-    console.error('❌ 草稿删除失败:', error);
+    console.error('❌ Draft deletion failed:', error);
     res.status(500).json({ error: 'Failed to delete draft' });
   }
 });
 
-// 3) 单文件发布：POST /api/uploads/commit (直接发布，无draft状态)
+// 3) Single file publish: POST /api/uploads/commit (direct publish, no draft status)
 router.post('/commit', async (req, res) => {
   const client = await db.connect();
   
   try {
     const { temp_name, project_id, file_type, round, due_date } = req.body;
     
-    // 验证必需参数
+    // Validate required parameters
     const requiredFields = [
       { name: 'temp_name', value: temp_name },
       { name: 'project_id', value: project_id },
@@ -146,17 +146,17 @@ router.post('/commit', async (req, res) => {
       return res.status(400).json({ error: 'round is required for assignment files' });
     }
 
-    // 验证临时文件存在
+    // Verify temporary file exists
     const tempPath = path.join(TEMP_DIR, temp_name);
     if (!fs.existsSync(tempPath)) {
       return res.status(400).json({ error: 'draft not found' });
     }
 
-    console.log(`🔄 发布文件: ${file_type}, project_id=${project_id}, temp_name=${temp_name}`);
+    console.log(`🔄 Publishing file: ${file_type}, project_id=${project_id}, temp_name=${temp_name}`);
 
     await client.query('BEGIN');
 
-    // 验证项目存在
+    // Verify project exists
     const projectCheck = await client.query(
       'SELECT project_id, name FROM project WHERE project_id = $1',
       [project_id]
@@ -167,18 +167,18 @@ router.post('/commit', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // 获取文件信息和原始文件名
+    // Get file information and original filename
     const stat = await fsp.stat(tempPath);
     let mimeType = mime.lookup(tempPath) || 'application/octet-stream';
     let originalName = null;
     
-    // 尝试读取metadata文件获取原始文件名
+    // Try to read metadata file to get original filename
     const metadataPath = path.join(TEMP_DIR, `${temp_name}.metadata.json`);
     try {
       if (fs.existsSync(metadataPath)) {
         const metadata = JSON.parse(await fsp.readFile(metadataPath, 'utf8'));
         originalName = metadata.original_name;
-        // 如果有原始文件名，使用它来更准确地检测MIME类型
+        // If there is an original filename, use it to more accurately detect MIME type
         if (originalName) {
           const detectedMime = mime.lookup(originalName);
           if (detectedMime) {
@@ -187,7 +187,7 @@ router.post('/commit', async (req, res) => {
         }
       }
     } catch (error) {
-      console.log('⚠️ 无法读取metadata文件，使用默认MIME类型');
+      console.log('⚠️ Unable to read metadata file, using default MIME type');
     }
     
     let recordId = null;
@@ -195,14 +195,14 @@ router.post('/commit', async (req, res) => {
     let assignmentIsPublished;
 
     if (file_type === 'rubric') {
-      // 获取rubric的下一个版本号
+      // Get next version number for rubric
       const versionResult = await client.query(
         'SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM rubric WHERE project_id = $1',
         [project_id]
       );
       newVersionNumber = versionResult.rows[0].next_version;
 
-      // 创建新的rubric记录
+      // Create new rubric record
       const rubricResult = await client.query(
         `INSERT INTO rubric (uploaded_by, project_id, version) 
          VALUES ($1, $2, $3) 
@@ -211,10 +211,10 @@ router.post('/commit', async (req, res) => {
       );
       recordId = rubricResult.rows[0].rubric_id;
       
-      console.log(`✅ 创建rubric记录: rubric_id=${recordId}, version=${newVersionNumber}`);
+      console.log(`✅ Created rubric record: rubric_id=${recordId}, version=${newVersionNumber}`);
 
     } else if (file_type === 'assignment') {
-      // 验证due_date
+      // Validate due_date
       if (due_date) {
         const dueDateObj = new Date(due_date);
         if (isNaN(dueDateObj.getTime())) {
@@ -223,14 +223,14 @@ router.post('/commit', async (req, res) => {
         }
       }
 
-      // 获取assignment的下一个版本号
+      // Get next version number for assignment
       const versionResult = await client.query(
         'SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM assignment WHERE project_id = $1 AND round = $2',
         [project_id, round]
       );
       newVersionNumber = versionResult.rows[0].next_version;
 
-      // 创建新的assignment记录
+      // Create new assignment record
       const assignmentResult = await client.query(
         `INSERT INTO assignment (name, description, due_at, round, project_id, version) 
          VALUES ($1, $2, $3, $4, $5, $6) 
@@ -247,10 +247,10 @@ router.post('/commit', async (req, res) => {
       recordId = assignmentResult.rows[0].assignment_id;
       assignmentIsPublished = assignmentResult.rows[0].is_published;
 
-      console.log(`✅ 创建assignment记录: assignment_id=${recordId}, round=${round}, version=${newVersionNumber}, is_published=${assignmentIsPublished}`);
+      console.log(`✅ Created assignment record: assignment_id=${recordId}, round=${round}, version=${newVersionNumber}, is_published=${assignmentIsPublished}`);
     }
 
-    // 移动文件到永久存储
+    // Move file to permanent storage
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -262,10 +262,12 @@ router.post('/commit', async (req, res) => {
     const permanentPath = path.join(permDir, newFileName);
     const storagePath = `${year}/${month}/${newFileName}`;
 
-    await fsp.rename(tempPath, permanentPath);
+    // 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
+    await fsp.copyFile(tempPath, permanentPath);
+    await fsp.unlink(tempPath);
     console.log(`📂 文件移动: ${tempPath} → ${permanentPath}`);
 
-    // 创建upload记录
+    // Create upload record
     const uploadResult = await client.query(
       `INSERT INTO upload (
         ${file_type === 'rubric' ? 'rubric_id' : 'assignment_id'}, 
@@ -283,28 +285,28 @@ router.post('/commit', async (req, res) => {
     );
 
     const uploadId = uploadResult.rows[0].upload_id;
-    console.log(`✅ Upload记录创建: upload_id=${uploadId}`);
+    console.log(`✅ Upload record created: upload_id=${uploadId}`);
 
-    // 如果是rubric文件，解析表格信息和详细内容
+    // If it's a rubric file, parse table information and detailed content
     let tableInfo = null;
     if (file_type === 'rubric') {
       try {
-        console.log(`📊 解析rubric文件...`);
+        console.log(`📊 Parsing rubric file...`);
         const { rows, columns, criteria, gradeLevels } = await parseRubricWithDetails(permanentPath, mimeType, originalName);
         
-        // 更新rubric表的基本信息
+        // Update basic information in rubric table
         await client.query(
           'UPDATE rubric SET "row" = $1, "column" = $2 WHERE rubric_id = $3',
           [rows, columns, recordId]
         );
         
-        console.log(`✅ Rubric基本解析完成: ${rows}行 x ${columns}列`);
-        console.log(`📋 提取到 ${criteria.length} 个评分标准`);
-        console.log(`🏆 提取到 ${gradeLevels.length} 个等级水平`);
+        console.log(`✅ Basic rubric parsing completed: ${rows} rows x ${columns} columns`);
+        console.log(`📋 Extracted ${criteria.length} grading criteria`);
+        console.log(`🏆 Extracted ${gradeLevels.length} grade levels`);
         
-        // 保存评分标准到数据库
+        // Save grading criteria to database
         if (criteria.length > 0) {
-          console.log(`💾 保存评分标准到数据库...`);
+          console.log(`💾 Saving grading criteria to database...`);
           
           for (const criterion of criteria) {
             const criterionResult = await client.query(
@@ -314,23 +316,26 @@ router.post('/commit', async (req, res) => {
             );
             
             const criterionId = criterionResult.rows[0].criterion_id;
-            console.log(`  ✅ 保存标准: ${criterion.title} (ID: ${criterionId})`);
+            console.log(`  ✅ Saved criterion: ${criterion.title} (ID: ${criterionId})`);
             
-            // 保存该标准的等级信息
+            // Save grade level information for this criterion
             const criterionLevels = gradeLevels.filter(level => level.criterion_seq_no === criterion.seq_no);
             
             for (const level of criterionLevels) {
+              // Ensure description is never null or empty
+              const levelDescription = (level.description && level.description.trim()) || 'No description';
+              
               await client.query(
                 `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no) 
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [criterionId, level.level_name, level.min_score, level.max_score, level.description, level.seq_no]
+                [criterionId, level.level_name, level.min_score, level.max_score, levelDescription, level.seq_no]
               );
               
-              console.log(`    🏆 保存等级: ${level.level_name} (${level.min_score}-${level.max_score}分)`);
+              console.log(`    🏆 Saved level: ${level.level_name} (${level.min_score}-${level.max_score} points)`);
             }
           }
           
-          console.log(`✅ 所有评分标准和等级已保存到数据库`);
+          console.log(`✅ All grading criteria and levels saved to database`);
         }
         
         tableInfo = { 
@@ -341,11 +346,11 @@ router.post('/commit', async (req, res) => {
         };
         
       } catch (parseError) {
-        console.error('❌ Rubric解析失败:', parseError);
+        console.error('❌ Rubric parsing failed:', parseError);
         
-        // 解析失败时，至少尝试基本解析
+        // When parsing fails, at least try basic parsing
         try {
-          console.log(`🔄 尝试基本解析...`);
+          console.log(`🔄 Attempting basic parsing...`);
           const { rows, columns } = await parseRubricFile(permanentPath, mimeType);
           
           await client.query(
@@ -353,16 +358,16 @@ router.post('/commit', async (req, res) => {
             [rows, columns, recordId]
           );
           
-          tableInfo = { rows, columns, error: `详细解析失败: ${parseError.message}` };
-          console.log(`⚠️ 基本解析完成: ${rows}行 x ${columns}列`);
+          tableInfo = { rows, columns, error: `Detailed parsing failed: ${parseError.message}` };
+          console.log(`⚠️ Basic parsing completed: ${rows} rows x ${columns} columns`);
         } catch (basicParseError) {
-          console.error('❌ 基本解析也失败:', basicParseError);
-          tableInfo = { rows: 0, columns: 0, error: `解析完全失败: ${basicParseError.message}` };
+          console.error('❌ Basic parsing also failed:', basicParseError);
+          tableInfo = { rows: 0, columns: 0, error: `Parsing completely failed: ${basicParseError.message}` };
         }
       }
     }
 
-    // 检查项目是否应该自动激活（存在已发布的 assignment 时）
+    // Check if project should be automatically activated (when published assignment exists)
     let projectAutoPublished = false;
     let currentProjectStatus = 'draft';
     const projectStatusCheck = await client.query(
@@ -383,17 +388,17 @@ router.post('/commit', async (req, res) => {
       );
       projectAutoPublished = true;
       currentProjectStatus = 'active';
-      console.log(`🚀 项目自动激活: project_id=${project_id} (has published assignment)`);
+      console.log(`🚀 Project automatically activated: project_id=${project_id} (has published assignment)`);
     }
 
     await client.query('COMMIT');
 
-    // 清理metadata文件（临时文件已经移动到permanent位置，无需删除）
+    // Clean up metadata file (temporary file has been moved to permanent location, no need to delete)
     try {
       await fsp.unlink(metadataPath);
-      console.log(`🗑️ 临时文件清理完成: ${temp_name}, metadata文件已删除`);
+      console.log(`🗑️ Temporary file cleanup completed: ${temp_name}, metadata file deleted`);
     } catch (cleanupError) {
-      console.log(`⚠️ metadata文件清理失败: ${cleanupError.message}`);
+      console.log(`⚠️ Metadata file cleanup failed: ${cleanupError.message}`);
     }
 
     const response = {
@@ -425,7 +430,7 @@ router.post('/commit', async (req, res) => {
 
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('❌ 文件发布失败:', error);
+    console.error('❌ File publish failed:', error);
     res.status(500).json({ 
       error: 'File commit failed',
       details: error.message 
@@ -435,14 +440,14 @@ router.post('/commit', async (req, res) => {
   }
 });
 
-// 4) 获取项目状态：GET /api/uploads/project/:project_id/status
+// 4) Get project status: GET /api/uploads/project/:project_id/status
 router.get('/project/:project_id/status', async (req, res) => {
   try {
     const { project_id } = req.params;
     
-    console.log(`🔍 获取项目 ${project_id} 状态...`);
+    console.log(`🔍 Getting project ${project_id} status...`);
 
-    // 获取项目基本信息
+    // Get project basic information
     const projectResult = await db.query(`
       SELECT 
         project_id,
@@ -460,7 +465,7 @@ router.get('/project/:project_id/status', async (req, res) => {
 
     const project = projectResult.rows[0];
 
-    // 获取最新版本的rubric
+    // Get latest version of rubric
     const rubricResult = await db.query(`
       SELECT 
         r.rubric_id,
@@ -479,7 +484,7 @@ router.get('/project/:project_id/status', async (req, res) => {
       LIMIT 1
     `, [project_id]);
 
-    // 获取最新版本的assignments
+    // Get latest version of assignments
     const assignmentsResult = await db.query(`
       SELECT 
         a.assignment_id,
@@ -504,7 +509,7 @@ router.get('/project/:project_id/status', async (req, res) => {
       ORDER BY a.round
     `, [project_id]);
 
-    // 检查项目发布要求（需要rubric + 至少1个assignment）
+    // Check project publication requirements (need rubric + at least 1 assignment)
     const hasRubric = rubricResult.rows.length > 0;
     const hasAssignments = assignmentsResult.rows.length > 0;
     const meetsPublishRequirements = hasRubric && hasAssignments;
@@ -556,12 +561,12 @@ router.get('/project/:project_id/status', async (req, res) => {
       }
     };
 
-    console.log(`✅ 项目状态: meets_requirements=${meetsPublishRequirements}, rubric=${hasRubric}, assignments=${hasAssignments}`);
+    console.log(`✅ Project status: meets_requirements=${meetsPublishRequirements}, rubric=${hasRubric}, assignments=${hasAssignments}`);
 
     res.json(projectStatus);
 
   } catch (error) {
-    console.error('❌ 获取项目状态失败:', error);
+    console.error('❌ Failed to get project status:', error);
     res.status(500).json({ 
       error: 'Failed to get project status',
       details: error.message 
@@ -569,13 +574,13 @@ router.get('/project/:project_id/status', async (req, res) => {
   }
 });
 
-// 获取项目最新的 rubric_id、assignment1 与 assignment2 的最新 id
+// Get project latest rubric_id, assignment1 and assignment2 latest ids
 // GET /api/uploads/project/:project_id/latest-ids
 router.get('/project/:project_id/latest-ids', async (req, res) => {
   try {
     const { project_id } = req.params;
 
-    // 最新 rubric（按 version 最大）
+    // Latest rubric (by maximum version)
     const rubricResult = await db.query(
       `SELECT rubric_id, version
        FROM rubric WHERE project_id = $1
@@ -584,7 +589,7 @@ router.get('/project/:project_id/latest-ids', async (req, res) => {
       [project_id]
     );
 
-    // 最新 assignment round=1
+    // Latest assignment round=1
     const a1Result = await db.query(
       `SELECT assignment_id, version
        FROM assignment
@@ -594,7 +599,7 @@ router.get('/project/:project_id/latest-ids', async (req, res) => {
       [project_id]
     );
 
-    // 最新 assignment round=2
+    // Latest assignment round=2
     const a2Result = await db.query(
       `SELECT assignment_id, version
        FROM assignment
@@ -620,19 +625,19 @@ router.get('/project/:project_id/latest-ids', async (req, res) => {
       } : null
     });
   } catch (error) {
-    console.error('❌ 获取latest-ids失败:', error);
+    console.error('❌ Failed to get latest-ids:', error);
     return res.status(500).json({ error: 'Failed to get latest ids', details: error.message });
   }
 });
 
-// 5) 激活项目：POST /api/uploads/project/:project_id/activate (由draft切到active)
+// 5) Activate project: POST /api/uploads/project/:project_id/activate (from draft to active)
 router.post('/project/:project_id/activate', async (req, res) => {
   try {
     const { project_id } = req.params;
     
-    console.log(`🚀 激活项目: project_id=${project_id}`);
+    console.log(`🚀 Activating project: project_id=${project_id}`);
 
-    // 验证项目存在
+    // Verify project exists
     const projectCheck = await db.query(
       'SELECT project_id FROM project WHERE project_id = $1',
       [project_id]
@@ -642,7 +647,7 @@ router.post('/project/:project_id/activate', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // 激活条件：至少存在一个已发布的 assignment
+    // Activation condition: at least one published assignment exists
     const publishedAssignment = await db.query(
       'SELECT 1 FROM assignment WHERE project_id = $1 AND is_published = true LIMIT 1',
       [project_id]
@@ -657,13 +662,13 @@ router.post('/project/:project_id/activate', async (req, res) => {
       });
     }
 
-    // 将项目状态从draft改为active
+    // Change project status from draft to active
     await db.query(
       'UPDATE project SET status = \'active\' WHERE project_id = $1',
       [project_id]
     );
 
-    console.log(`✅ 项目激活成功: project_id=${project_id}`);
+    console.log(`✅ Project activated successfully: project_id=${project_id}`);
 
     res.json({
       message: 'Project activated successfully',
@@ -673,7 +678,7 @@ router.post('/project/:project_id/activate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 项目激活失败:', error);
+    console.error('❌ Project activation failed:', error);
     res.status(500).json({ 
       error: 'Failed to activate project',
       details: error.message 
@@ -681,14 +686,14 @@ router.post('/project/:project_id/activate', async (req, res) => {
   }
 });
 
-// 5b) 兼容旧路由：发布项目（内部转到激活）POST /api/uploads/project/:project_id/publish
+// 5b) Compatible with old route: publish project (internally redirect to activate) POST /api/uploads/project/:project_id/publish
 router.post('/project/:project_id/publish', async (req, res) => {
-  // 为了兼容旧客户端，重用激活逻辑
+  // For compatibility with old clients, reuse activation logic
   req.url = `/project/${req.params.project_id}/activate`;
   return router.handle(req, res);
 });
 
-// 6) 文件下载：GET /api/uploads/:id/download (保持与原API完全一致)
+// 6) File download: GET /api/uploads/:id/download (fully consistent with original API)
 router.get('/:id/download', async (req, res) => {
   try {
     const { id } = req.params;
@@ -716,38 +721,38 @@ router.get('/:id/download', async (req, res) => {
     fileStream.pipe(res);
     
   } catch (error) {
-    console.error('❌ 文件下载失败:', error);
+    console.error('❌ File download failed:', error);
     res.status(500).json({ error: 'Download failed' });
   }
 });
 
-// 7) 创建项目：POST /api/uploads/project
+// 7) Create project: POST /api/uploads/project
 router.post('/project', async (req, res) => {
   const client = await db.connect();
   
   try {
     const { name, description } = req.body;
     
-    const projectName = name || 'New Project';
-    const projectDescription = description || 'Auto-created project for uploads';
+    const projectName = (name && name.trim()) || 'New Project';
+    const projectDescription = (description && description.trim()) || 'No description';
     
-    console.log(`📁 创建新项目: ${projectName}`);
+    console.log(`📁 Creating new project: ${projectName}`);
 
     await client.query('BEGIN');
 
-    // 创建新项目（默认draft状态）
+    // Create new project (default draft status)
     const projectResult = await client.query(
       `INSERT INTO project (name, description, created_by, status) 
        VALUES ($1, $2, $3, 'draft') 
        RETURNING project_id, name, description, status, created_at`,
-      [projectName, projectDescription, 1] // 默认创建者ID为1
+      [projectName, projectDescription, 1] // Default creator ID is 1
     );
 
     const newProject = projectResult.rows[0];
 
     await client.query('COMMIT');
 
-    console.log(`✅ 项目创建成功: project_id=${newProject.project_id}`);
+    console.log(`✅ Project created successfully: project_id=${newProject.project_id}`);
 
     res.json({
       message: 'Project created successfully',
@@ -762,7 +767,7 @@ router.post('/project', async (req, res) => {
 
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('❌ 项目创建失败:', error);
+    console.error('❌ Project creation failed:', error);
     res.status(500).json({ 
       error: 'Failed to create project',
       details: error.message 
@@ -772,7 +777,7 @@ router.post('/project', async (req, res) => {
   }
 });
 
-// 8) 重命名项目：PUT /api/uploads/project/:project_id
+// 8) Rename project: PUT /api/uploads/project/:project_id
 router.put('/project/:project_id', async (req, res) => {
   try {
     const { project_id } = req.params;
@@ -782,22 +787,24 @@ router.put('/project/:project_id', async (req, res) => {
       return res.status(400).json({ error: 'Name or description is required' });
     }
 
-    console.log(`📝 更新项目: project_id=${project_id}`);
+    console.log(`📝 Updating project: project_id=${project_id}`);
 
-    // 构建更新字段
+    // Build update fields
     const updateFields = [];
     const updateValues = [];
     let paramIndex = 1;
 
     if (name) {
+      const trimmedName = name.trim();
       updateFields.push(`name = $${paramIndex}`);
-      updateValues.push(name);
+      updateValues.push(trimmedName || 'New Project');
       paramIndex++;
     }
 
-    if (description) {
+    if (description !== undefined) {
+      const trimmedDescription = (description && description.trim()) || 'No description';
       updateFields.push(`description = $${paramIndex}`);
-      updateValues.push(description);
+      updateValues.push(trimmedDescription);
       paramIndex++;
     }
 
@@ -818,7 +825,7 @@ router.put('/project/:project_id', async (req, res) => {
 
     const updatedProject = result.rows[0];
 
-    console.log(`✅ 项目更新成功: ${updatedProject.name}`);
+    console.log(`✅ Project updated successfully: ${updatedProject.name}`);
 
     res.json({
       message: 'Project updated successfully',
@@ -832,7 +839,7 @@ router.put('/project/:project_id', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 项目更新失败:', error);
+    console.error('❌ Project update failed:', error);
     res.status(500).json({ 
       error: 'Failed to update project',
       details: error.message 
@@ -840,10 +847,10 @@ router.put('/project/:project_id', async (req, res) => {
   }
 });
 
-// 9) 获取所有项目：GET /api/uploads/projects
+// 9) Get all projects: GET /api/uploads/projects
 router.get('/projects', async (req, res) => {
   try {
-    console.log('📋 获取所有项目列表...');
+    console.log('📋 Getting all project list...');
 
     const result = await db.query(`
       SELECT 
@@ -858,7 +865,7 @@ router.get('/projects', async (req, res) => {
       ORDER BY created_at DESC
     `);
 
-    console.log(`✅ 找到 ${result.rows.length} 个项目`);
+    console.log(`✅ Found ${result.rows.length} projects`);
 
     res.json({
       projects: result.rows.map(project => ({
@@ -875,7 +882,7 @@ router.get('/projects', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 获取项目列表失败:', error);
+    console.error('❌ Failed to get project list:', error);
     res.status(500).json({ 
       error: 'Failed to get projects',
       details: error.message 
@@ -883,31 +890,209 @@ router.get('/projects', async (req, res) => {
   }
 });
 
-// 10) 删除项目：DELETE /api/uploads/project/:project_id
+// Past tasks: GET /api/uploads/past-tasks
+// Returns archived projects grouped by computed semester (Australia/Melbourne),
+// each project includes latest Round 1 and Round 2 assignment (by version),
+// and provides target URLs for feedback and rubric pages
+router.get('/past-tasks', async (req, res) => {
+  try {
+    console.log('📚 Getting past tasks (archived projects)...');
+
+    // 1) Get archived projects with their latest due_at (max of assignments)
+    const archivedProjects = await db.query(`
+      SELECT 
+        p.project_id,
+        p.name,
+        p.status,
+        MAX(a.due_at) AS latest_due
+      FROM project p
+      JOIN assignment a ON a.project_id = p.project_id
+      WHERE p.status IN ('archived','completed')
+      GROUP BY p.project_id, p.name
+      ORDER BY latest_due DESC NULLS LAST
+    `);
+
+    // 2) For all these projects, fetch latest version assignment per round (1 and 2)
+    const projectIds = archivedProjects.rows.map(r => r.project_id);
+    let latestAssignments = [];
+    if (projectIds.length > 0) {
+      const inParams = projectIds.map((_, i) => `$${i + 1}`).join(',');
+      const latestSql = `
+        SELECT a.* FROM assignment a
+        JOIN (
+          SELECT project_id, round, MAX(version) AS max_version
+          FROM assignment
+          WHERE project_id IN (${inParams})
+          GROUP BY project_id, round
+        ) t
+        ON a.project_id = t.project_id AND a.round = t.round AND a.version = t.max_version
+      `;
+      const latestRs = await db.query(latestSql, projectIds);
+      latestAssignments = latestRs.rows;
+    }
+
+    // 3) Build map: project_id -> { round1, round2 }
+    const idToAssignments = new Map();
+    for (const row of latestAssignments) {
+      const bucket = idToAssignments.get(row.project_id) || {};
+      if (row.round === 1) bucket.round1 = row;
+      if (row.round === 2) bucket.round2 = row;
+      idToAssignments.set(row.project_id, bucket);
+    }
+
+    // 4) Helper to compute semester in Australia/Melbourne
+    const tz = 'Australia/Melbourne';
+    function computeSemester(dueIso) {
+      if (!dueIso) return { year: null, sem: null };
+      const d = new Date(dueIso);
+      // Get components in Australia/Melbourne
+      const parts = new Intl.DateTimeFormat('en-AU', {
+        timeZone: tz,
+        year: 'numeric', month: 'numeric', day: 'numeric'
+      }).formatToParts(d).reduce((acc, p) => { acc[p.type] = parseInt(p.value, 10) || acc[p.type]; return acc; }, {});
+      const month = parts.month; // 1-12
+      const year = parts.year;
+      if (month >= 2 && month <= 6) {
+        return { year, sem: 1 };
+      }
+      // 7..12 and 1 belong to Semester 2; year is the July year
+      if (month >= 7) {
+        return { year, sem: 2 };
+      }
+      // month === 1 => Semester 2 of previous year
+      return { year: year - 1, sem: 2 };
+    }
+
+    // 5) Assemble groups { year, semester, projects: [...] }
+    const groupsMap = new Map(); // key: `${year}-S${sem}`
+
+    for (const p of archivedProjects.rows) {
+      const rounds = idToAssignments.get(p.project_id) || {};
+      const latestDue = p.latest_due || rounds.round2?.due_at || rounds.round1?.due_at;
+      const { year, sem } = computeSemester(latestDue);
+      if (!year || !sem) continue;
+
+      const key = `${year}-S${sem}`;
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, { year, semester: `Semester ${sem}`, projects: [] });
+      }
+
+      const assignments = [];
+      if (rounds.round1) {
+        assignments.push({
+          assignment_id: rounds.round1.assignment_id,
+          title: `${rounds.round1.name} (Round 1)`,
+          round: 1,
+          report_url: `/dashboard/coordinator/feedback?assignment=${encodeURIComponent(rounds.round1.assignment_id)}`,
+          rubric_url: `/dashboard/coordinator/rubric?project=${encodeURIComponent(p.project_id)}`
+        });
+      }
+      if (rounds.round2) {
+        assignments.push({
+          assignment_id: rounds.round2.assignment_id,
+          title: `${rounds.round2.name} (Round 2)`,
+          round: 2,
+          report_url: `/dashboard/coordinator/feedback?assignment=${encodeURIComponent(rounds.round2.assignment_id)}`,
+          rubric_url: `/dashboard/coordinator/rubric?project=${encodeURIComponent(p.project_id)}`
+        });
+      }
+
+      groupsMap.get(key).projects.push({
+        project_id: p.project_id,
+        project_name: p.name,
+        status: p.status,
+        assignments
+      });
+    }
+
+    // 6) Sort groups by year desc then S2 before S1; projects keep DB order
+    const groups = Array.from(groupsMap.values()).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      const sa = a.semester === 'Semester 2' ? 2 : 1;
+      const sb = b.semester === 'Semester 2' ? 2 : 1;
+      return sb - sa;
+    });
+
+    res.json({ groups });
+  } catch (error) {
+    console.error('❌ Failed to get past tasks:', error);
+    res.status(500).json({ error: 'Failed to get past tasks', details: error.message });
+  }
+});
+
+// Update project status: PUT /api/uploads/project/:project_id/status
+// Allowed transitions: active -> completed|archived, completed -> archived, archived -> completed (no draft)
+router.put('/project/:project_id/status', async (req, res) => {
+  const client = await db.connect();
+  try {
+    const { project_id } = req.params;
+    const { status } = req.body || {};
+
+    const allowed = ['completed', 'archived', 'active'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const currentRs = await client.query('SELECT status FROM project WHERE project_id = $1', [project_id]);
+    if (currentRs.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    const current = currentRs.rows[0].status;
+
+    // Transition rules:
+    // - No draft here
+    // - active -> completed | archived
+    // - completed -> archived
+    // - archived -> completed
+    if (current === 'archived' && !(status === 'archived' || status === 'completed')) {
+      return res.status(400).json({ error: 'Archived project can only move to completed' });
+    }
+    if (status === 'active' && current !== 'active') {
+      return res.status(400).json({ error: 'Cannot transition back to active' });
+    }
+    if (status === 'completed' && !['active','completed','archived'].includes(current)) {
+      return res.status(400).json({ error: 'Invalid transition to completed' });
+    }
+
+    await client.query('UPDATE project SET status = $1 WHERE project_id = $2', [status, project_id]);
+    return res.json({ project_id: Number(project_id), status });
+  } catch (error) {
+    console.error('Failed to update project status:', error);
+    return res.status(500).json({ error: 'Failed to update project status' });
+  } finally {
+    client.release();
+  }
+});
+
+// 10) Delete project: DELETE /api/uploads/project/:project_id
 router.delete('/project/:project_id', async (req, res) => {
   const client = await db.connect();
   
   try {
     const { project_id } = req.params;
     
-    console.log(`🗑️ 删除项目: project_id=${project_id}`);
+    console.log(`🗑️ Deleting project: project_id=${project_id}`);
+    console.log(`🗑️ Project ID type: ${typeof project_id}`);
 
     await client.query('BEGIN');
 
-    // 验证项目存在并获取项目信息
+    // Validate project exists and get project info
     const projectCheck = await client.query(
       'SELECT project_id, name FROM project WHERE project_id = $1',
       [project_id]
     );
     
+    console.log(`🗑️ Project check result: ${projectCheck.rows.length} rows found`);
+    
     if (projectCheck.rows.length === 0) {
       await client.query('ROLLBACK');
+      console.log(`🗑️ Project not found: ${project_id}`);
       return res.status(404).json({ error: 'Project not found' });
     }
 
     const projectName = projectCheck.rows[0].name;
 
-    // 获取所有相关的上传文件路径
+    // Get all related upload file paths
     const uploadFiles = await client.query(`
       SELECT u.storage_path 
       FROM upload u
@@ -916,25 +1101,88 @@ router.delete('/project/:project_id', async (req, res) => {
       WHERE a.project_id = $1 OR r.project_id = $1
     `, [project_id]);
 
-    // 删除物理文件
+    // Delete physical files
     for (const file of uploadFiles.rows) {
       if (file.storage_path) {
         const filePath = path.join(PERM_ROOT, file.storage_path);
         try {
           await fsp.unlink(filePath);
-          console.log(`📂 删除文件: ${file.storage_path}`);
+          console.log(`📂 File deleted: ${file.storage_path}`);
         } catch (fileError) {
-          console.log(`⚠️ 文件删除失败 (可能已不存在): ${file.storage_path}`);
+          console.log(`⚠️ File deletion failed (may not exist): ${file.storage_path}`);
         }
       }
     }
 
-    // 删除数据库记录 (依赖CASCADE删除)
+    // Delete related records in correct order to avoid foreign key constraints
+    // Get all assignment IDs and rubric IDs for this project first
+    const assignmentIds = await client.query(
+      'SELECT assignment_id FROM assignment WHERE project_id = $1',
+      [project_id]
+    );
+    
+    const rubricIds = await client.query(
+      'SELECT rubric_id FROM rubric WHERE project_id = $1',
+      [project_id]
+    );
+    
+    // 1. Delete upload records first (they reference both assignment and rubric)
+    if (assignmentIds.rows.length > 0) {
+      const assignmentIdList = assignmentIds.rows.map(row => row.assignment_id);
+      const assignmentPlaceholders = assignmentIdList.map((_, i) => `$${i + 1}`).join(',');
+      await client.query(`
+        DELETE FROM upload 
+        WHERE assignment_id IN (${assignmentPlaceholders})
+      `, assignmentIdList);
+    }
+    
+    if (rubricIds.rows.length > 0) {
+      const rubricIdList = rubricIds.rows.map(row => row.rubric_id);
+      const rubricPlaceholders = rubricIdList.map((_, i) => `$${i + 1}`).join(',');
+      await client.query(`
+        DELETE FROM upload 
+        WHERE rubric_id IN (${rubricPlaceholders})
+      `, rubricIdList);
+    }
+    
+    // 2. Delete other related records that reference assignments
+    if (assignmentIds.rows.length > 0) {
+      const ids = assignmentIds.rows.map(row => row.assignment_id);
+      
+      // Delete baseline_score records
+      if (ids.length > 0) {
+        const baselinePlaceholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await client.query(`
+          DELETE FROM baseline_score 
+          WHERE assignment_id IN (${baselinePlaceholders})
+        `, ids);
+      }
+      
+      // Delete feedback records
+      if (ids.length > 0) {
+        const feedbackPlaceholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await client.query(`
+          DELETE FROM feedback 
+          WHERE assignment_id IN (${feedbackPlaceholders})
+        `, ids);
+      }
+      
+      // Delete marker_score records
+      if (ids.length > 0) {
+        const markerPlaceholders = ids.map((_, i) => `$${i + 1}`).join(',');
+        await client.query(`
+          DELETE FROM marker_score 
+          WHERE assignment_id IN (${markerPlaceholders})
+        `, ids);
+      }
+    }
+    
+    // 3. Finally delete the project (this will CASCADE delete assignments and rubrics)
     await client.query('DELETE FROM project WHERE project_id = $1', [project_id]);
 
     await client.query('COMMIT');
 
-    console.log(`✅ 项目删除成功: ${projectName} (project_id=${project_id})`);
+    console.log(`✅ Project deleted successfully: ${projectName} (project_id=${project_id})`);
 
     res.json({
       message: 'Project deleted successfully',
@@ -947,7 +1195,8 @@ router.delete('/project/:project_id', async (req, res) => {
 
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('❌ 项目删除失败:', error);
+    console.error('❌ Project deletion failed:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({ 
       error: 'Failed to delete project',
       details: error.message 
@@ -957,14 +1206,14 @@ router.delete('/project/:project_id', async (req, res) => {
   }
 });
 
-// 11) 根据名字删除项目：DELETE /api/uploads/project/by-name/:name
+// 11) Delete project by name: DELETE /api/uploads/project/by-name/:name
 router.delete('/project/by-name/:name', async (req, res) => {
   try {
     const { name } = req.params;
     
-    console.log(`🔍 查找项目: name=${name}`);
+    console.log(`🔍 Finding project: name=${name}`);
 
-    // 查找项目
+    // Find project
     const projectResult = await db.query(
       'SELECT project_id, name FROM project WHERE name = $1',
       [name]
@@ -984,10 +1233,10 @@ router.delete('/project/by-name/:name', async (req, res) => {
 
     const project = projectResult.rows[0];
     
-    // 重定向到按ID删除
-    console.log(`🔄 重定向到按ID删除: project_id=${project.project_id}`);
+    // Redirect to delete by ID
+    console.log(`🔄 Redirecting to delete by ID: project_id=${project.project_id}`);
     
-    // 直接调用删除逻辑
+    // Directly call delete logic
     req.params.project_id = project.project_id;
     return router.handle(
       Object.assign(req, { method: 'DELETE', url: `/project/${project.project_id}` }), 
@@ -995,7 +1244,7 @@ router.delete('/project/by-name/:name', async (req, res) => {
     );
 
   } catch (error) {
-    console.error('❌ 按名字删除项目失败:', error);
+    console.error('❌ Failed to delete project by name:', error);
     res.status(500).json({ 
       error: 'Failed to delete project by name',
       details: error.message 
@@ -1003,12 +1252,12 @@ router.delete('/project/by-name/:name', async (req, res) => {
   }
 });
 
-// 12) 批量清理临时文件：DELETE /api/uploads/debug/temp-files
+// 12) Batch cleanup temporary files: DELETE /api/uploads/debug/temp-files
 router.delete('/debug/temp-files', async (req, res) => {
   try {
     const { older_than_hours, force } = req.query;
     
-    console.log('🧹 清理临时文件...');
+    console.log('🧹 Cleaning temporary files...');
     
     const files = await fsp.readdir(TEMP_DIR);
     let deletedFiles = [];
@@ -1018,7 +1267,7 @@ router.delete('/debug/temp-files', async (req, res) => {
       const filePath = path.join(TEMP_DIR, file);
       const stat = await fsp.stat(filePath);
       
-      // 如果指定了时间限制
+      // If time limit is specified
       if (older_than_hours && !force) {
         const hoursOld = (Date.now() - stat.mtime.getTime()) / (1000 * 60 * 60);
         if (hoursOld < parseFloat(older_than_hours)) {
@@ -1037,7 +1286,7 @@ router.delete('/debug/temp-files', async (req, res) => {
           size: stat.size,
           age_hours: ((Date.now() - stat.mtime.getTime()) / (1000 * 60 * 60)).toFixed(1)
         });
-        console.log(`🗑️ 删除临时文件: ${file}`);
+        console.log(`🗑️ Deleted temp file: ${file}`);
       } catch (unlinkError) {
         skippedFiles.push({
           name: file,
@@ -1046,7 +1295,7 @@ router.delete('/debug/temp-files', async (req, res) => {
       }
     }
 
-    console.log(`✅ 临时文件清理完成: 删除${deletedFiles.length}个，跳过${skippedFiles.length}个`);
+    console.log(`✅ Temp files cleanup completed: deleted ${deletedFiles.length}, skipped ${skippedFiles.length}`);
 
     res.json({
       message: 'Temp files cleanup completed',
@@ -1057,7 +1306,7 @@ router.delete('/debug/temp-files', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 临时文件清理失败:', error);
+    console.error('❌ Temp files cleanup failed:', error);
     res.status(500).json({ 
       error: 'Failed to cleanup temp files',
       details: error.message 
@@ -1065,7 +1314,7 @@ router.delete('/debug/temp-files', async (req, res) => {
   }
 });
 
-// 13) 调试工具：GET /api/uploads/debug/temp-files (保持与原API一致)
+// 13) Debug tool: GET /api/uploads/debug/temp-files (consistent with original API)
 router.get('/debug/temp-files', async (req, res) => {
   try {
     const files = await fsp.readdir(TEMP_DIR);
@@ -1089,27 +1338,27 @@ router.get('/debug/temp-files', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ 调试失败:', error);
+    console.error('❌ Debug failed:', error);
     res.status(500).json({ error: 'Debug failed' });
   }
 });
 
-// 16) 手动更新分数区间：PUT /api/uploads/grade-level/:grade_level_id
+// 16) Manually update score range: PUT /api/uploads/grade-level/:grade_level_id
 router.put('/grade-level/:grade_level_id', async (req, res) => {
   try {
     const { grade_level_id } = req.params;
     const { min_score, max_score, level_name, description } = req.body;
     
-    console.log(`🔧 手动更新分数区间: grade_level_id=${grade_level_id}`);
+    console.log(`🔧 Manually updating score range: grade_level_id=${grade_level_id}`);
     
-    // 验证必需参数
+    // Validate required parameters
     if (min_score === undefined || max_score === undefined) {
       return res.status(400).json({ 
         error: 'min_score and max_score are required' 
       });
     }
     
-    // 验证分数区间合理性
+    // Validate score range reasonableness
     const minScore = parseFloat(min_score);
     const maxScore = parseFloat(max_score);
     
@@ -1131,7 +1380,7 @@ router.put('/grade-level/:grade_level_id', async (req, res) => {
       });
     }
     
-    // 检查等级是否存在
+    // Check if level exists
     const existingLevel = await db.query(
       'SELECT * FROM criterion_grade_level WHERE grade_level_id = $1',
       [grade_level_id]
@@ -1145,7 +1394,7 @@ router.put('/grade-level/:grade_level_id', async (req, res) => {
     
     const currentLevel = existingLevel.rows[0];
     
-    // 构建更新语句
+    // Build update statement
     const updateFields = [];
     const updateValues = [];
     let valueIndex = 1;
@@ -1178,9 +1427,9 @@ router.put('/grade-level/:grade_level_id', async (req, res) => {
     const result = await db.query(updateQuery, updateValues);
     const updatedLevel = result.rows[0];
     
-    console.log(`✅ 分数区间更新成功:`);
-    console.log(`  原始: ${currentLevel.level_name} (${currentLevel.min_score}-${currentLevel.max_score})`);
-    console.log(`  更新: ${updatedLevel.level_name} (${updatedLevel.min_score}-${updatedLevel.max_score})`);
+    console.log(`✅ Score range updated successfully:`);
+    console.log(`  Original: ${currentLevel.level_name} (${currentLevel.min_score}-${currentLevel.max_score})`);
+    console.log(`  Updated: ${updatedLevel.level_name} (${updatedLevel.min_score}-${updatedLevel.max_score})`);
     
     res.json({
       message: 'Grade level updated successfully',
@@ -1200,7 +1449,7 @@ router.put('/grade-level/:grade_level_id', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ 更新分数区间失败:', error);
+    console.error('❌ Failed to update score range:', error);
     res.status(500).json({ 
       error: 'Failed to update grade level',
       details: error.message 
@@ -1208,14 +1457,14 @@ router.put('/grade-level/:grade_level_id', async (req, res) => {
   }
 });
 
-// 17) 获取所有评分标准和等级：GET /api/uploads/rubric/:rubric_id/details
+// 17) Get all grading criteria and levels: GET /api/uploads/rubric/:rubric_id/details
 router.get('/rubric/:rubric_id/details', async (req, res) => {
   try {
     const { rubric_id } = req.params;
     
-    console.log(`📋 获取rubric详细信息: rubric_id=${rubric_id}`);
+    console.log(`📋 Getting rubric details: rubric_id=${rubric_id}`);
     
-    // 获取rubric基本信息
+    // Get rubric basic information
     const rubricInfo = await db.query(
       'SELECT * FROM rubric WHERE rubric_id = $1',
       [rubric_id]
@@ -1225,7 +1474,7 @@ router.get('/rubric/:rubric_id/details', async (req, res) => {
       return res.status(404).json({ error: 'Rubric not found' });
     }
     
-    // 获取所有评分标准
+    // Get all grading criteria
     const criteria = await db.query(`
       SELECT 
         rc.criterion_id,
@@ -1238,7 +1487,7 @@ router.get('/rubric/:rubric_id/details', async (req, res) => {
       ORDER BY rc.seq_no
     `, [rubric_id]);
     
-    // 获取所有等级水平
+    // Get all grade levels
     const gradeLevels = await db.query(`
       SELECT 
         cgl.grade_level_id,
@@ -1255,7 +1504,7 @@ router.get('/rubric/:rubric_id/details', async (req, res) => {
       ORDER BY rc.seq_no, cgl.seq_no
     `, [rubric_id]);
     
-    // 组织数据结构
+    // Organize data structure
     const criteriaWithLevels = criteria.rows.map(criterion => ({
       criterion_id: criterion.criterion_id,
       seq_no: criterion.seq_no,
@@ -1274,7 +1523,7 @@ router.get('/rubric/:rubric_id/details', async (req, res) => {
         }))
     }));
     
-    console.log(`✅ 返回 ${criteria.rows.length} 个标准，${gradeLevels.rows.length} 个等级`);
+    console.log(`✅ Returning ${criteria.rows.length} criteria, ${gradeLevels.rows.length} levels`);
     
     res.json({
       rubric: {
@@ -1292,7 +1541,7 @@ router.get('/rubric/:rubric_id/details', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ 获取rubric详细信息失败:', error);
+    console.error('❌ Failed to get rubric details:', error);
     res.status(500).json({ 
       error: 'Failed to get rubric details',
       details: error.message 
@@ -1300,7 +1549,7 @@ router.get('/rubric/:rubric_id/details', async (req, res) => {
   }
 });
 
-// 改分功能：根据criterion和分数查找对应的grade level
+// Grade modification function: find corresponding grade level based on criterion and score
 router.post('/score-lookup', async (req, res) => {
   try {
     const { criterion_id, score } = req.body;
@@ -1318,9 +1567,9 @@ router.post('/score-lookup', async (req, res) => {
       });
     }
     
-    console.log(`🔍 查找分数 ${scoreValue} 在criterion ${criterion_id} 中对应的等级...`);
+    console.log(`🔍 Finding grade for score ${scoreValue} in criterion ${criterion_id}...`);
     
-    // 首先验证criterion是否存在
+    // First validate if criterion exists
     const criterionCheck = await db.query(
       'SELECT criterion_id, title, max_score FROM rubric_criterion WHERE criterion_id = $1',
       [criterion_id]
@@ -1334,7 +1583,7 @@ router.post('/score-lookup', async (req, res) => {
     
     const criterion = criterionCheck.rows[0];
     
-    // 检查分数是否在有效范围内
+    // Check if score is within valid range
     if (scoreValue < 0 || scoreValue > criterion.max_score) {
       return res.status(400).json({ 
         error: `Score ${scoreValue} is out of range. Valid range: 0 - ${criterion.max_score}`,
@@ -1346,7 +1595,7 @@ router.post('/score-lookup', async (req, res) => {
       });
     }
     
-    // 查找对应的grade level (分数在min_score和max_score之间)
+    // Find corresponding grade level (score between min_score and max_score)
     const gradeLevelQuery = await db.query(`
       SELECT 
         grade_level_id,
@@ -1363,7 +1612,7 @@ router.post('/score-lookup', async (req, res) => {
     `, [criterion_id, scoreValue]);
     
     if (gradeLevelQuery.rows.length === 0) {
-      // 如果没有精确匹配，查找最接近的等级
+      // If no exact match, find the closest level
       const nearestQuery = await db.query(`
         SELECT 
           grade_level_id,
@@ -1407,10 +1656,10 @@ router.post('/score-lookup', async (req, res) => {
       }
     }
     
-    // 返回精确匹配的结果
+    // Return exact match result
     const gradeLevel = gradeLevelQuery.rows[0];
     
-    console.log(`✅ 找到匹配等级: ${gradeLevel.level_name} (${gradeLevel.min_score}-${gradeLevel.max_score}分)`);
+    console.log(`✅ Found matching level: ${gradeLevel.level_name} (${gradeLevel.min_score}-${gradeLevel.max_score} points)`);
     
     res.json({
       match_type: 'exact',
@@ -1432,7 +1681,7 @@ router.post('/score-lookup', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ 分数查找失败:', error);
+    console.error('❌ Score lookup failed:', error);
     res.status(500).json({ 
       error: 'Failed to lookup score',
       details: error.message 
@@ -1440,10 +1689,10 @@ router.post('/score-lookup', async (req, res) => {
   }
 });
 
-// ============== 评分功能 APIs ==============
+// ============== Scoring APIs ==============
 
 /**
- * 根据分数匹配等级区间的通用函数
+ * Generic function to match grade level range by score
  */
 async function findGradeLevelByScore(criterion_id, score) {
   const result = await db.query(
@@ -1477,14 +1726,14 @@ async function findGradeLevelByScore(criterion_id, score) {
 }
 
 /**
- * Coordinator专用 - 设置/更新baseline分数
+ * Coordinator exclusive - set/update baseline score
  * POST /api/uploads/scoring/baseline
  */
 router.post('/scoring/baseline', async (req, res) => {
   try {
     const { assignment_id, criterion_id, score, comment } = req.body;
 
-    // 验证必需字段
+    // Validate required fields
     if (!assignment_id || !criterion_id || score === undefined) {
       return res.status(400).json({
         error: 'Missing required fields: assignment_id, criterion_id, score'
@@ -1498,7 +1747,7 @@ router.post('/scoring/baseline', async (req, res) => {
       });
     }
 
-    // 验证assignment存在并且是最新版本
+    // Validate assignment exists and is latest version
     const assignmentCheck = await db.query(
       `SELECT a.assignment_id, a.project_id, a.version, a.round
        FROM assignment a
@@ -1520,7 +1769,7 @@ router.post('/scoring/baseline', async (req, res) => {
 
     const projectId = assignmentCheck.rows[0].project_id;
 
-    // 验证criterion存在且属于该project的最新rubric版本
+    // Verify criterion exists and belongs to the latest rubric version of the project
     const criterionCheck = await db.query(
       `SELECT rc.criterion_id, rc.max_score, r.rubric_id, r.version
        FROM rubric_criterion rc
@@ -1549,7 +1798,7 @@ router.post('/scoring/baseline', async (req, res) => {
       });
     }
 
-    // 查找匹配的等级区间
+    // Find matching grade level range
     const gradeLevel = await findGradeLevelByScore(criterion_id, scoreValue);
     if (!gradeLevel) {
       return res.status(400).json({
@@ -1557,7 +1806,7 @@ router.post('/scoring/baseline', async (req, res) => {
       });
     }
 
-    // 插入或更新baseline_score
+    // Insert or update baseline_score
     const upsertResult = await db.query(
       `INSERT INTO baseline_score (assignment_id, criterion_id, score, comment)
        VALUES ($1, $2, $3, $4)
@@ -1569,7 +1818,7 @@ router.post('/scoring/baseline', async (req, res) => {
 
     const baselineScore = upsertResult.rows[0];
 
-    console.log(`✅ Baseline分数设置成功: assignment_id=${assignment_id}, criterion_id=${criterion_id}, score=${scoreValue}`);
+    console.log(`✅ Baseline score set successfully: assignment_id=${assignment_id}, criterion_id=${criterion_id}, score=${scoreValue}`);
 
     res.json({
       message: 'Baseline score set successfully',
@@ -1584,7 +1833,7 @@ router.post('/scoring/baseline', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 设置baseline分数失败:', error);
+    console.error('❌ Failed to set baseline score:', error);
     res.status(500).json({
       error: 'Failed to set baseline score',
       details: error.message
@@ -1593,14 +1842,14 @@ router.post('/scoring/baseline', async (req, res) => {
 });
 
 /**
- * Marker专用 - 设置/更新marker分数
+ * Marker exclusive - set/update marker score
  * POST /api/uploads/scoring/marker
  */
 router.post('/scoring/marker', async (req, res) => {
   try {
     const { assignment_id, criterion_id, marker_id, score, comment } = req.body;
 
-    // 验证必需字段
+    // Validate required fields
     if (!assignment_id || !criterion_id || !marker_id || score === undefined) {
       return res.status(400).json({
         error: 'Missing required fields: assignment_id, criterion_id, marker_id, score'
@@ -1614,7 +1863,7 @@ router.post('/scoring/marker', async (req, res) => {
       });
     }
 
-    // 验证assignment存在并且是最新版本
+    // Verify assignment exists and is the latest version
     const assignmentCheck = await db.query(
       `SELECT a.assignment_id, a.project_id, a.version, a.round
        FROM assignment a
@@ -1636,7 +1885,7 @@ router.post('/scoring/marker', async (req, res) => {
 
     const projectId = assignmentCheck.rows[0].project_id;
 
-    // 验证criterion存在且属于该project的最新rubric版本
+    // Verify criterion exists and belongs to the latest rubric version of the project
     const criterionCheck = await db.query(
       `SELECT rc.criterion_id, rc.max_score, r.rubric_id, r.version
        FROM rubric_criterion rc
@@ -1674,7 +1923,7 @@ router.post('/scoring/marker', async (req, res) => {
       });
     }
 
-    // 查找匹配的等级区间
+    // Find matching grade level range
     const gradeLevel = await findGradeLevelByScore(criterion_id, scoreValue);
     if (!gradeLevel) {
       return res.status(400).json({
@@ -1682,7 +1931,7 @@ router.post('/scoring/marker', async (req, res) => {
       });
     }
 
-    // 插入或更新marker_score
+    // Insert or update marker_score
     const upsertResult = await db.query(
       `INSERT INTO marker_score (assignment_id, criterion_id, marker_id, score, comment, submitted_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
@@ -1694,7 +1943,7 @@ router.post('/scoring/marker', async (req, res) => {
 
     const markerScore = upsertResult.rows[0];
 
-    console.log(`✅ Marker分数设置成功: assignment_id=${assignment_id}, criterion_id=${criterion_id}, marker_id=${marker_id}, score=${scoreValue}`);
+    console.log(`✅ Marker score set successfully: assignment_id=${assignment_id}, criterion_id=${criterion_id}, marker_id=${marker_id}, score=${scoreValue}`);
 
     res.json({
       message: 'Marker score set successfully',
@@ -1712,7 +1961,7 @@ router.post('/scoring/marker', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 设置marker分数失败:', error);
+    console.error('❌ Failed to set marker score:', error);
     res.status(500).json({
       error: 'Failed to set marker score',
       details: error.message
@@ -1721,7 +1970,7 @@ router.post('/scoring/marker', async (req, res) => {
 });
 
 /**
- * 获取assignment的所有baseline分数
+ * Get all baseline scores for assignment
  * GET /api/uploads/scoring/baseline/:assignment_id
  */
 router.get('/scoring/baseline/:assignment_id', async (req, res) => {
@@ -1741,7 +1990,7 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
       [assignment_id]
     );
 
-    console.log(`✅ 获取baseline分数成功: assignment_id=${assignment_id}, count=${result.rows.length}`);
+    console.log(`✅ Baseline score set successfully: assignment_id=${assignment_id}, count=${result.rows.length}`);
 
     res.json({
       assignment_id: parseInt(assignment_id),
@@ -1752,7 +2001,7 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
         criterion_max_score: parseFloat(row.criterion_max_score),
         score: parseFloat(row.score),
         comment: row.comment,
-        finalized: row.finalized || false, // 添加 finalized 字段
+        finalized: row.finalized || false, // Add finalized field
         matched_level: row.level_name ? {
           level_name: row.level_name,
           min_score: parseFloat(row.level_min_score),
@@ -1763,7 +2012,7 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 获取baseline分数失败:', error);
+    console.error('❌ Failed to get baseline scores:', error);
     res.status(500).json({
       error: 'Failed to get baseline scores',
       details: error.message
@@ -1772,7 +2021,7 @@ router.get('/scoring/baseline/:assignment_id', async (req, res) => {
 });
 
 /**
- * 获取assignment的marker分数
+ * Get assignment marker scores
  * GET /api/uploads/scoring/marker/:assignment_id/:marker_id
  */
 router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
@@ -1793,7 +2042,7 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
       [assignment_id, marker_id]
     );
 
-    console.log(`✅ 获取marker分数成功: assignment_id=${assignment_id}, marker_id=${marker_id}, count=${result.rows.length}`);
+    console.log(`✅ Marker score retrieved successfully: assignment_id=${assignment_id}, marker_id=${marker_id}, count=${result.rows.length}`);
 
     res.json({
       assignment_id: parseInt(assignment_id),
@@ -1818,7 +2067,7 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 获取marker分数失败:', error);
+    console.error('❌ Failed to get marker scores:', error);
     res.status(500).json({
       error: 'Failed to get marker scores',
       details: error.message
@@ -1826,13 +2075,17 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
   }
 });
 
-// 获取 assignment 状态：GET /api/uploads/assignment/:assignment_id/status
+// Get assignment status: GET /api/uploads/assignment/:assignment_id/status
 router.get('/assignment/:assignment_id/status', async (req, res) => {
   try {
     const { assignment_id } = req.params;
+    const BUSINESS_TZ = process.env.BUSINESS_TIMEZONE || 'Australia/Melbourne';
 
     const result = await db.query(
-      `SELECT assignment_id, is_published, name, round, version, project_id, due_at, created_at
+      `SELECT 
+         assignment_id, is_published, name, round, version, project_id, due_at, created_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty
        FROM assignment WHERE assignment_id = $1`,
       [assignment_id]
     );
@@ -1850,17 +2103,159 @@ router.get('/assignment/:assignment_id/status', async (req, res) => {
         version: row.version,
         project_id: row.project_id,
         due_at: row.due_at,
+        due_at_local_iso: row.due_at_local_iso,
+        due_at_pretty: row.due_at_pretty,
         created_at: row.created_at,
         is_published: row.is_published
       }
     });
   } catch (error) {
-    console.error('❌ 获取assignment状态失败:', error);
+    console.error('❌ Failed to get assignment status:', error);
     return res.status(500).json({ error: 'Failed to get assignment status', details: error.message });
   }
 });
 
-// 恢复并增强：手动更新 assignment 发布状态
+const { requireCoordinator } = require('../middleware/roleAuth');
+const authenticate = require('../middleware/auth');
+
+// Update assignment due date: PUT /api/uploads/assignment/:assignment_id/due
+router.put('/assignment/:assignment_id/due', authenticate, requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    const { due_at } = req.body || {};
+
+    if (!due_at) {
+      return res.status(400).json({ error: 'Missing due_at' });
+    }
+
+    // Parse to a timestamp string acceptable by Postgres timestamp without time zone
+    // Expect ISO string or datetime-local string from browser
+    const parsed = new Date(due_at);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: 'Invalid due_at format' });
+    }
+
+    // 1) Server-side rule: if original due date already passed, reject change
+    const originalDueRes = await db.query(
+      'SELECT due_at, (due_at < NOW()) AS is_past FROM assignment WHERE assignment_id = $1',
+      [assignment_id]
+    );
+    if (originalDueRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    if (originalDueRes.rows[0].is_past === true) {
+      return res.status(400).json({
+        error: 'Cannot modify due date',
+        message: 'Original due date has already passed and cannot be changed.'
+      });
+    }
+
+    // Format as 'YYYY-MM-DD HH:MM:SS'
+    const pad = (n) => String(n).padStart(2, '0');
+    const ts = `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`;
+
+    const result = await db.query(
+      `UPDATE assignment SET due_at = $1 WHERE assignment_id = $2 
+       RETURNING assignment_id, due_at,
+         to_char(due_at, 'YYYY-MM-DD"T"HH24:MI:SS') as due_at_local_iso,
+         to_char(due_at, 'Dy, Mon DD, YYYY, HH24:MI') as due_at_pretty`,
+      [ts, assignment_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    console.log(`✅ Updated due_at for assignment ${assignment_id} -> ${ts}`);
+    return res.json({
+      success: true,
+      assignment: {
+        assignment_id: parseInt(result.rows[0].assignment_id),
+        due_at: result.rows[0].due_at,
+        due_at_local_iso: result.rows[0].due_at_local_iso,
+        due_at_pretty: result.rows[0].due_at_pretty
+      }
+    });
+  } catch (error) {
+    console.error('❌ Failed to update assignment due date:', error);
+    return res.status(500).json({ error: 'Failed to update assignment due date', details: error.message });
+  }
+});
+
+/**
+ * Coordinator only - list active markers who have NOT submitted marks for the assignment
+ * Definition of "submitted": has at least one finalized marker_score row for this assignment
+ * GET /api/uploads/assignment/:assignment_id/pending-markers
+ */
+router.get('/assignment/:assignment_id/pending-markers', authenticate, requireCoordinator, async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    console.log(`[pending-markers] assignment_id=${assignment_id}, userId=${req.user?.id}`);
+
+    // Verify assignment and get project to resolve rubric criteria count (optional info)
+    const a = await db.query('SELECT assignment_id, project_id FROM assignment WHERE assignment_id = $1', [assignment_id]);
+    console.log('[pending-markers] assignment query rows:', a.rows.length);
+    if (a.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    const projectId = a.rows[0].project_id;
+    console.log('[pending-markers] projectId=', projectId);
+
+    // Get criteria count from latest rubric (for reference)
+    const crit = await db.query(
+      `SELECT COUNT(*) AS criteria_count
+       FROM rubric_criterion rc
+       JOIN rubric r ON rc.rubric_id = r.rubric_id
+       WHERE r.project_id = $1
+         AND r.version = (SELECT MAX(version) FROM rubric WHERE project_id = $1)`,
+      [projectId]
+    );
+    console.log('[pending-markers] criteria_count rows:', crit.rows);
+    const criteriaCount = parseInt(crit.rows[0]?.criteria_count || '0', 10);
+
+    // Aggregate marker submission status for this assignment
+    const result = await db.query(
+      `WITH ms AS (
+         SELECT marker_id,
+                COUNT(*) FILTER (WHERE finalized = true) AS finalized_count,
+                COUNT(*) AS total_count
+         FROM marker_score
+         WHERE assignment_id = $1
+         GROUP BY marker_id
+       )
+       SELECT u.user_id       AS marker_id,
+              u.name          AS marker_name,
+              u.email         AS marker_email,
+              COALESCE(ms.total_count, 0)     AS submitted_count,
+              COALESCE(ms.finalized_count, 0) AS finalized_count
+       FROM app_user u
+       LEFT JOIN ms ON ms.marker_id = u.user_id
+       WHERE u.role = 'MARKER' AND u.is_active = true
+         AND COALESCE(ms.finalized_count, 0) = 0
+       ORDER BY u.name ASC`,
+      [assignment_id]
+    );
+    console.log('[pending-markers] result count:', result.rows.length);
+
+    return res.json({
+      assignment_id: parseInt(assignment_id),
+      criteria_count: criteriaCount,
+      pending_markers: result.rows.map(r => ({
+        marker_id: parseInt(r.marker_id),
+        name: r.marker_name,
+        email: r.marker_email,
+        submitted_count: parseInt(r.submitted_count || 0, 10),
+        finalized_count: parseInt(r.finalized_count || 0, 10)
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to list pending markers:', error);
+    return res.status(500).json({ error: 'Failed to list pending markers', details: error.message });
+  }
+});
+
+// Restore and enhance: manually update assignment publish status
 // PUT /api/uploads/assignment/:assignment_id/publish
 router.put('/assignment/:assignment_id/publish', async (req, res) => {
   try {
@@ -1871,7 +2266,7 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
       return res.status(400).json({ error: 'is_published must be a boolean' });
     }
 
-    // 获取 assignment 及其 project
+    // Get assignment and its project
     const assignmentResult = await db.query(
       'SELECT assignment_id, project_id, is_published, round FROM assignment WHERE assignment_id = $1',
       [assignment_id]
@@ -1884,7 +2279,7 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
     const projectId = assignmentResult.rows[0].project_id;
     const currentRound = parseInt(assignmentResult.rows[0].round);
 
-    // 如果要发布，校验项目至少有 rubric 且至少有一个 assignment
+    // If publishing, validate project has at least rubric and at least one assignment
     if (is_published === true) {
       const rubricExists = await db.query(
         'SELECT 1 FROM rubric WHERE project_id = $1 LIMIT 1',
@@ -1908,7 +2303,7 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
       }
     }
 
-    // 额外限制：round=2 发布前，要求 round=1 最新版本已发布
+    // Additional restriction: before publishing round=2, require round=1 latest version is published
     if (currentRound === 2) {
     const latestRound1 = await db.query(
       `SELECT is_published
@@ -1921,26 +2316,26 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
 
     if (latestRound1.rows.length === 0) {
       return res.status(400).json({
-        error: '发布失败',
-        message: '未找到作业1最新版本，请先提交作业1再尝试发布作业2'
+        error: 'Publish failed',
+        message: 'Assignment 1 latest version not found, please submit Assignment 1 before trying to publish Assignment 2'
       });
     }
 
     if (latestRound1.rows[0].is_published !== true) {
       return res.status(400).json({
-        error: '发布失败',
-        message: '请先发布作业1'
+        error: 'Publish failed',
+        message: 'Please publish Assignment 1 first'
       });
     }
     }
 
-    // 更新 assignment 发布状态
+    // Update assignment publication status
     const updateResult = await db.query(
       'UPDATE assignment SET is_published = $1 WHERE assignment_id = $2 RETURNING assignment_id, is_published, project_id',
       [is_published, assignment_id]
     );
 
-    // 若发布成功且项目仍为 draft，则激活项目
+    // If publish successful and project is still draft, activate project
     let projectStatus;
     if (is_published === true) {
       const statusResult = await db.query('SELECT status FROM project WHERE project_id = $1', [projectId]);
@@ -1953,7 +2348,85 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
       }
     }
 
-    console.log(`📝 assignment 发布状态更新: assignment_id=${assignment_id}, is_published=${is_published}`);
+    console.log(`📝 Assignment publication status updated: assignment_id=${assignment_id}, is_published=${is_published}`);
+
+    // If published successfully, send notification emails to all active markers
+    if (is_published === true) {
+      try {
+        // Get assignment details including project name
+        const assignmentDetailsResult = await db.query(
+          `SELECT a.name as assignment_name, a.due_at, a.round, p.name as project_name
+           FROM assignment a
+           JOIN project p ON a.project_id = p.project_id
+           WHERE a.assignment_id = $1`,
+          [assignment_id]
+        );
+
+        if (assignmentDetailsResult.rows.length > 0) {
+          const assignmentDetails = assignmentDetailsResult.rows[0];
+          const assignmentName = assignmentDetails.assignment_name || `Assignment ${assignmentDetails.round}`;
+          const projectName = assignmentDetails.project_name;
+          const dueAt = assignmentDetails.due_at 
+            ? new Date(assignmentDetails.due_at).toLocaleString('en-AU', { 
+                timeZone: 'Australia/Melbourne',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : null;
+
+          // Get all active markers and coordinators
+          const recipientsResult = await db.query(
+            `SELECT user_id, name, email, role
+             FROM app_user
+             WHERE (role = 'MARKER' OR role = 'COORDINATOR') AND is_active = true
+             ORDER BY name ASC`
+          );
+
+          console.log(`📧 Sending assignment notifications to ${recipientsResult.rows.length} user(s) (markers + coordinators)`);
+
+          // Send different emails based on user role (don't wait for completion to avoid blocking the response)
+          const EmailService = require('../services/emailService');
+          const emailPromises = recipientsResult.rows.map(user => {
+            if (user.role === 'MARKER') {
+              // Send new assignment notification to markers
+              return EmailService.sendNewAssignmentNotification(
+                user.email,
+                user.name,
+                assignmentName,
+                projectName,
+                dueAt
+              ).catch(err => {
+                console.error(`❌ Failed to send new assignment notification to marker ${user.email}:`, err.message);
+              });
+            } else if (user.role === 'COORDINATOR') {
+              // Send published success notification to coordinators
+              return EmailService.sendAssignmentPublishedNotification(
+                user.email,
+                user.name,
+                assignmentName,
+                projectName,
+                dueAt
+              ).catch(err => {
+                console.error(`❌ Failed to send published notification to coordinator ${user.email}:`, err.message);
+              });
+            }
+          });
+
+          // Send all emails asynchronously (fire and forget)
+          Promise.all(emailPromises).then(() => {
+            console.log(`✅ Assignment notification emails sent successfully (markers: new assignment, coordinators: published success)`);
+          }).catch(err => {
+            console.error(`⚠️ Some notification emails failed:`, err);
+          });
+        }
+      } catch (emailError) {
+        // Log error but don't fail the publish operation
+        console.error('⚠️ Error sending notification emails:', emailError);
+      }
+    }
 
     return res.json({
       message: 'Assignment publish status updated',
@@ -1964,27 +2437,27 @@ router.put('/assignment/:assignment_id/publish', async (req, res) => {
       ...(projectStatus && { project_status: projectStatus })
     });
   } catch (error) {
-    console.error('❌ 更新assignment发布状态失败:', error);
+    console.error('❌ Failed to update assignment publication status:', error);
     return res.status(500).json({ error: 'Failed to update assignment publish status', details: error.message });
   }
 });
 
 /**
- * Coordinator专用 - 批量设置/更新baseline分数
+ * Coordinator exclusive - batch set/update baseline scores
  * POST /api/uploads/scoring/baseline/batch
  */
 router.post('/scoring/baseline/batch', async (req, res) => {
   try {
     const { assignment_id, scores } = req.body;
 
-    // 验证必需字段
+    // Validate required fields
     if (!assignment_id || !scores || !Array.isArray(scores) || scores.length === 0) {
       return res.status(400).json({
         error: 'Missing required fields: assignment_id, scores (array)'
       });
     }
 
-    // 验证assignment存在并且是最新版本
+    // Verify assignment exists and is the latest version
     const assignmentCheck = await db.query(
       `SELECT a.assignment_id, a.project_id, a.version, a.round
        FROM assignment a
@@ -2009,7 +2482,7 @@ router.post('/scoring/baseline/batch', async (req, res) => {
     const results = [];
     const errors = [];
 
-    // 开始事务
+    // Start transaction
     const client = await db.connect();
     await client.query('BEGIN');
 
@@ -2017,7 +2490,7 @@ router.post('/scoring/baseline/batch', async (req, res) => {
       for (let i = 0; i < scores.length; i++) {
         const { criterion_id, score, comment } = scores[i];
 
-        // 验证单个分数项
+        // Validate individual score item
         if (!criterion_id || score === undefined) {
           errors.push({
             index: i,
@@ -2037,7 +2510,7 @@ router.post('/scoring/baseline/batch', async (req, res) => {
           continue;
         }
 
-        // 验证criterion存在且属于该project的最新rubric版本
+        // Verify criterion exists and belongs to the latest rubric version of this project
         const criterionCheck = await client.query(
           `SELECT rc.criterion_id, rc.max_score, r.rubric_id, r.version
            FROM rubric_criterion rc
@@ -2071,7 +2544,7 @@ router.post('/scoring/baseline/batch', async (req, res) => {
           continue;
         }
 
-        // 查找匹配的等级区间
+        // Find matching grade level range
         const gradeLevel = await findGradeLevelByScore(criterion_id, scoreValue);
         if (!gradeLevel) {
           errors.push({
@@ -2082,7 +2555,7 @@ router.post('/scoring/baseline/batch', async (req, res) => {
           continue;
         }
 
-        // 插入或更新baseline_score
+        // Insert or update baseline_score
         const upsertResult = await client.query(
           `INSERT INTO baseline_score (assignment_id, criterion_id, score, comment)
            VALUES ($1, $2, $3, $4)
@@ -2110,7 +2583,7 @@ router.post('/scoring/baseline/batch', async (req, res) => {
 
       await client.query('COMMIT');
 
-      console.log(`✅ 批量Baseline分数设置完成: assignment_id=${assignment_id}, 成功=${results.length}, 失败=${errors.length}`);
+      console.log(`✅ Batch baseline score setting completed: assignment_id=${assignment_id}, successful=${results.length}, failed=${errors.length}`);
 
       res.json({
         message: 'Batch baseline scores processed',
@@ -2132,7 +2605,7 @@ router.post('/scoring/baseline/batch', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ 批量设置baseline分数失败:', error);
+    console.error('❌ Failed to batch set baseline scores:', error);
     res.status(500).json({
       error: 'Failed to set batch baseline scores',
       details: error.message
@@ -2141,26 +2614,26 @@ router.post('/scoring/baseline/batch', async (req, res) => {
 });
 
 /**
- * Coordinator专用 - 批量确认baseline分数
+ * Coordinator exclusive - batch confirm baseline scores
  * POST /api/uploads/scoring/baseline/submit
  */
 router.post('/scoring/baseline/submit', async (req, res) => {
     try {
-        // 1. 获取请求参数 - 现在接收criterion_ids数组
+        // 1. Get request parameters - now accepts criterion_ids array
         const { assignment_id, criterion_ids } = req.body;
 
-        // 2. 参数验证
+        // 2. Parameter validation
         if (!assignment_id || !criterion_ids || !Array.isArray(criterion_ids) || criterion_ids.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'assignment_id 和 criterion_ids 数组是必需的参数'
+                message: 'assignment_id and criterion_ids array are required parameters'
             });
         }
 
-        // 3. 构建IN查询的占位符 ($1, $2, $3...)
+        // 3. Build IN query placeholders ($1, $2, $3...)
         const placeholders = criterion_ids.map((_, index) => `$${index + 2}`).join(',');
 
-        // 4. 批量更新数据库
+        // 4. Batch update database
         const query = `
             UPDATE baseline_score
             SET finalized = true
@@ -2172,10 +2645,10 @@ router.post('/scoring/baseline/submit', async (req, res) => {
         const params = [assignment_id, ...criterion_ids];
         const result = await db.query(query, params);
 
-        // 5. 返回成功响应
+        // 5. Return success response
         res.json({
             success: true,
-            message: `已成功确认 ${result.rowCount} 个baseline分数`,
+            message: `Successfully confirmed ${result.rowCount} baseline scores`,
             data: {
                 updated_count: result.rowCount,
                 updated_records: result.rows
@@ -2183,10 +2656,10 @@ router.post('/scoring/baseline/submit', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('批量确认baseline分数时出错:', error);
+        console.error('Error confirming baseline scores in batch:', error);
         res.status(500).json({
             success: false,
-            message: '服务器内部错误',
+            message: 'Internal server error',
             error: error.message
         });
     }
@@ -2194,21 +2667,21 @@ router.post('/scoring/baseline/submit', async (req, res) => {
 
 
 /**
- * Marker专用 - 批量设置/更新marker分数
+ * Marker exclusive - batch set/update marker scores
  * POST /api/uploads/scoring/marker/batch
  */
 router.post('/scoring/marker/batch', async (req, res) => {
   try {
     const { assignment_id, marker_id, scores } = req.body;
 
-    // 验证必需字段
+    // Validate required fields
     if (!assignment_id || !marker_id || !scores || !Array.isArray(scores) || scores.length === 0) {
       return res.status(400).json({
         error: 'Missing required fields: assignment_id, marker_id, scores (array)'
       });
     }
 
-    // 验证assignment存在并且是最新版本
+    // Verify assignment exists and is the latest version
     const assignmentCheck = await db.query(
       `SELECT a.assignment_id, a.project_id, a.version, a.round
        FROM assignment a
@@ -2242,7 +2715,7 @@ router.post('/scoring/marker/batch', async (req, res) => {
     const results = [];
     const errors = [];
 
-    // 开始事务
+    // Start transaction
     const client = await db.connect();
     await client.query('BEGIN');
 
@@ -2250,7 +2723,7 @@ router.post('/scoring/marker/batch', async (req, res) => {
       for (let i = 0; i < scores.length; i++) {
         const { criterion_id, score, comment } = scores[i];
 
-        // 验证单个分数项
+        // Validate individual score item
         if (!criterion_id || score === undefined) {
           errors.push({
             index: i,
@@ -2270,7 +2743,7 @@ router.post('/scoring/marker/batch', async (req, res) => {
           continue;
         }
 
-        // 验证criterion存在且属于该project的最新rubric版本
+        // Verify criterion exists and belongs to the latest rubric version of this project
         const criterionCheck = await client.query(
           `SELECT rc.criterion_id, rc.max_score, r.rubric_id, r.version
            FROM rubric_criterion rc
@@ -2304,7 +2777,7 @@ router.post('/scoring/marker/batch', async (req, res) => {
           continue;
         }
 
-        // 查找匹配的等级区间
+        // Find matching grade level range
         const gradeLevel = await findGradeLevelByScore(criterion_id, scoreValue);
         if (!gradeLevel) {
           errors.push({
@@ -2315,7 +2788,7 @@ router.post('/scoring/marker/batch', async (req, res) => {
           continue;
         }
 
-        // 插入或更新marker_score
+        // Insert or update marker_score
         const upsertResult = await client.query(
           `INSERT INTO marker_score (assignment_id, criterion_id, marker_id, score, comment, submitted_at)
            VALUES ($1, $2, $3, $4, $5, NOW())
@@ -2346,7 +2819,7 @@ router.post('/scoring/marker/batch', async (req, res) => {
 
       await client.query('COMMIT');
 
-      console.log(`✅ 批量Marker分数设置完成: assignment_id=${assignment_id}, marker_id=${marker_id}, 成功=${results.length}, 失败=${errors.length}`);
+      console.log(`✅ Batch marker score setting completed: assignment_id=${assignment_id}, marker_id=${marker_id}, success=${results.length}, failed=${errors.length}`);
 
       res.json({
         message: 'Batch marker scores processed',
@@ -2369,7 +2842,7 @@ router.post('/scoring/marker/batch', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ 批量设置marker分数失败:', error);
+    console.error('❌ Failed to batch set marker scores:', error);
     res.status(500).json({
       error: 'Failed to set batch marker scores',
       details: error.message
@@ -2378,26 +2851,26 @@ router.post('/scoring/marker/batch', async (req, res) => {
 });
 
 /**
- * Marker专用 - 批量确认marker分数
+ * Marker exclusive - batch confirm marker scores
  * POST /api/uploads/scoring/marker/submit
  */
 router.post('/scoring/marker/submit', async (req, res) => {
     try {
-        // 1. 获取请求参数
+        // 1. Get request parameters
         const { assignment_id, marker_id, criterion_ids } = req.body;
 
-        // 2. 参数验证
+        // 2. Parameter validation
         if (!assignment_id || !marker_id || !criterion_ids || !Array.isArray(criterion_ids) || criterion_ids.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'assignment_id, marker_id 和 criterion_ids 数组是必需的参数'
+                message: 'assignment_id, marker_id and criterion_ids array are required parameters'
             });
         }
 
-        // 3. 构建IN查询的占位符
+        // 3. Build IN query placeholders
         const placeholders = criterion_ids.map((_, index) => `$${index + 3}`).join(',');
 
-        // 4. 批量更新数据库
+        // 4. Batch update database
         const query = `
             UPDATE marker_score
             SET finalized = true
@@ -2410,10 +2883,10 @@ router.post('/scoring/marker/submit', async (req, res) => {
         const params = [assignment_id, marker_id, ...criterion_ids];
         const result = await db.query(query, params);
 
-        // 5. 返回成功响应
+        // 5. Return success response
         res.json({
             success: true,
-            message: `已成功确认 ${result.rowCount} 个marker分数`,
+            message: `Successfully confirmed ${result.rowCount} marker scores`,
             data: {
                 updated_count: result.rowCount,
                 updated_records: result.rows
@@ -2421,10 +2894,10 @@ router.post('/scoring/marker/submit', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('批量确认marker分数时出错:', error);
+        console.error('Error confirming marker scores in batch:', error);
         res.status(500).json({
             success: false,
-            message: '服务器内部错误',
+            message: 'Internal server error',
             error: error.message
         });
     }
@@ -2432,14 +2905,14 @@ router.post('/scoring/marker/submit', async (req, res) => {
 
 
 /**
- * 生成Assignment Moderation对比报告
+ * Generate Assignment Moderation comparison report
  * GET /api/uploads/assignments/:assignment_id/moderation-report
  */
 router.get('/assignments/:assignment_id/moderation-report', async (req, res) => {
   try {
     const { assignment_id } = req.params;
 
-    // 验证assignment存在并且是最新版本
+    // Verify assignment exists and is the latest version
     const assignmentCheck = await db.query(
       `SELECT a.assignment_id, a.name, a.project_id, a.version, a.round
        FROM assignment a
@@ -2461,7 +2934,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
 
     const assignment = assignmentCheck.rows[0];
 
-    // 获取基准分数和marker分数的完整数据
+    // Get complete data for baseline scores and marker scores
     const mainQuery = `
       SELECT 
         bs.criterion_id,
@@ -2469,9 +2942,11 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         rc.max_score as criterion_max_score,
         rc.seq_no,
         bs.score as baseline_score,
+        bs.comment as baseline_comment,
         ms.marker_id,
         u.name as marker_name,
-        ms.score as marker_score
+        ms.score as marker_score,
+        ms.comment as marker_comment
       FROM baseline_score bs
       JOIN rubric_criterion rc ON bs.criterion_id = rc.criterion_id  
       LEFT JOIN marker_score ms ON bs.assignment_id = ms.assignment_id 
@@ -2490,7 +2965,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
       });
     }
 
-    // 组织数据结构
+    // Organize data structure
     const criteriaMap = new Map();
     const markersMap = new Map();
 
@@ -2498,7 +2973,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
       const criterionId = row.criterion_id;
       const markerId = row.marker_id;
 
-      // 初始化criterion数据
+      // Initialize criterion data
       if (!criteriaMap.has(criterionId)) {
         const baselineScore = parseFloat(row.baseline_score);
         const maxScore = parseFloat(row.criterion_max_score);
@@ -2510,21 +2985,22 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           max_score: maxScore,
           seq_no: row.seq_no,
           baseline_score: baselineScore,
-          baseline_percentage: baselinePercentage, // 当前分数/最高分数的百分比
+          baseline_comment: row.baseline_comment || null,
+          baseline_percentage: baselinePercentage, // Current score/maximum score percentage
           range_lower: Math.round(baselineScore * 0.95 * 100) / 100, // ±5%
           range_upper: Math.round(baselineScore * 1.05 * 100) / 100,
           marker_scores: []
         });
       }
 
-      // 添加marker分数（如果存在）
+      // Add marker score (if exists)
       if (markerId && row.marker_score !== null) {
         const markerScore = parseFloat(row.marker_score);
         const criterion = criteriaMap.get(criterionId);
         
         const withinRange = markerScore >= criterion.range_lower && markerScore <= criterion.range_upper;
         
-        // 计算marker的百分比和与baseline的差异百分比
+        // Calculate marker percentage and percentage difference from baseline
         const markerPercentage = Math.round((markerScore / criterion.max_score) * 100 * 100) / 100;
         const percentageDifference = Math.round((markerPercentage - criterion.baseline_percentage) * 100) / 100;
         
@@ -2532,12 +3008,13 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           marker_id: markerId,
           marker_name: row.marker_name,
           score: markerScore,
-          percentage: markerPercentage, // 当前分数/最高分数的百分比
-          percentage_difference: percentageDifference, // 与baseline的百分比差异，可正可负
+          comment: row.marker_comment || null,
+          percentage: markerPercentage, // Current score/maximum score percentage
+          percentage_difference: percentageDifference, // Percentage difference from baseline, can be positive or negative
           within_range: withinRange
         });
 
-        // 初始化marker总分跟踪
+        // Initialize marker total score tracking
         if (!markersMap.has(markerId)) {
           markersMap.set(markerId, {
             marker_id: markerId,
@@ -2547,33 +3024,36 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           });
         }
 
-        // 累计marker总分
+        // Accumulate marker total score
         const markerTotal = markersMap.get(markerId);
         markerTotal.total += markerScore;
         markerTotal.criteria_count += 1;
       }
     });
 
-    // 转换为数组并排序
+    // Convert to array and sort
     const criteria = Array.from(criteriaMap.values()).sort((a, b) => a.seq_no - b.seq_no);
 
-    // 计算基准总分和最高总分
+    // Calculate baseline total and maximum total score
     const baselineTotal = criteria.reduce((sum, criterion) => sum + criterion.baseline_score, 0);
     const maxTotalScore = criteria.reduce((sum, criterion) => sum + criterion.max_score, 0);
     const baselineTotalRounded = Math.round(baselineTotal * 100) / 100;
     const baselineTotalPercentage = Math.round((baselineTotal / maxTotalScore) * 100 * 100) / 100;
 
-    // 计算总分范围（±2.5%）
-    const totalRangeLower = Math.round(baselineTotalRounded * 0.975 * 100) / 100;
-    const totalRangeUpper = Math.round(baselineTotalRounded * 1.025 * 100) / 100;
+    // Calculate total score range (±5% for red, ±2.5% for warning threshold)
+    const totalRangeLower = Math.round(baselineTotalRounded * 0.95 * 100) / 100;
+    const totalRangeUpper = Math.round(baselineTotalRounded * 1.05 * 100) / 100;
+    const totalWarningLower = Math.round(baselineTotalRounded * 0.975 * 100) / 100;
+    const totalWarningUpper = Math.round(baselineTotalRounded * 1.025 * 100) / 100;
 
-    // 计算marker总分并判断范围
+    // Calculate marker total scores and determine if within range
     const markerTotals = Array.from(markersMap.values()).map(marker => {
       const markerTotal = Math.round(marker.total * 100) / 100;
       const withinRange = markerTotal >= totalRangeLower && markerTotal <= totalRangeUpper;
+      const withinWarningRange = markerTotal >= totalWarningLower && markerTotal <= totalWarningUpper;
       const difference = Math.abs(markerTotal - baselineTotalRounded);
       
-      // 计算总分百分比和与baseline的差异百分比
+      // Calculate total percentage and difference from baseline percentage
       const markerTotalPercentage = Math.round((markerTotal / maxTotalScore) * 100 * 100) / 100;
       const totalPercentageDifference = Math.round((markerTotalPercentage - baselineTotalPercentage) * 100) / 100;
 
@@ -2581,17 +3061,18 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         marker_id: marker.marker_id,
         marker_name: marker.marker_name,
         total: markerTotal,
-        percentage: markerTotalPercentage, // 总分百分比
-        percentage_difference: totalPercentageDifference, // 与baseline总分的百分比差异，可正可负
+        percentage: markerTotalPercentage, // Total score percentage
+        percentage_difference: totalPercentageDifference, // Percentage difference from baseline total score, can be positive or negative
         within_range: withinRange,
+        within_warning_range: withinWarningRange,
         difference: Math.round(difference * 100) / 100
       };
     });
 
-    // 按差异大小排序（差异大的排在前面）
+    // Sort by difference size (larger differences first)
     markerTotals.sort((a, b) => b.difference - a.difference);
 
-    // 构建响应
+    // Build response
     const response = {
       assignment: {
         assignment_id: parseInt(assignment_id),
@@ -2600,10 +3081,12 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
       criteria: criteria,
       totals: {
         baseline_total: baselineTotalRounded,
-        baseline_percentage: baselineTotalPercentage, // baseline总分百分比
-        max_total_score: maxTotalScore, // 最高总分
-        range_lower: totalRangeLower,
+        baseline_percentage: baselineTotalPercentage, // baseline total score percentage
+        max_total_score: maxTotalScore, // maximum total score
+        range_lower: totalRangeLower, // ±5% range for red alert
         range_upper: totalRangeUpper,
+        warning_lower: totalWarningLower, // ±2.5% range for yellow warning
+        warning_upper: totalWarningUpper,
         marker_totals: markerTotals
       },
       summary: {
@@ -2614,12 +3097,12 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
       }
     };
 
-    console.log(`✅ Moderation报告生成成功: assignment_id=${assignment_id}, criteria=${criteria.length}, markers=${markerTotals.length}`);
+    console.log(`✅ Moderation report generated successfully: assignment_id=${assignment_id}, criteria=${criteria.length}, markers=${markerTotals.length}`);
 
     res.json(response);
 
   } catch (error) {
-    console.error('❌ 生成moderation报告失败:', error);
+    console.error('❌ Failed to generate moderation report:', error);
     res.status(500).json({
       error: 'Failed to generate moderation report',
       details: error.message
@@ -2628,14 +3111,14 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
 });
 
 /**
- * 调试API - 检查assignment和rubric关系
+ * Debug API - Check assignment and rubric relationship
  * GET /api/uploads/debug/assignment/:assignment_id/rubric-info
  */
 router.get('/debug/assignment/:assignment_id/rubric-info', async (req, res) => {
   try {
     const { assignment_id } = req.params;
 
-    // 获取assignment信息
+    // Get assignment information
     const assignmentResult = await db.query(
       'SELECT assignment_id, name, project_id FROM assignment WHERE assignment_id = $1',
       [assignment_id]
@@ -2648,13 +3131,13 @@ router.get('/debug/assignment/:assignment_id/rubric-info', async (req, res) => {
     const assignment = assignmentResult.rows[0];
     const projectId = assignment.project_id;
 
-    // 获取该project的所有rubric版本
+    // Get all rubric versions for this project
     const rubricsResult = await db.query(
       'SELECT rubric_id, version, uploaded_by FROM rubric WHERE project_id = $1 ORDER BY version DESC',
       [projectId]
     );
 
-    // 获取最新版本的criterion
+    // Get latest version criteria
     const latestVersionResult = await db.query(
       'SELECT MAX(version) as latest_version FROM rubric WHERE project_id = $1',
       [projectId]
@@ -2675,7 +3158,7 @@ router.get('/debug/assignment/:assignment_id/rubric-info', async (req, res) => {
       latestCriteria = criteriaResult.rows;
     }
 
-    // 检查现有的baseline分数
+    // Check existing baseline scores
     const baselineResult = await db.query(
       `SELECT bs.*, rc.title as criterion_title
        FROM baseline_score bs
@@ -2699,7 +3182,7 @@ router.get('/debug/assignment/:assignment_id/rubric-info', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 调试assignment rubric信息失败:', error);
+    console.error('❌ Failed to debug assignment rubric info:', error);
     res.status(500).json({
       error: 'Failed to get assignment rubric debug info',
       details: error.message
@@ -2708,7 +3191,7 @@ router.get('/debug/assignment/:assignment_id/rubric-info', async (req, res) => {
 });
 
 /**
- * 调试API - 查找criterion属于哪个project和rubric
+ * Debug API - Find which project and rubric a criterion belongs to
  * GET /api/uploads/debug/criterion/:criterion_id/info
  */
 router.get('/debug/criterion/:criterion_id/info', async (req, res) => {
@@ -2732,7 +3215,7 @@ router.get('/debug/criterion/:criterion_id/info', async (req, res) => {
 
     const criterion = result.rows[0];
 
-    // 检查是否是最新版本
+    // Check if it's the latest version
     const latestVersionResult = await db.query(
       'SELECT MAX(version) as latest_version FROM rubric WHERE project_id = $1',
       [criterion.project_id]
@@ -2761,7 +3244,7 @@ router.get('/debug/criterion/:criterion_id/info', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 查找criterion信息失败:', error);
+    console.error('❌ Failed to find criterion info:', error);
     res.status(500).json({
       error: 'Failed to get criterion info',
       details: error.message
@@ -2770,15 +3253,15 @@ router.get('/debug/criterion/:criterion_id/info', async (req, res) => {
 });
 
 //==========
-// 新增接口：通过project_id获取最新的rubric_id
+// New API: Get latest rubric_id by project_id
 // GET /api/project/:project_id/latest-rubric
 router.get('/project/:project_id/latest-rubric', async (req, res) => {
   try {
     const { project_id } = req.params;
 
-    console.log(`🔍 通过project_id查找最新rubric: project_id=${project_id}`);
+    console.log(`🔍 Finding latest rubric by project_id: project_id=${project_id}`);
 
-    // 查询该project_id下所有rubric，按version降序排列，取最新的一个
+    // Query all rubrics for this project_id, sorted by version in descending order, get the latest one
     const result = await db.query(`
       SELECT rubric_id, project_id, version, created_at
       FROM rubric
@@ -2788,7 +3271,7 @@ router.get('/project/:project_id/latest-rubric', async (req, res) => {
     `, [project_id]);
 
     if (result.rows.length === 0) {
-      console.log(`❌ 未找到project_id=${project_id}对应的rubric`);
+      console.log(`❌ No rubric found for project_id=${project_id}`);
       return res.status(404).json({
         error: 'No rubric found for this project',
         project_id: parseInt(project_id)
@@ -2796,7 +3279,7 @@ router.get('/project/:project_id/latest-rubric', async (req, res) => {
     }
 
     const latestRubric = result.rows[0];
-    console.log(`✅ 找到最新rubric: rubric_id=${latestRubric.rubric_id}, version=${latestRubric.version}`);
+    console.log(`✅ Found latest rubric: rubric_id=${latestRubric.rubric_id}, version=${latestRubric.version}`);
 
     res.json({
       project_id: parseInt(project_id),
@@ -2806,7 +3289,7 @@ router.get('/project/:project_id/latest-rubric', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 获取最新rubric失败:', error);
+    console.error('❌ Failed to get latest rubric:', error);
     res.status(500).json({
       error: 'Failed to get latest rubric',
       details: error.message
@@ -2814,7 +3297,7 @@ router.get('/project/:project_id/latest-rubric', async (req, res) => {
   }
 });
 
-//获取 assignment 关联的文件信息 - GET /api/uploads/assignment/:assignment_id/files
+//Get assignment associated file information - GET /api/uploads/assignment/:assignment_id/files
 router.get('/assignment/:assignment_id/files', async (req, res) => {
   try {
     const { assignment_id } = req.params;
@@ -2838,9 +3321,1017 @@ router.get('/assignment/:assignment_id/files', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('❌ 获取assignment文件失败:', error);
+    console.error('❌ Failed to get assignment files:', error);
     return res.status(500).json({ error: 'Failed to get assignment files' });
   }
 });
+
+// ============== Rubric Modification APIs ==============
+
+/**
+ * Update criterion title
+ * PUT /api/uploads/rubric/criterion/:criterion_id/title
+ */
+router.put('/rubric/criterion/:criterion_id/title', async (req, res) => {
+  try {
+    const { criterion_id } = req.params;
+    const { title } = req.body;
+    
+    if (!title || title.trim() === '') {
+      return res.status(400).json({ 
+        error: 'Title is required and cannot be empty' 
+      });
+    }
+    
+    console.log(`📝 Updating criterion ${criterion_id} title to: ${title}`);
+    
+    // Check if criterion exists
+    const criterionCheck = await db.query(
+      'SELECT criterion_id, title FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Criterion not found' 
+      });
+    }
+    
+    // Update criterion title
+    const result = await db.query(
+      'UPDATE rubric_criterion SET title = $1 WHERE criterion_id = $2 RETURNING *',
+      [title.trim(), criterion_id]
+    );
+    
+    console.log(`✅ Updated criterion title: ${result.rows[0].title}`);
+    
+    res.json({
+      success: true,
+      message: 'Criterion title updated successfully',
+      criterion: {
+        criterion_id: result.rows[0].criterion_id,
+        title: result.rows[0].title,
+        seq_no: result.rows[0].seq_no,
+        rubric_id: result.rows[0].rubric_id
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update criterion title:', error);
+    res.status(500).json({ 
+      error: 'Failed to update criterion title',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update criterion description
+ * PUT /api/uploads/rubric/criterion/:criterion_id/description
+ * Automatically parses and updates max_score if found in description
+ */
+router.put('/rubric/criterion/:criterion_id/description', async (req, res) => {
+  try {
+    const { criterion_id } = req.params;
+    const { description } = req.body;
+    
+    console.log(`📝 Updating criterion ${criterion_id} description`);
+    
+    // Check if criterion exists
+    const criterionCheck = await db.query(
+      'SELECT criterion_id, title, max_score FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Criterion not found' 
+      });
+    }
+    
+    const currentCriterion = criterionCheck.rows[0];
+    
+    // Try to parse max score from description (e.g., "总分: 20分", "Total: 20 points")
+    const parsedMaxScore = parseMaxScoreFromDescription(description);
+    let updateFields = ['description = $1'];
+    let updateValues = [description || null];
+    let valueIndex = 2;
+    
+    let scoreUpdateInfo = null;
+    
+    if (parsedMaxScore !== null) {
+      console.log(`🔍 Auto-detected max score in description: ${parsedMaxScore}`);
+      
+      // Validate score
+      if (parsedMaxScore < 0) {
+        return res.status(400).json({ 
+          error: 'Max score must be non-negative' 
+        });
+      }
+      
+      // Automatically add max score update
+      updateFields.push(`max_score = $${valueIndex++}`);
+      updateValues.push(parsedMaxScore);
+      
+      scoreUpdateInfo = {
+        previous: {
+          max_score: parseFloat(currentCriterion.max_score)
+        },
+        updated: {
+          max_score: parsedMaxScore
+        }
+      };
+    }
+    
+    updateValues.push(criterion_id);
+    
+    // Update criterion description (and max_score if auto-detected)
+    const updateQuery = `
+      UPDATE rubric_criterion 
+      SET ${updateFields.join(', ')} 
+      WHERE criterion_id = $${valueIndex}
+      RETURNING *
+    `;
+    
+    const result = await db.query(updateQuery, updateValues);
+    const updatedCriterion = result.rows[0];
+    
+    console.log(`✅ Updated criterion description for: ${updatedCriterion.title}`);
+    if (scoreUpdateInfo) {
+      console.log(`📊 Auto-updated max score: ${scoreUpdateInfo.previous.max_score} → ${scoreUpdateInfo.updated.max_score}`);
+    }
+    
+    const response = {
+      success: true,
+      message: 'Criterion description updated successfully',
+      criterion: {
+        criterion_id: updatedCriterion.criterion_id,
+        title: updatedCriterion.title,
+        description: updatedCriterion.description,
+        max_score: parseFloat(updatedCriterion.max_score),
+        seq_no: updatedCriterion.seq_no,
+        rubric_id: updatedCriterion.rubric_id
+      }
+    };
+    
+    // Add score update information if max score was auto-updated
+    if (scoreUpdateInfo) {
+      response.message += ' (max score auto-updated from description)';
+      response.score_update = scoreUpdateInfo;
+    }
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('❌ Failed to update criterion description:', error);
+    res.status(500).json({ 
+      error: 'Failed to update criterion description',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update criterion max score
+ * PUT /api/uploads/rubric/criterion/:criterion_id/max-score
+ */
+router.put('/rubric/criterion/:criterion_id/max-score', async (req, res) => {
+  try {
+    const { criterion_id } = req.params;
+    const { max_score } = req.body;
+    
+    if (max_score === undefined || max_score === null) {
+      return res.status(400).json({ 
+        error: 'Max score is required' 
+      });
+    }
+    
+    const scoreValue = parseFloat(max_score);
+    if (isNaN(scoreValue) || scoreValue < 0) {
+      return res.status(400).json({ 
+        error: 'Max score must be a valid positive number' 
+      });
+    }
+    
+    console.log(`📝 Updating criterion ${criterion_id} max score to: ${scoreValue}`);
+    
+    // Check if criterion exists
+    const criterionCheck = await db.query(
+      'SELECT criterion_id, title, max_score FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Criterion not found' 
+      });
+    }
+    
+    // Update criterion max score
+    const result = await db.query(
+      'UPDATE rubric_criterion SET max_score = $1 WHERE criterion_id = $2 RETURNING *',
+      [scoreValue, criterion_id]
+    );
+    
+    console.log(`✅ Updated criterion max score: ${result.rows[0].title} -> ${result.rows[0].max_score}`);
+    
+    res.json({
+      success: true,
+      message: 'Criterion max score updated successfully',
+      criterion: {
+        criterion_id: result.rows[0].criterion_id,
+        title: result.rows[0].title,
+        max_score: parseFloat(result.rows[0].max_score),
+        seq_no: result.rows[0].seq_no,
+        rubric_id: result.rows[0].rubric_id
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update criterion max score:', error);
+    res.status(500).json({ 
+      error: 'Failed to update criterion max score',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update grade level name
+ * PUT /api/uploads/rubric/grade-level/:grade_level_id/name
+ */
+router.put('/rubric/grade-level/:grade_level_id/name', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    const { level_name } = req.body;
+    
+    if (!level_name || level_name.trim() === '') {
+      return res.status(400).json({ 
+        error: 'Level name is required and cannot be empty' 
+      });
+    }
+    
+    console.log(`📝 Updating grade level ${grade_level_id} name to: ${level_name}`);
+    
+    // Check if grade level exists
+    const gradeLevelCheck = await db.query(
+      'SELECT grade_level_id, level_name, criterion_id FROM criterion_grade_level WHERE grade_level_id = $1',
+      [grade_level_id]
+    );
+    
+    if (gradeLevelCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    // Update grade level name
+    const result = await db.query(
+      'UPDATE criterion_grade_level SET level_name = $1 WHERE grade_level_id = $2 RETURNING *',
+      [level_name.trim(), grade_level_id]
+    );
+    
+    console.log(`✅ Updated grade level name: ${result.rows[0].level_name}`);
+    
+    res.json({
+      success: true,
+      message: 'Grade level name updated successfully',
+      grade_level: {
+        grade_level_id: result.rows[0].grade_level_id,
+        level_name: result.rows[0].level_name,
+        criterion_id: result.rows[0].criterion_id,
+        seq_no: result.rows[0].seq_no,
+        min_score: parseFloat(result.rows[0].min_score),
+        max_score: parseFloat(result.rows[0].max_score)
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update grade level name:', error);
+    res.status(500).json({ 
+      error: 'Failed to update grade level name',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Parse score range from description text
+ * Supports formats like: "优秀 (8-10分)", "Good (5-7 points)", "Level 1 (0-2)"
+ */
+function parseScoreRangeFromDescription(description) {
+  if (!description) return null;
+  
+  // Match patterns like: (8-10), (5-7分), (0-2 points), (10-15分)
+  const scorePatterns = [
+    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*分?\)/i,  // Chinese format: (8-10分)
+    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*points?\)/i,  // English format: (5-7 points)
+    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\)/i  // Simple format: (0-2)
+  ];
+  
+  for (const pattern of scorePatterns) {
+    const match = description.match(pattern);
+    if (match) {
+      const minScore = parseFloat(match[1]);
+      const maxScore = parseFloat(match[2]);
+      
+      if (!isNaN(minScore) && !isNaN(maxScore) && minScore <= maxScore) {
+        return { min_score: minScore, max_score: maxScore };
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Parse max score from criterion description text
+ * Supports formats like: "总分: 20分", "Total: 20 points", "Max: 15"
+ */
+function parseMaxScoreFromDescription(description) {
+  if (!description) return null;
+  
+  // Match patterns like: 总分: 20分, Total: 20 points, Max: 15, 最高分: 25分
+  const maxScorePatterns = [
+    /total[：:]\s*(\d+(?:\.\d+)?)\s*points?/i,  // English format: Total: 20 points
+    /max[：:]\s*(\d+(?:\.\d+)?)/i,  // English format: Max: 15
+    /(\d+(?:\.\d+)?)\s*points?\s*total/i  // English format: 20 points total
+  ];
+  
+  for (const pattern of maxScorePatterns) {
+    const match = description.match(pattern);
+    if (match) {
+      const maxScore = parseFloat(match[1]);
+      
+      if (!isNaN(maxScore) && maxScore >= 0) {
+        return maxScore;
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Update grade level description
+ * PUT /api/uploads/rubric/grade-level/:grade_level_id/description
+ * Automatically parses and updates min_score/max_score if found in description
+ */
+router.put('/rubric/grade-level/:grade_level_id/description', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    const { description } = req.body;
+    
+    console.log(`📝 Updating grade level ${grade_level_id} description`);
+    
+    // Check if grade level exists
+    const gradeLevelCheck = await db.query(
+      'SELECT grade_level_id, level_name, criterion_id, min_score, max_score FROM criterion_grade_level WHERE grade_level_id = $1',
+      [grade_level_id]
+    );
+    
+    if (gradeLevelCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    const currentLevel = gradeLevelCheck.rows[0];
+    
+    // Always try to parse score range from description
+    // Ensure description is never null or empty
+    const cleanDescription = (description && description.trim()) || 'No description';
+    const parsedScores = parseScoreRangeFromDescription(cleanDescription);
+    let updateFields = ['description = $1'];
+    let updateValues = [cleanDescription];
+    let valueIndex = 2;
+    
+    let scoreUpdateInfo = null;
+    
+    if (parsedScores) {
+      console.log(`🔍 Auto-detected score range in description: ${parsedScores.min_score}-${parsedScores.max_score}`);
+      
+      // Validate scores
+      if (parsedScores.min_score < 0 || parsedScores.max_score < 0) {
+        return res.status(400).json({ 
+          error: 'Scores must be non-negative' 
+        });
+      }
+      
+      if (parsedScores.min_score > parsedScores.max_score) {
+        return res.status(400).json({ 
+          error: 'Min score cannot be greater than max score' 
+        });
+      }
+      
+      // Automatically add score updates
+      updateFields.push(`min_score = $${valueIndex++}`);
+      updateFields.push(`max_score = $${valueIndex++}`);
+      updateValues.push(parsedScores.min_score);
+      updateValues.push(parsedScores.max_score);
+      
+      scoreUpdateInfo = {
+        previous: {
+          min_score: parseFloat(currentLevel.min_score),
+          max_score: parseFloat(currentLevel.max_score)
+        },
+        updated: {
+          min_score: parsedScores.min_score,
+          max_score: parsedScores.max_score
+        }
+      };
+    }
+    
+    updateValues.push(grade_level_id);
+    
+    // Update grade level description (and scores if auto-detected)
+    const updateQuery = `
+      UPDATE criterion_grade_level 
+      SET ${updateFields.join(', ')} 
+      WHERE grade_level_id = $${valueIndex}
+      RETURNING *
+    `;
+    
+    const result = await db.query(updateQuery, updateValues);
+    const updatedLevel = result.rows[0];
+    
+    console.log(`✅ Updated grade level description for: ${updatedLevel.level_name}`);
+    if (scoreUpdateInfo) {
+      console.log(`📊 Auto-updated scores: ${scoreUpdateInfo.previous.min_score}-${scoreUpdateInfo.previous.max_score} → ${scoreUpdateInfo.updated.min_score}-${scoreUpdateInfo.updated.max_score}`);
+    }
+    
+    const response = {
+      success: true,
+      message: 'Grade level description updated successfully',
+      grade_level: {
+        grade_level_id: updatedLevel.grade_level_id,
+        level_name: updatedLevel.level_name,
+        description: updatedLevel.description,
+        criterion_id: updatedLevel.criterion_id,
+        seq_no: updatedLevel.seq_no,
+        min_score: parseFloat(updatedLevel.min_score),
+        max_score: parseFloat(updatedLevel.max_score)
+      }
+    };
+    
+    // Add score update information if scores were auto-updated
+    if (scoreUpdateInfo) {
+      response.message += ' (scores auto-updated from description)';
+      response.score_update = scoreUpdateInfo;
+    }
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('❌ Failed to update grade level description:', error);
+    res.status(500).json({ 
+      error: 'Failed to update grade level description',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Update grade level scores (min_score and max_score)
+ * PUT /api/uploads/rubric/grade-level/:grade_level_id/scores
+ */
+router.put('/rubric/grade-level/:grade_level_id/scores', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    const { min_score, max_score } = req.body;
+    
+    if (min_score === undefined || max_score === undefined) {
+      return res.status(400).json({ 
+        error: 'Both min_score and max_score are required' 
+      });
+    }
+    
+    const minScoreValue = parseFloat(min_score);
+    const maxScoreValue = parseFloat(max_score);
+    
+    if (isNaN(minScoreValue) || isNaN(maxScoreValue)) {
+      return res.status(400).json({ 
+        error: 'Scores must be valid numbers' 
+      });
+    }
+    
+    if (minScoreValue < 0 || maxScoreValue < 0) {
+      return res.status(400).json({ 
+        error: 'Scores must be non-negative' 
+      });
+    }
+    
+    if (minScoreValue > maxScoreValue) {
+      return res.status(400).json({ 
+        error: 'Min score cannot be greater than max score' 
+      });
+    }
+    
+    console.log(`📝 Updating grade level ${grade_level_id} scores: ${minScoreValue} - ${maxScoreValue}`);
+    
+    // Check if grade level exists
+    const gradeLevelCheck = await db.query(
+      'SELECT grade_level_id, level_name, criterion_id FROM criterion_grade_level WHERE grade_level_id = $1',
+      [grade_level_id]
+    );
+    
+    if (gradeLevelCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    // Update grade level scores
+    const result = await db.query(
+      'UPDATE criterion_grade_level SET min_score = $1, max_score = $2 WHERE grade_level_id = $3 RETURNING *',
+      [minScoreValue, maxScoreValue, grade_level_id]
+    );
+    
+    console.log(`✅ Updated grade level scores: ${result.rows[0].level_name} -> ${result.rows[0].min_score}-${result.rows[0].max_score}`);
+    
+    res.json({
+      success: true,
+      message: 'Grade level scores updated successfully',
+      grade_level: {
+        grade_level_id: result.rows[0].grade_level_id,
+        level_name: result.rows[0].level_name,
+        criterion_id: result.rows[0].criterion_id,
+        seq_no: result.rows[0].seq_no,
+        min_score: parseFloat(result.rows[0].min_score),
+        max_score: parseFloat(result.rows[0].max_score),
+        description: result.rows[0].description
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to update grade level scores:', error);
+    res.status(500).json({ 
+      error: 'Failed to update grade level scores',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Get grade level details by ID
+ * GET /api/uploads/rubric/grade-level/:grade_level_id
+ */
+router.get('/rubric/grade-level/:grade_level_id', async (req, res) => {
+  try {
+    const { grade_level_id } = req.params;
+    
+    console.log(`🔍 Getting grade level details: ${grade_level_id}`);
+    
+    const result = await db.query(`
+      SELECT 
+        cgl.grade_level_id,
+        cgl.criterion_id,
+        cgl.level_name,
+        cgl.min_score,
+        cgl.max_score,
+        cgl.description,
+        cgl.seq_no,
+        rc.title as criterion_title,
+        rc.rubric_id
+      FROM criterion_grade_level cgl
+      JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+      WHERE cgl.grade_level_id = $1
+    `, [grade_level_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Grade level not found' 
+      });
+    }
+    
+    const gradeLevel = result.rows[0];
+    
+    res.json({
+      success: true,
+      grade_level: {
+        grade_level_id: gradeLevel.grade_level_id,
+        level_name: gradeLevel.level_name,
+        criterion_id: gradeLevel.criterion_id,
+        criterion_title: gradeLevel.criterion_title,
+        rubric_id: gradeLevel.rubric_id,
+        seq_no: gradeLevel.seq_no,
+        min_score: parseFloat(gradeLevel.min_score),
+        max_score: parseFloat(gradeLevel.max_score),
+        description: gradeLevel.description
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to get grade level details:', error);
+    res.status(500).json({ 
+      error: 'Failed to get grade level details',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Add new criterion (row) to rubric
+ * POST /api/uploads/rubric/:rubric_id/add-criterion
+ */
+router.post('/rubric/:rubric_id/add-criterion', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id } = req.params;
+    const { title, description, max_score } = req.body;
+    
+    console.log(`➕ Adding new criterion to rubric: ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Verify rubric exists
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "row", "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentRows = rubricCheck.rows[0].row || 0;
+    
+    // Get next sequence number
+    const seqResult = await client.query(
+      'SELECT COALESCE(MAX(seq_no), 0) + 1 as next_seq FROM rubric_criterion WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    const nextSeq = seqResult.rows[0].next_seq;
+    
+    // Create new criterion
+    const criterionResult = await client.query(
+      `INSERT INTO rubric_criterion (rubric_id, seq_no, title, description, max_score)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING criterion_id, seq_no, title, description, max_score`,
+      [
+        rubric_id,
+        nextSeq,
+        title || `New Criterion ${nextSeq}`,
+        description || null,
+        max_score || 0
+      ]
+    );
+    
+    const newCriterion = criterionResult.rows[0];
+    console.log(`✅ Created new criterion: ${newCriterion.criterion_id}`);
+    
+    // Get all existing grade levels from other criteria in this rubric
+    const existingLevels = await client.query(
+      `SELECT DISTINCT cgl.level_name, cgl.min_score, cgl.max_score, cgl.seq_no
+       FROM criterion_grade_level cgl
+       JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+       WHERE rc.rubric_id = $1
+       ORDER BY cgl.seq_no`,
+      [rubric_id]
+    );
+    
+    // Create grade level entries for this new criterion
+    const createdLevels = [];
+    for (const level of existingLevels.rows) {
+      const levelResult = await client.query(
+        `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING grade_level_id, level_name, min_score, max_score, seq_no`,
+        [
+          newCriterion.criterion_id,
+          level.level_name,
+          level.min_score || 0,
+          level.max_score || 0,
+          'No description', // Default description for new criterion
+          level.seq_no
+        ]
+      );
+      createdLevels.push(levelResult.rows[0]);
+    }
+    
+    console.log(`✅ Created ${createdLevels.length} grade levels for new criterion`);
+    
+    // Update rubric row count
+    await client.query(
+      'UPDATE rubric SET "row" = $1 WHERE rubric_id = $2',
+      [currentRows + 1, rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'New criterion added successfully',
+      criterion: {
+        criterion_id: newCriterion.criterion_id,
+        seq_no: newCriterion.seq_no,
+        title: newCriterion.title,
+        description: newCriterion.description,
+        max_score: parseFloat(newCriterion.max_score),
+        grade_levels: createdLevels.map(level => ({
+          grade_level_id: level.grade_level_id,
+          level_name: level.level_name,
+          min_score: parseFloat(level.min_score),
+          max_score: parseFloat(level.max_score),
+          seq_no: level.seq_no
+        }))
+      },
+      rubric_updated: {
+        new_row_count: currentRows + 1
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to add new criterion:', error);
+    res.status(500).json({
+      error: 'Failed to add new criterion',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Delete criterion (row) from rubric
+ * DELETE /api/uploads/rubric/criterion/:criterion_id
+ */
+router.delete('/rubric/criterion/:criterion_id', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { criterion_id } = req.params;
+    
+    console.log(`🗑️ Deleting criterion: ${criterion_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Get criterion and rubric info
+    const criterionCheck = await client.query(
+      `SELECT rc.criterion_id, rc.title, rc.rubric_id, r."row"
+       FROM rubric_criterion rc
+       JOIN rubric r ON rc.rubric_id = r.rubric_id
+       WHERE rc.criterion_id = $1`,
+      [criterion_id]
+    );
+    
+    if (criterionCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Criterion not found' });
+    }
+    
+    const criterion = criterionCheck.rows[0];
+    const rubricId = criterion.rubric_id;
+    const currentRows = criterion.row || 0;
+    
+    // Delete all grade levels for this criterion
+    const deletedLevels = await client.query(
+      'DELETE FROM criterion_grade_level WHERE criterion_id = $1 RETURNING grade_level_id',
+      [criterion_id]
+    );
+    
+    console.log(`✅ Deleted ${deletedLevels.rows.length} grade levels`);
+    
+    // Delete the criterion itself
+    await client.query(
+      'DELETE FROM rubric_criterion WHERE criterion_id = $1',
+      [criterion_id]
+    );
+    
+    console.log(`✅ Deleted criterion: ${criterion.title}`);
+    
+    // Update rubric row count
+    await client.query(
+      'UPDATE rubric SET "row" = $1 WHERE rubric_id = $2',
+      [Math.max(0, currentRows - 1), rubricId]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Criterion deleted successfully',
+      deleted: {
+        criterion_id: parseInt(criterion_id),
+        title: criterion.title,
+        grade_levels_deleted: deletedLevels.rows.length
+      },
+      rubric_updated: {
+        rubric_id: rubricId,
+        new_row_count: Math.max(0, currentRows - 1)
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to delete criterion:', error);
+    res.status(500).json({
+      error: 'Failed to delete criterion',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Delete grade level (column) from rubric
+ * DELETE /api/uploads/rubric/:rubric_id/grade-level/:level_name
+ */
+router.delete('/rubric/:rubric_id/grade-level/:level_name', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id, level_name } = req.params;
+    const decodedLevelName = decodeURIComponent(level_name);
+    
+    console.log(`🗑️ Deleting grade level: ${decodedLevelName} from rubric ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Get rubric info
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentColumns = rubricCheck.rows[0].column || 0;
+    
+    // Delete all grade level entries with this level_name for this rubric's criteria
+    const deletedLevels = await client.query(
+      `DELETE FROM criterion_grade_level cgl
+       USING rubric_criterion rc
+       WHERE cgl.criterion_id = rc.criterion_id
+         AND rc.rubric_id = $1
+         AND cgl.level_name = $2
+       RETURNING cgl.grade_level_id, cgl.criterion_id`,
+      [rubric_id, decodedLevelName]
+    );
+    
+    if (deletedLevels.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ 
+        error: 'Grade level not found',
+        message: `No grade level with name "${decodedLevelName}" found in this rubric`
+      });
+    }
+    
+    console.log(`✅ Deleted ${deletedLevels.rows.length} grade level entries`);
+    
+    // Update rubric column count
+    await client.query(
+      'UPDATE rubric SET "column" = $1 WHERE rubric_id = $2',
+      [Math.max(0, currentColumns - 1), rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Grade level deleted successfully',
+      deleted: {
+        level_name: decodedLevelName,
+        entries_deleted: deletedLevels.rows.length
+      },
+      rubric_updated: {
+        rubric_id: parseInt(rubric_id),
+        new_column_count: Math.max(0, currentColumns - 1)
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to delete grade level:', error);
+    res.status(500).json({
+      error: 'Failed to delete grade level',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Add new grade level (column) to rubric
+ * POST /api/uploads/rubric/:rubric_id/add-grade-level
+ */
+router.post('/rubric/:rubric_id/add-grade-level', async (req, res) => {
+  const client = await db.connect();
+  
+  try {
+    const { rubric_id } = req.params;
+    const { level_name, min_score, max_score } = req.body;
+    
+    console.log(`➕ Adding new grade level to rubric: ${rubric_id}`);
+    
+    await client.query('BEGIN');
+    
+    // Verify rubric exists
+    const rubricCheck = await client.query(
+      'SELECT rubric_id, "row", "column" FROM rubric WHERE rubric_id = $1',
+      [rubric_id]
+    );
+    
+    if (rubricCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Rubric not found' });
+    }
+    
+    const currentColumns = rubricCheck.rows[0].column || 0;
+    
+    // Get next sequence number for grade levels
+    const seqResult = await client.query(
+      `SELECT COALESCE(MAX(cgl.seq_no), 0) + 1 as next_seq
+       FROM criterion_grade_level cgl
+       JOIN rubric_criterion rc ON cgl.criterion_id = rc.criterion_id
+       WHERE rc.rubric_id = $1`,
+      [rubric_id]
+    );
+    const nextSeq = seqResult.rows[0].next_seq;
+    
+    // Get all criteria for this rubric
+    const criteriaResult = await client.query(
+      'SELECT criterion_id FROM rubric_criterion WHERE rubric_id = $1 ORDER BY seq_no',
+      [rubric_id]
+    );
+    
+    if (criteriaResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Cannot add grade level: no criteria exist in this rubric',
+        message: 'Please add at least one criterion first'
+      });
+    }
+    
+    // Create new grade level for each criterion
+    const createdLevels = [];
+    for (const criterion of criteriaResult.rows) {
+      const levelResult = await client.query(
+        `INSERT INTO criterion_grade_level (criterion_id, level_name, min_score, max_score, description, seq_no)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING grade_level_id, criterion_id, level_name, min_score, max_score, seq_no`,
+        [
+          criterion.criterion_id,
+          level_name || `New Level ${nextSeq}`,
+          min_score || 0,
+          max_score || 0,
+          'No description', // Default description for new grade level
+          nextSeq
+        ]
+      );
+      createdLevels.push(levelResult.rows[0]);
+    }
+    
+    console.log(`✅ Created ${createdLevels.length} grade level entries`);
+    
+    // Update rubric column count
+    await client.query(
+      'UPDATE rubric SET "column" = $1 WHERE rubric_id = $2',
+      [currentColumns + 1, rubric_id]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'New grade level added successfully',
+      grade_level: {
+        level_name: level_name || `New Level ${nextSeq}`,
+        min_score: parseFloat(min_score || 0),
+        max_score: parseFloat(max_score || 0),
+        seq_no: nextSeq,
+        entries_created: createdLevels.map(level => ({
+          grade_level_id: level.grade_level_id,
+          criterion_id: level.criterion_id,
+          level_name: level.level_name,
+          min_score: parseFloat(level.min_score),
+          max_score: parseFloat(level.max_score)
+        }))
+      },
+      rubric_updated: {
+        new_column_count: currentColumns + 1
+      }
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Failed to add new grade level:', error);
+    res.status(500).json({
+      error: 'Failed to add new grade level',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 
 module.exports = router;
