@@ -235,7 +235,10 @@ function renderTable(data, tbody) {
            contenteditable="false"
            data-type="criterion-title"
            data-criterion-id="${criterion.criterion_id}"
-           data-seq-no="${criterion.seq_no || idx + 1}">${criterion.seq_no || idx + 1}. ${esc(criterion.title)}</div>
+           data-seq-no="${criterion.seq_no || idx + 1}">
+        <span>${criterion.seq_no || idx + 1}.</span><br>
+        <span>${esc(criterion.title)}</span>
+      </div>
     `;
     tr.appendChild(td0);
 
