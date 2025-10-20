@@ -256,11 +256,22 @@ async function loadFeedback(data){
   // 更新总体分差显示（只有在存在 baseline 时才计算差值）
   if (hasAnyBaseline) {
     const difference = markerTotal - coordinatorTotal;
+    const absDifference = Math.abs(difference);
+    const deviationPercent = totalMax > 0 ? (absDifference / totalMax) * 100 : 0;
+    
     scoreDifferenceEl.textContent = difference > 0 ? `+${difference}` : `${difference}`;
-    scoreDifferenceEl.className = 'difference-value';
+    
+    // 根据偏差百分比设置颜色：>5%红色, >2.5%黄色, <=2.5%绿色
+    if (deviationPercent > 5) {
+      scoreDifferenceEl.className = 'difference-value danger';
+    } else if (deviationPercent > 2.5) {
+      scoreDifferenceEl.className = 'difference-value warning';
+    } else {
+      scoreDifferenceEl.className = 'difference-value good';
+    }
   } else {
     scoreDifferenceEl.textContent = "-";
-    scoreDifferenceEl.className = "difference-value";
+    scoreDifferenceEl.className = "difference-value neutral";
   }
 
   // --- 渲染表格行 ---
@@ -300,7 +311,28 @@ async function loadFeedback(data){
       const markerValForDiff = (typeof c.markerScore === 'number') ? c.markerScore : 0;
       const diff = markerValForDiff - c.coordinatorScore;
       const diffText = diff > 0 ? `+${diff}` : `${diff}`;
-      td3.innerHTML = `<span>${diffText}</span>`;
+      
+      // 计算该criterion的偏差百分比
+      const absDiff = Math.abs(diff);
+      const criterionDeviationPercent = c.max > 0 ? (absDiff / c.max) * 100 : 0;
+      
+      // 单个criterion：>5%红色，否则根据差异大小设置颜色
+      let colorClass = '';
+      if (criterionDeviationPercent > 5) {
+        colorClass = 'danger';
+      } else if (criterionDeviationPercent > 0) {
+        // 有差异但不超过5%，根据差异大小设置为黄色或绿色
+        if (criterionDeviationPercent > 2.5) {
+          colorClass = 'warning';
+        } else {
+          colorClass = 'good';
+        }
+      } else {
+        // 没有差异
+        colorClass = 'good';
+      }
+      
+      td3.innerHTML = `<span class="${colorClass}">${diffText}</span>`;
     }
     tr.appendChild(td3);
 
