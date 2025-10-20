@@ -231,20 +231,11 @@ function renderTable(data, tbody) {
     // Left side criteria
     const td0 = td();
     td0.innerHTML = `
-      <div class="criterion-title editable-cell" 
+      <div class="criterion-title editable-cell"
            contenteditable="false"
-           data-type="criterion-title" 
+           data-type="criterion-title"
            data-criterion-id="${criterion.criterion_id}"
            data-seq-no="${criterion.seq_no || idx + 1}">${criterion.seq_no || idx + 1}. ${esc(criterion.title)}</div>
-      ${criterion.description ? `<div class="editable-cell" 
-           contenteditable="false"
-           data-type="criterion-description" 
-           data-criterion-id="${criterion.criterion_id}"
-           style="font-weight: 400; margin-top: 4px; color: var(--muted);">${esc(criterion.description)}</div>` : `<div class="editable-cell" 
-           contenteditable="false"
-           data-type="criterion-description" 
-           data-criterion-id="${criterion.criterion_id}"
-           style="font-weight: 400; margin-top: 4px; color: var(--muted);">(No description)</div>`}
     `;
     tr.appendChild(td0);
 
