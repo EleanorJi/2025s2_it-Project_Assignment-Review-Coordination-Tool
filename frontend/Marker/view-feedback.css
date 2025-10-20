@@ -222,6 +222,25 @@
     border: 1px solid #d6d8db;
   }
 
+  /* Difference color classes based on percentage */
+  .difference-green {
+    background: #d1f4e0;
+    color: #16a34a;
+    border: 1px solid #86efac;
+  }
+
+  .difference-yellow {
+    background: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fbbf24;
+  }
+
+  .difference-red {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+  }
+
   /* Table */
   .table-scroll{overflow:auto; border-radius:4px; border:1px solid var(--border)}
   .feedback-table{width:100%; border-collapse:collapse; border-spacing:0}
@@ -284,13 +303,33 @@
     text-align: center;
     font-weight: 700;
     font-size: 14px;
+    color: var(--text);
   }
 
-  .difference-cell {
-    text-align: center;
+  .difference-cell span {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
     font-weight: 700;
     font-size: 14px;
-    color: var(--text);
+  }
+
+  .difference-cell .difference-green {
+    background: #d1f4e0;
+    color: #16a34a;
+    border: 1px solid #86efac;
+  }
+
+  .difference-cell .difference-yellow {
+    background: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fbbf24;
+  }
+
+  .difference-cell .difference-red {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
   }
 
   /* Feedback text */

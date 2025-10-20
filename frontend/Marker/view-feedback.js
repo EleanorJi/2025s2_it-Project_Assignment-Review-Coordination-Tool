@@ -257,7 +257,19 @@ async function loadFeedback(data){
   if (hasAnyBaseline) {
     const difference = markerTotal - coordinatorTotal;
     scoreDifferenceEl.textContent = difference > 0 ? `+${difference}` : `${difference}`;
-    scoreDifferenceEl.className = 'difference-value';
+    
+    // 计算百分比差异
+    const percentageDiff = totalMax > 0 ? Math.abs(difference / totalMax) * 100 : 0;
+    
+    // 根据百分比设置颜色类
+    let colorClass = 'difference-green';
+    if (percentageDiff > 5) {
+      colorClass = 'difference-red';
+    } else if (percentageDiff > 2.5) {
+      colorClass = 'difference-yellow';
+    }
+    
+    scoreDifferenceEl.className = `difference-value ${colorClass}`;
   } else {
     scoreDifferenceEl.textContent = "-";
     scoreDifferenceEl.className = "difference-value";
@@ -300,7 +312,19 @@ async function loadFeedback(data){
       const markerValForDiff = (typeof c.markerScore === 'number') ? c.markerScore : 0;
       const diff = markerValForDiff - c.coordinatorScore;
       const diffText = diff > 0 ? `+${diff}` : `${diff}`;
-      td3.innerHTML = `<span>${diffText}</span>`;
+      
+      // 计算该 criterion 的百分比差异
+      const criterionPercentageDiff = c.max > 0 ? Math.abs(diff / c.max) * 100 : 0;
+      
+      // 根据百分比设置颜色类
+      let criterionColorClass = 'difference-green';
+      if (criterionPercentageDiff > 5) {
+        criterionColorClass = 'difference-red';
+      } else if (criterionPercentageDiff > 2.5) {
+        criterionColorClass = 'difference-yellow';
+      }
+      
+      td3.innerHTML = `<span class="${criterionColorClass}">${diffText}</span>`;
     }
     tr.appendChild(td3);
 
