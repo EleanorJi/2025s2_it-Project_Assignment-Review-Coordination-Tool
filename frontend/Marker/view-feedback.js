@@ -304,8 +304,8 @@ async function loadFeedback(data){
 
     // Difference 列：只有当 coordinator 存在时才计算差值，否则显示 "-"
     const td3 = td();
+    td3.className = 'difference-cell';
     if (typeof c.coordinatorScore !== 'number') {
-      td3.className = 'difference-cell';
       td3.innerHTML = `<span>-</span>`;
     } else {
       const markerValForDiff = (typeof c.markerScore === 'number') ? c.markerScore : 0;
@@ -332,8 +332,7 @@ async function loadFeedback(data){
         colorClass = 'good';
       }
       
-      td3.className = `difference-cell ${colorClass}`;
-      td3.innerHTML = `<span>${diffText}</span>`;
+      td3.innerHTML = `<span class="${colorClass}">${diffText}</span>`;
     }
     tr.appendChild(td3);
 

@@ -208,7 +208,7 @@
   }
 
   .difference-value {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 900;
     padding: 8px 16px;
     border-radius: 8px;
@@ -217,27 +217,19 @@
   }
 
   .difference-value.neutral {
-    background: #e2e3e5;
-    color: #383d41;
-    border: 1px solid #d6d8db;
+    color: #6B7280;
   }
 
   .difference-value.good {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    color: #16a34a;
   }
 
   .difference-value.warning {
-    background: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeaa7;
+    color: #F59E0B;
   }
 
   .difference-value.danger {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    color: #DC2626;
   }
 
   /* Table */
@@ -306,24 +298,27 @@
 
   .difference-cell {
     text-align: center;
+    vertical-align: middle;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text);
   }
 
-  .difference-cell.good {
-    color: #155724;
-    background: #d4edda;
+  .difference-cell span {
+    display: inline-block;
   }
 
-  .difference-cell.warning {
-    color: #856404;
-    background: #fff3cd;
+  .difference-cell span.good {
+    color: #16a34a;
   }
 
-  .difference-cell.danger {
-    color: #721c24;
-    background: #f8d7da;
+  .difference-cell span.warning {
+    color: #F59E0B;
+  }
+
+  .difference-cell span.danger {
+    color: #DC2626;
+    font-weight: 800;
   }
 
   /* Feedback text */
