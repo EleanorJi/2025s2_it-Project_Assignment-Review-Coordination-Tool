@@ -157,7 +157,7 @@
       // Assignment list inside project (latest Round 1 & Round 2)
       const aList = document.createElement('div');
       aList.className = 'pa-list';
-      (project.assignments || []).forEach(a => aList.appendChild(renderAssignmentRow(a)));
+      (project.assignments || []).forEach(a => aList.appendChild(renderAssignmentRow(a, project.project_id)));
       projBlock.append(aList);
 
       pHd.addEventListener('click', () => {
@@ -168,7 +168,7 @@
       return projBlock;
     }
 
-    function renderAssignmentRow(item) {
+    function renderAssignmentRow(item, projectId) {
       const row = document.createElement('div');
       row.className = 'pa-row';
   
@@ -179,8 +179,8 @@
       const acts = document.createElement('div');
       acts.className = 'pa-actions';
       acts.append(
-        makeBtn('View report', () => openOrToast(item.report_url || item.reportUrl, 'Report not available')),
-        makeBtn('Open rubric', () => openOrToast(item.rubric_url || item.rubricUrl, 'Rubric not available'))
+        makeBtn('View report', () => openOrToast(`/dashboard/coordinator/feedback?project=${projectId}&assignment=${item.assignment_id}`,'Feedback not available')),
+        makeBtn('Open rubric', () => openOrToast(`/dashboard/coordinator/rubric?project=${projectId}`,'Rubric not available'))
       );
   
       row.append(left, acts);
