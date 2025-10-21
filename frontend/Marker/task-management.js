@@ -201,17 +201,14 @@
           console.error('❌ 获取assignment状态过程中出错:', error);
         }
 
-        // 确定task状态：如果有任何assignment被publish，则为active，否则为draft
-        let taskStatus = 'draft';
-        if (assignment1Status === 'published' || assignment2Status === 'published') {
-          taskStatus = 'active';
-        }
+        // 确定task状态
+        let taskStatus = project.status || 'draft'; // 假设后端返回了status字段
         console.log(`🏷️ 项目状态: ${taskStatus}`);
         console.log(`📊 Assignment1状态: ${assignment1Status}, Assignment2状态: ${assignment2Status}`);
 
         // 只显示有active assignment的项目
         console.log(`🔍 检查项目 ${project.name}: taskStatus=${taskStatus}, assignment1Status=${assignment1Status}, assignment2Status=${assignment2Status}`);
-        if (taskStatus === 'active') {
+        if (taskStatus === 'active' || taskStatus === 'completed') {
           console.log(`✅ 添加active项目: ${project.name}`);
           console.log(`📋 项目详情:`, {
             title: project.name,
