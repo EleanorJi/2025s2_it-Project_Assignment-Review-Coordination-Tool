@@ -250,8 +250,8 @@ async function loadFeedback(data){
   const hasAnyBaseline = data.criteria.some(c => c.coordinatorScore !== null);
 
   // 更新顶部总分显示
-  markerScoreEl.textContent = `${markerTotal}/${totalMax}`;
-  coordinatorScoreEl.textContent = hasAnyBaseline ? `${coordinatorTotal}/${totalMax}` : "-";
+  markerScoreEl.textContent = `${markerTotal.toFixed(1)}/${totalMax.toFixed(1)}`;
+  coordinatorScoreEl.textContent = hasAnyBaseline ? `${coordinatorTotal.toFixed(1)}/${totalMax.toFixed(1)}` : "-";
 
   // 更新总体分差显示（只有在存在 baseline 时才计算差值）
   if (hasAnyBaseline) {
@@ -259,7 +259,7 @@ async function loadFeedback(data){
     const absDifference = Math.abs(difference);
     const deviationPercent = totalMax > 0 ? (absDifference / totalMax) * 100 : 0;
     
-    scoreDifferenceEl.textContent = difference > 0 ? `+${difference}` : `${difference}`;
+    scoreDifferenceEl.textContent = difference > 0 ? `+${difference.toFixed(1)}` : `${difference.toFixed(1)}`;
     
     // 根据偏差百分比设置颜色：>5%红色, >2.5%黄色, <=2.5%绿色
     if (deviationPercent > 5) {
@@ -291,14 +291,14 @@ async function loadFeedback(data){
     // Marker 分数显示（如果缺失显示 "-/max"）
     const td1 = td();
     td1.className = 'score-cell score-marker';
-    const markerDisplay = (typeof c.markerScore === 'number') ? `${c.markerScore}/${c.max || 0}` : `-/${c.max || 0}`;
+    const markerDisplay = (typeof c.markerScore === 'number') ? `${c.markerScore.toFixed(1)}/${(c.max || 0).toFixed(1)}` : `-/${(c.max || 0).toFixed(1)}`;
     td1.textContent = markerDisplay;
     tr.appendChild(td1);
 
     // Coordinator (baseline) 分数显示（缺失则 "-/max"）
     const td2 = td();
     td2.className = 'score-cell score-coordinator';
-    const coordinatorDisplay = (typeof c.coordinatorScore === 'number') ? `${c.coordinatorScore}/${c.max || 0}` : `-/${c.max || 0}`;
+    const coordinatorDisplay = (typeof c.coordinatorScore === 'number') ? `${c.coordinatorScore.toFixed(1)}/${(c.max || 0).toFixed(1)}` : `-/${(c.max || 0).toFixed(1)}`;
     td2.textContent = coordinatorDisplay;
     tr.appendChild(td2);
 
@@ -310,7 +310,7 @@ async function loadFeedback(data){
     } else {
       const markerValForDiff = (typeof c.markerScore === 'number') ? c.markerScore : 0;
       const diff = markerValForDiff - c.coordinatorScore;
-      const diffText = diff > 0 ? `+${diff}` : `${diff}`;
+      const diffText = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
       
       // 计算该criterion的偏差百分比
       const absDiff = Math.abs(diff);
