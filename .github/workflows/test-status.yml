@@ -2,9 +2,9 @@ name: Test Status Badge
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, front ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, front ]
 
 jobs:
   test-status:
