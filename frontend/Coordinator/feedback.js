@@ -13,12 +13,12 @@ console.log('📊 Feedback.js v2.5 loaded - 3-tier color for Total (green≤2.5%
 /* ===== 辅助函数 ===== */
 // 获取当前assignment ID
 function getCurrentAssignmentId() {
-  // 从URL参数获取assignment ID
+  // 从URL参数获取assignment ID（兼容 assignment_id 与 assignment=数字）
   const urlParams = new URLSearchParams(window.location.search);
-  const assignmentId = urlParams.get('assignment_id');
+  const assignmentIdParam = urlParams.get('assignment_id') || urlParams.get('assignment');
 
-  if (assignmentId) {
-    return parseInt(assignmentId);
+  if (assignmentIdParam && /^\d+$/.test(String(assignmentIdParam))) {
+    return parseInt(assignmentIdParam);
   }
 
   // 或者从全局变量获取
@@ -28,7 +28,7 @@ function getCurrentAssignmentId() {
 
   // 或者从localStorage获取
   const stored = localStorage.getItem('currentAssignmentId');
-  if (stored) {
+  if (stored && /^\d+$/.test(String(stored))) {
     return parseInt(stored);
   }
 
@@ -562,27 +562,56 @@ function restoreScrollPosition() {
   initUserInfo();
 
   const urlParams = new URLSearchParams(window.location.search);
-  const projectId = urlParams.get("project");
-  const assignmentKey = urlParams.get("assignment"); // assignment1 / assignment2
+  const projectIdParam = urlParams.get("project");
+  const assignmentParam = urlParams.get("assignment"); // assignment1 / assignment2 或 数字ID
 
-  if (!projectId || !assignmentKey) {
+  // 先尝试直接解析 assignmentId（兼容历史链接：completed/archived 从 Past Assignment 进入）
+  const directAssignmentId = getCurrentAssignmentId();
+  if (directAssignmentId) {
+    try {
+      // 通过 assignmentId 反查 projectId
+      const asRes = await fetch(`/api/uploads/assignment/${directAssignmentId}/status`);
+      if (!asRes.ok) throw new Error('Failed to fetch assignment status');
+      const asData = await asRes.json();
+      const projectId = asData.assignment?.project_id;
+      if (!projectId) throw new Error('Project ID not found for assignment');
+
+      // 保存项目与作业信息
+      currentProjectId = projectId;
+      window.currentAssignmentId = directAssignmentId;
+      localStorage.setItem('currentAssignmentId', String(directAssignmentId));
+      console.log(`✅ Assignment ID (direct) stored: ${directAssignmentId}`);
+
+      // 加载Rubric与文件信息后渲染
+      await loadRubricDescriptions(projectId);
+      await loadProjectFileInfo(projectId);
+      debugCurrentState();
+      loadModerationReport(directAssignmentId);
+      return; // 已完成初始化
+    } catch (err) {
+      console.error('通过 assignmentId 初始化失败，回退到项目方式:', err);
+      // 继续尝试使用 project + assignmentKey 方式
+    }
+  }
+
+  // Fallback：使用 project + assignmentKey（assignment1/assignment2）方式
+  if (!projectIdParam || !assignmentParam) {
     console.warn("缺少 project 或 assignment 参数");
     return;
   }
 
   // 保存项目ID到全局变量
-  currentProjectId = projectId;
-  
-  await loadRubricDescriptions(projectId);
+  currentProjectId = projectIdParam;
+  await loadRubricDescriptions(projectIdParam);
 
   try {
-    const res = await fetch(`/api/uploads/project/${projectId}/latest-ids`);
+    const res = await fetch(`/api/uploads/project/${projectIdParam}/latest-ids`);
     const data = await res.json();
 
     let assignmentId = null;
-    if (assignmentKey === "assignment1" && data.assignment1) {
+    if (assignmentParam === "assignment1" && data.assignment1) {
       assignmentId = data.assignment1.assignment_id;
-    } else if (assignmentKey === "assignment2" && data.assignment2) {
+    } else if (assignmentParam === "assignment2" && data.assignment2) {
       assignmentId = data.assignment2.assignment_id;
     }
 
@@ -600,7 +629,7 @@ function restoreScrollPosition() {
     debugCurrentState();
 
     // 加载项目文件信息
-    await loadProjectFileInfo(projectId);
+    await loadProjectFileInfo(projectIdParam);
     
     loadModerationReport(assignmentId);
   } catch (err) {
