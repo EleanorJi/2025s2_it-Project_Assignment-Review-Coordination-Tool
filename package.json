@@ -1,0 +1,16 @@
+{
+  "name": "assignment-management-system",
+  "version": "1.0.0",
+  "description": "Assignment Management System with Marker and Coordinator roles",
+  "scripts": {
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:all": "npm run test",
+    "test:ci": "npm run test:backend && npm run test:frontend"
+  },
+  "keywords": ["assignment", "management", "education"],
+  "author": "",
+  "license": "ISC"
+}
+

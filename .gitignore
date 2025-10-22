@@ -68,3 +68,9 @@ dist/
 build/
 */dist/
 */build/
+
+# Database backups
+*.sql.backup
+
+# Package lock files (uncomment if needed)
+# package-lock.json
