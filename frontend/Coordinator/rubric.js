@@ -203,13 +203,95 @@ function updateTableHeaders(gradeLevelOrder) {
     thead.removeChild(existingHeaders[i]);
   }
 
-  // Insert new grade level headers
+  // Insert new grade level headers with reorder controls
   gradeLevelOrder.forEach((levelName, index) => {
     const th = document.createElement('th');
     th.scope = 'col';
-    th.innerHTML = `<div class="grade-header editable-header" data-type="grade-level-name" data-level-name="${esc(levelName)}">${esc(levelName)}</div>`;
+    th.setAttribute('data-column-index', index);
+    th.setAttribute('data-level-name', levelName);
+    
+    // Get a grade_level_id for this level_name (we'll use the first one found)
+    let gradeLevelId = null;
+    if (currentData && currentData.criteria) {
+      for (const criterion of currentData.criteria) {
+        const level = criterion.grade_levels?.find(l => l.level_name === levelName);
+        if (level) {
+          gradeLevelId = level.grade_level_id;
+          break;
+        }
+      }
+    }
+    
+    // Header content with reorder controls
+    const headerContent = `
+      <div class="grade-header-wrapper">
+        <div class="grade-header editable-header" 
+             data-type="grade-level-name" 
+             data-level-name="${esc(levelName)}"
+             data-grade-level-id="${gradeLevelId || ''}"
+             contenteditable="false">${esc(levelName)}</div>
+        <div class="column-reorder-controls" style="display:none;">
+          <button class="column-move-btn" data-direction="left" data-level-name="${esc(levelName)}" title="Move Left">◀</button>
+          <button class="column-move-btn" data-direction="right" data-level-name="${esc(levelName)}" title="Move Right">▶</button>
+        </div>
+      </div>
+    `;
+    th.innerHTML = headerContent;
     thead.insertBefore(th, thead.lastElementChild);
   });
+  
+  // Add event listeners for reorder buttons if in edit mode
+  if (isEditMode) {
+    attachColumnReorderListeners();
+  }
+}
+
+function attachColumnReorderListeners() {
+  const moveButtons = document.querySelectorAll('.column-move-btn');
+  moveButtons.forEach(btn => {
+    btn.addEventListener('click', handleColumnMove);
+  });
+}
+
+function handleColumnMove(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const button = e.currentTarget;
+  const direction = button.getAttribute('data-direction');
+  const levelName = button.getAttribute('data-level-name');
+  
+  const currentIndex = gradeLevelOrder.indexOf(levelName);
+  
+  if (direction === 'left' && currentIndex > 0) {
+    // Swap with left neighbor
+    [gradeLevelOrder[currentIndex - 1], gradeLevelOrder[currentIndex]] = 
+    [gradeLevelOrder[currentIndex], gradeLevelOrder[currentIndex - 1]];
+  } else if (direction === 'right' && currentIndex < gradeLevelOrder.length - 1) {
+    // Swap with right neighbor
+    [gradeLevelOrder[currentIndex], gradeLevelOrder[currentIndex + 1]] = 
+    [gradeLevelOrder[currentIndex + 1], gradeLevelOrder[currentIndex]];
+  } else {
+    return; // Can't move (already at edge)
+  }
+  
+  // Re-render table with new order
+  const metaEl = document.getElementById('rubric-meta');
+  const tbody = document.getElementById('rubric-body');
+  
+  // Update headers
+  updateTableHeaders(gradeLevelOrder);
+  
+  // Re-render table body
+  renderTable(currentData, tbody);
+  
+  // Re-attach event listeners for edit mode
+  if (isEditMode) {
+    showColumnReorderControls();
+    makeHeadersEditable();
+  }
+  
+  console.log(`🔄 Moved column "${levelName}" ${direction}. New order:`, gradeLevelOrder);
 }
 
 function renderTable(data, tbody) {
@@ -329,14 +411,34 @@ function enterEditMode() {
   document.getElementById('controlButtons').style.display = 'flex';
   
   // Make cells editable
+  makeHeadersEditable();
   const editableCells = document.querySelectorAll('.editable-cell, .editable-header');
   editableCells.forEach(cell => {
     cell.contentEditable = 'true';
     cell.style.cursor = 'text';
   });
   
+  // Show column reorder controls
+  showColumnReorderControls();
+  
   // Add edit-mode class
   document.querySelector('.panel').classList.add('edit-mode');
+}
+
+function makeHeadersEditable() {
+  const editableHeaders = document.querySelectorAll('.editable-header');
+  editableHeaders.forEach(header => {
+    header.contentEditable = 'true';
+    header.style.cursor = 'text';
+  });
+}
+
+function showColumnReorderControls() {
+  const controls = document.querySelectorAll('.column-reorder-controls');
+  controls.forEach(control => {
+    control.style.display = 'flex';
+  });
+  attachColumnReorderListeners();
 }
 
 function cancelEdit() {
@@ -368,6 +470,12 @@ function exitEditMode() {
     cell.style.cursor = '';
   });
   
+  // Hide column reorder controls
+  const controls = document.querySelectorAll('.column-reorder-controls');
+  controls.forEach(control => {
+    control.style.display = 'none';
+  });
+  
   // Remove edit-mode class
   document.querySelector('.panel')?.classList.remove('edit-mode');
 }
@@ -379,6 +487,9 @@ async function saveChanges() {
   
   const changes = [];
   const editableCells = document.querySelectorAll('.editable-cell, .editable-header');
+  
+  // Track which grade levels have explicit score changes to avoid conflicts
+  const explicitScoreChanges = new Set();
   
   // Collect all changes
   editableCells.forEach(cell => {
@@ -445,6 +556,9 @@ async function saveChanges() {
         const originalMaxScore = parseFloat(cell.getAttribute('data-max-score'));
         
         if (newMinScore !== originalMinScore || newMaxScore !== originalMaxScore) {
+          // Mark this grade level as having explicit score change
+          explicitScoreChanges.add(gradeLevelId);
+          
           changes.push({
             type: 'grade-level-scores',
             gradeLevelId: gradeLevelId,
@@ -453,6 +567,21 @@ async function saveChanges() {
             original: { min: originalMinScore, max: originalMaxScore }
           });
         }
+      }
+    }
+    else if (type === 'grade-level-name') {
+      const oldLevelName = cell.getAttribute('data-level-name');
+      const newLevelName = content;
+      
+      if (oldLevelName && newLevelName && oldLevelName !== newLevelName) {
+        console.log(`🔄 Grade level name change detected: "${oldLevelName}" → "${newLevelName}"`);
+        
+        changes.push({
+          type: 'grade-level-name',
+          oldLevelName: oldLevelName,
+          newLevelName: newLevelName,
+          rubricId: rubricId
+        });
       }
     }
     else if (type === 'grade-level-description') {
@@ -470,8 +599,9 @@ async function saveChanges() {
       if (content !== originalDesc && content !== '(No description)') {
         const newDesc = content === '(No description)' ? '' : content;
         
-        // ⭐ 检测 description 中的分数范围 (min - max)
-        const scoreRangeMatch = newDesc.match(/\(?\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*(?:分|points?)?\s*\)?/i);
+        // ⭐ 增强检测: 支持多种分数格式
+        // 匹配格式：(min - max), min-max, (min to max), min to max 分/points
+        const scoreRangeMatch = newDesc.match(/\(?\s*(\d+(?:\.\d+)?)\s*(?:-|to|~)\s*(\d+(?:\.\d+)?)\s*(?:分|points?|marks?)?\s*\)?/i);
         
         if (scoreRangeMatch) {
           const detectedMin = parseFloat(scoreRangeMatch[1]);
@@ -479,15 +609,27 @@ async function saveChanges() {
           
           console.log(`🔍 Detected score range in description: ${detectedMin} - ${detectedMax}`);
           
-          // 添加自动更新分数范围的change
-          changes.push({
-            type: 'grade-level-scores-from-description',
-            gradeLevelId: gradeLevelId,
-            minScore: detectedMin,
-            maxScore: detectedMax,
-            description: newDesc,
-            original: originalDesc
-          });
+          // Only auto-update scores from description if there's no explicit badge score change
+          // This prevents conflicts when user edits both badge and description
+          if (!explicitScoreChanges.has(gradeLevelId)) {
+            changes.push({
+              type: 'grade-level-scores-from-description',
+              gradeLevelId: gradeLevelId,
+              minScore: detectedMin,
+              maxScore: detectedMax,
+              description: newDesc,
+              original: originalDesc
+            });
+          } else {
+            // User edited both badge and description - just update description
+            console.log(`⚠️ Skipping auto-score update for grade level ${gradeLevelId} - badge was explicitly edited`);
+            changes.push({
+              type: 'grade-level-description',
+              gradeLevelId: gradeLevelId,
+              value: newDesc,
+              original: originalDesc
+            });
+          }
         } else {
           // 没有检测到分数范围，只更新description
           changes.push({
@@ -515,7 +657,50 @@ async function saveChanges() {
   
   for (const change of changes) {
     try {
-      if (change.type === 'criterion-title') {
+      if (change.type === 'grade-level-name') {
+        // Update all grade level entries with this level_name in the rubric
+        console.log(`📝 Updating grade level name: "${change.oldLevelName}" → "${change.newLevelName}"`);
+        
+        // Get all grade_level_ids with this level_name in this rubric
+        const gradeLevelIds = [];
+        for (const criterion of currentData.criteria) {
+          const level = criterion.grade_levels?.find(l => l.level_name === change.oldLevelName);
+          if (level) {
+            gradeLevelIds.push(level.grade_level_id);
+          }
+        }
+        
+        console.log(`Found ${gradeLevelIds.length} grade level entries to update`);
+        
+        // Update each grade_level_id
+        for (const gradeLevelId of gradeLevelIds) {
+          await fetch(`/api/uploads/rubric/grade-level/${gradeLevelId}/name`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level_name: change.newLevelName })
+          });
+        }
+        
+        console.log(`✅ Updated ${gradeLevelIds.length} grade level names`);
+        
+        // Update gradeLevelOrder array to reflect the name change
+        const orderIndex = gradeLevelOrder.indexOf(change.oldLevelName);
+        if (orderIndex !== -1) {
+          gradeLevelOrder[orderIndex] = change.newLevelName;
+        }
+        
+        // Update currentData to reflect the name change
+        for (const criterion of currentData.criteria) {
+          for (const level of criterion.grade_levels || []) {
+            if (level.level_name === change.oldLevelName) {
+              level.level_name = change.newLevelName;
+            }
+          }
+        }
+        
+        successCount++;
+      }
+      else if (change.type === 'criterion-title') {
         await fetch(`/api/uploads/rubric/criterion/${change.criterionId}/title`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -762,9 +947,9 @@ async function confirmAddGradeLevel() {
     console.log('✅ Grade level added:', result);
     
     closeAddGradeLevelModal();
-    alert(`✅ Successfully added new grade level!\n\nLevel Name: ${result.grade_level.level_name}\nScore Range: ${result.grade_level.min_score} - ${result.grade_level.max_score}\nEntries Created: ${result.grade_level.entries_created.length}\nNew Column Count: ${result.rubric_updated.new_column_count}`);
+    alert(`✅ Successfully added new grade level!\n\nLevel Name: ${result.grade_level.level_name}\nScore Range: ${result.grade_level.min_score} - ${result.grade_level.max_score}\nEntries Created: ${result.grade_level.entries_created.length}\nNew Column Count: ${result.rubric_updated.new_column_count}\n\n✨ The column has been automatically positioned based on its score range (highest to lowest).`);
     
-    // Reload rubric data
+    // Reload rubric data - this will re-sort columns by max_score
     await loadRubric();
     
   } catch (error) {
