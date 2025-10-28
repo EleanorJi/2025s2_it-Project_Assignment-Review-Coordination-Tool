@@ -234,12 +234,12 @@ function initCommonNav() {
         recentAssignmentsList.innerHTML = data.recentAssignments.map(assignment => `
           <div class="assignment-item">
             <div class="assignment-meta">
-              <div class="assignment-title">${assignment.name}</div>
-              <div class="assignment-subtitle">${assignment.project_name} • Round ${assignment.round} • Due ${formatDate(assignment.due_at)}</div>
+              <div class="assignment-title">${assignment.project_name} - Assignment ${assignment.round}</div>
+              <div class="assignment-subtitle">Due ${formatDate(assignment.due_at)} • ${assignment.markers_completed}/${assignment.markers_assigned} markers completed</div>
             </div>
             <div class="assignment-actions">
               <span class="assignment-status ${assignment.is_published ? 'active' : 'draft'}">${getStatusText(assignment.is_published)}</span>
-              <button class="btn primary sm" onclick="window.location.href='/dashboard/coordinator/taskManagement'">Manage</button>
+              <button class="btn primary sm" onclick="window.location.href='/dashboard/coordinator/taskManagement?project=${assignment.project_id}&assignment=${assignment.round}'">Manage</button>
             </div>
           </div>
         `).join('');
@@ -247,23 +247,15 @@ function initCommonNav() {
         recentAssignmentsList.innerHTML = '<div class="empty-state">No recent assignments</div>';
       }
 
-      // Update outliers list
+      // Update outliers list with pagination
       const outliersList = document.getElementById('outliers-list');
-      if (data.outliers && data.outliers.length > 0) {
-        outliersList.innerHTML = data.outliers.map(outlier => `
-          <div class="outlier-item">
-            <div class="outlier-title">${outlier.marker_name} • ${outlier.assignment_name}</div>
-            <div class="outlier-content">${outlier.criterion_name}: ${outlier.score}/${outlier.max_score}</div>
-            <div class="outlier-meta">
-              Deviation: <span class="outlier-deviation ${outlier.deviation_percent > 0 ? 'positive' : 'negative'}">
-                ${outlier.deviation_percent > 0 ? '+' : ''}${outlier.deviation_percent}%
-              </span>
-            </div>
-          </div>
-        `).join('');
-      } else {
-        outliersList.innerHTML = '<div class="empty-state">No outliers detected</div>';
-      }
+      
+      // Store all outliers globally for pagination
+      window.allOutliers = data.outliers || [];
+      window.displayedOutliersCount = 5; // Initial display count
+      
+      // Display outliers
+      displayOutliers();
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -288,4 +280,44 @@ function initCommonNav() {
   function getStatusText(isPublished) {
     return isPublished ? 'Published' : 'Draft';
   }
+
+  // Outliers pagination functions
+  function displayOutliers() {
+    const outliersList = document.getElementById('outliers-list');
+    const loadMoreBtn = document.getElementById('outliers-load-more');
+    
+    if (window.allOutliers.length === 0) {
+      outliersList.innerHTML = '<div class="empty-state">No outliers detected</div>';
+      loadMoreBtn.style.display = 'none';
+      return;
+    }
+    
+    // Display only the first N outliers
+    const outliersToDisplay = window.allOutliers.slice(0, window.displayedOutliersCount);
+    
+    outliersList.innerHTML = outliersToDisplay.map(outlier => `
+      <div class="outlier-item" style="cursor: pointer;" onclick="window.location.href='/dashboard/coordinator/taskManagement?project=${outlier.project_id}&assignment=${outlier.round}'">
+        <div class="outlier-title">${outlier.marker_name} • ${outlier.project_name} - Assignment ${outlier.round}</div>
+        <div class="outlier-content">${outlier.criterion_name}: ${outlier.score}/${outlier.max_score}</div>
+        <div class="outlier-meta">
+          Deviation: <span class="outlier-deviation ${Math.abs(outlier.deviation_percent) > 10 ? 'high' : (Math.abs(outlier.deviation_percent) > 5 ? 'medium' : 'low')}">
+            ${outlier.deviation_percent > 0 ? '+' : ''}${outlier.deviation_percent}%
+          </span>
+        </div>
+      </div>
+    `).join('');
+    
+    // Show/hide "Load More" button
+    if (window.allOutliers.length > window.displayedOutliersCount) {
+      loadMoreBtn.style.display = 'block';
+    } else {
+      loadMoreBtn.style.display = 'none';
+    }
+  }
+
+  window.loadMoreOutliers = function() {
+    window.displayedOutliersCount += 5;
+    displayOutliers();
+  };
+
 })();

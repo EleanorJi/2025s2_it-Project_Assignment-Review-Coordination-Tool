@@ -40,10 +40,10 @@
   .dropdown-item:hover{background:linear-gradient(90deg,#f8fafc 0%,#fff 100%);border-left-color:#0F172A;text-decoration:none;padding-left:20px}
 
   /* Layout */
-  .app{display:grid;grid-template-columns:280px 1fr;gap:0;padding:16px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow)}
+  .app{display:grid;grid-template-columns:280px 1fr;gap:0;background:#fff}
   .sidebar{
-    background:#edf0f2;border-right:1px solid var(--border);border-radius:var(--radius) 0 0 var(--radius);padding:16px;
-    height:calc(100vh - 96px);position:sticky;top:86px;
+    background:#edf0f2;border-right:1px solid var(--border);padding:16px;
+    height:calc(100vh - 70px);position:sticky;top:70px;
   }
   .nav{display:flex;flex-direction:column;gap:8px;margin-top:8px}
   .nav-item{
@@ -60,7 +60,7 @@
   
   .main{padding:16px}
   .panel{
-    background:#fff;border-radius:0 var(--radius) var(--radius) 0;
+    background:#fff;
     padding:18px 18px 22px;
   }
   
@@ -180,15 +180,30 @@
     border-color:#bbdefb;
   }
 
-  /* Outliers List - Enhanced */
+  /* Outliers List - Enhanced with scrolling */
   .outliers-list{
     display:flex;flex-direction:column;gap:12px;
+    max-height:500px;overflow-y:auto;
+    padding-right:4px;
+  }
+  .outliers-list::-webkit-scrollbar{
+    width:6px;
+  }
+  .outliers-list::-webkit-scrollbar-track{
+    background:#f1f5f9;border-radius:3px;
+  }
+  .outliers-list::-webkit-scrollbar-thumb{
+    background:#cbd5e1;border-radius:3px;
+  }
+  .outliers-list::-webkit-scrollbar-thumb:hover{
+    background:#94a3b8;
   }
   .outlier-item{
     padding:16px 18px;border:1px solid var(--border);
     border-radius:14px;background:#fff;
     transition:all 0.3s ease;
     box-shadow:0 2px 8px rgba(15,23,42,0.04);
+    cursor:pointer;
   }
   .outlier-item:hover{
     background:#f8fafc;transform:translateY(-2px);
@@ -209,12 +224,29 @@
   }
   .outlier-deviation{
     font-weight:700;font-size:14px;
+    padding:2px 8px;
+    border-radius:6px;
+    display:inline-block;
   }
-  .outlier-deviation.positive{
-    color:var(--good);
+  .outlier-deviation.high{
+    color:#dc2626;
+    background:#fee2e2;
   }
-  .outlier-deviation.negative{
-    color:var(--bad);
+  .outlier-deviation.medium{
+    color:#ea580c;
+    background:#ffedd5;
+  }
+  .outlier-deviation.low{
+    color:#16a34a;
+    background:#dcfce7;
+  }
+
+  /* Load More Button */
+  .outliers-load-more{
+    text-align:center;margin-top:12px;
+  }
+  .outliers-load-more .btn{
+    width:100%;
   }
 
   /* Marker Stats - Enhanced */
