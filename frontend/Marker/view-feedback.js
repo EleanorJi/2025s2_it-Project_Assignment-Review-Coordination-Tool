@@ -18,10 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // console.log("User Info:", rawUser);
       if (rawUser) {
         const user = JSON.parse(rawUser);
-        if (user && user.name) {
+        if (user) {
           const usernameEl = document.getElementById("username");
           if (usernameEl) {
-            usernameEl.textContent = user.name;
+            usernameEl.textContent = user.name || user.email || 'User';
           }
         }
       }
@@ -685,3 +685,8 @@ document.addEventListener('DOMContentLoaded', () => {
     link.click();
   });
 });
+
+// 全局goToResetPassword函数
+window.goToResetPassword = function() {
+  window.location.href = '/reset-password';
+};

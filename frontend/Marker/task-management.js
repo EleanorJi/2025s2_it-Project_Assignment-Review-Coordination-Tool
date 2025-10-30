@@ -711,4 +711,9 @@
     }
   };
 
+  // 全局goToResetPassword函数
+  window.goToResetPassword = function() {
+    window.location.href = '/reset-password';
+  };
+
 })();

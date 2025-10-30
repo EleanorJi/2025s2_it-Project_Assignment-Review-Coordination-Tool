@@ -9,10 +9,10 @@
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
         const user = JSON.parse(rawUser);
-        if (user && user.name) {
+        if (user) {
           const usernameEl = document.getElementById("username");
           if (usernameEl) {
-            usernameEl.textContent = user.name;
+            usernameEl.textContent = user.name || user.email || 'User';
           }
         }
       }
@@ -20,6 +20,11 @@
       console.error("Failed to load username:", err);
     }
   }
+
+  // 全局goToResetPassword函数
+  window.goToResetPassword = function() {
+    window.location.href = '/reset-password';
+  };
 
   // 初始化dropdown
   function initDropdown() {

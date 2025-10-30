@@ -189,6 +189,11 @@ function initCommonNav() {
         window.location.href = '/login';
       }
     };
+
+    // 全局goToResetPassword函数
+    window.goToResetPassword = function() {
+      window.location.href = '/reset-password';
+    };
   }
 
   // 在页面加载时初始化dropdown和logout功能

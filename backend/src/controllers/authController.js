@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const db = require('../config/database');
 const { ROLES } = require('../config/constants');
 const EmailService = require('../services/emailService');
+const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 
 exports.login = async (req, res) => {
   const { email, name, password } = req.body;
@@ -54,7 +55,9 @@ exports.login = async (req, res) => {
       });
     }
 
-    if (user.password_hash !== password) {
+    // 验证密码
+    const isPasswordValid = await comparePassword(password, user.password_hash);
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
         message: 'Authentication failed. Invalid password.'
@@ -215,10 +218,13 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
+    // 加密新密码
+    const hashedPassword = await hashPassword(newPassword);
+    
     // 更新密码并清除重置令牌
     await db.query(
       'UPDATE app_user SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL WHERE user_id = $2',
-      [newPassword, user.id] // 注意：实际项目中应该对密码进行哈希处理
+      [hashedPassword, user.id]
     );
 
     res.json({
@@ -231,6 +237,72 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error.'
+    });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // Get current user password
+    const userResult = await db.query(
+      'SELECT password_hash FROM app_user WHERE user_id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    // Verify current password
+    const isCurrentPasswordValid = await comparePassword(currentPassword, user.password_hash);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await hashPassword(newPassword);
+
+    // Update password
+    await db.query(
+      'UPDATE app_user SET password_hash = $1 WHERE user_id = $2',
+      [hashedNewPassword, userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 };

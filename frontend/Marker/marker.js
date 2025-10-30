@@ -1,5 +1,5 @@
-
-document.querySelectorAll('.nav-item').forEach(b=>{
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item').forEach(b=>{
     b.addEventListener('click',()=>{
       document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
@@ -11,10 +11,10 @@ document.querySelectorAll('.nav-item').forEach(b=>{
     const rawUser = localStorage.getItem("user");
     if (rawUser) {
       const user = JSON.parse(rawUser);
-      if (user && user.name) {
+      if (user) {
         const usernameEl = document.getElementById("username");
         if (usernameEl) {
-          usernameEl.textContent = user.name;
+          usernameEl.textContent = user.name || user.email || 'User';
         }
       }
     }
@@ -105,6 +105,7 @@ document.querySelectorAll('.nav-item').forEach(b=>{
       }
     });
   }
+});
 
   // 全局logout函数
   window.logout = async function() {
@@ -131,6 +132,11 @@ document.querySelectorAll('.nav-item').forEach(b=>{
       document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       window.location.href = '/login';
     }
+  };
+
+  // 全局goToResetPassword函数
+  window.goToResetPassword = function() {
+    window.location.href = '/reset-password';
   };
 
   // Dashboard data loading function
