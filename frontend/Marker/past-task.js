@@ -30,7 +30,8 @@
   function initDropdown() {
     const usernameEl = document.getElementById('username');
     const dropdown = document.querySelector('.dropdown-menu');
-    const logoutBtn = document.querySelector('.dropdown-item');
+    const allDropdownItems = document.querySelectorAll('.dropdown-item');
+    const logoutBtn = allDropdownItems.length > 1 ? allDropdownItems[1] : null;
 
     if (usernameEl && dropdown) {
       usernameEl.addEventListener('click', (e) => {

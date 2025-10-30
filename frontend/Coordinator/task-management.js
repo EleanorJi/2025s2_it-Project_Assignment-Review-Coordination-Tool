@@ -1372,7 +1372,8 @@
     // 初始化dropdown和logout功能
     const accountEl = document.querySelector('.account');
     const dropdown = document.querySelector('.dropdown-menu');
-    const logoutBtn = document.querySelector('.dropdown-item');
+    const allDropdownItems = document.querySelectorAll('.dropdown-item');
+    const logoutBtn = allDropdownItems.length > 1 ? allDropdownItems[1] : null;
 
     if (accountEl && dropdown) {
       accountEl.addEventListener('click', (e) => {
@@ -2150,5 +2151,10 @@
       }
     });
   }
+
+  // Global goToResetPassword function
+  window.goToResetPassword = function() {
+    window.location.href = '/reset-password';
+  };
 
 })();

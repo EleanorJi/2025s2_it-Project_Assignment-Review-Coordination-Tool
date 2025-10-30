@@ -43,27 +43,31 @@ router.get('/signup', async (req, res) => {
 router.get('/reset-password', async (req, res) => {
   const { token } = req.query;
 
-  if (!token) {
-    return res.status(400).send('Invalid reset token');
-  }
+  // If token is provided, validate it (for forgot password flow)
+  if (token) {
+    try {
+      // 验证token是否有效
+      const userResult = await db.query(
+        'SELECT user_id as id, reset_token_expiry FROM app_user WHERE reset_token = $1 AND reset_token_expiry > NOW()',
+        [token]
+      );
 
-  try {
-    // 验证token是否有效
-    const userResult = await db.query(
-      'SELECT user_id as id, reset_token_expiry FROM app_user WHERE reset_token = $1 AND reset_token_expiry > NOW()',
-      [token]
-    );
+      if (userResult.rows.length === 0) {
+        return res.status(400).send('Invalid or expired reset token');
+      }
 
-    if (userResult.rows.length === 0) {
-      return res.status(400).send('Invalid or expired reset token');
+      // 发送重置密码页面 (with valid token)
+      res.sendFile(path.join(__dirname, '../../frontend/reset-password.html'));
+      return;
+    } catch (error) {
+      console.error('Reset password page error:', error);
+      return res.status(500).send('Internal server error');
     }
-
-    // 发送重置密码页面
-    res.sendFile(path.join(__dirname, '../../frontend/reset-password.html'));
-  } catch (error) {
-    console.error('Reset password page error:', error);
-    res.status(500).send('Internal server error');
   }
+
+  // No token provided - allow access (for logged-in users to change password)
+  // The frontend will check if user is logged in and show appropriate form
+  res.sendFile(path.join(__dirname, '../../frontend/reset-password.html'));
 });
 
 router.get('/forgot-password', (req, res) => {
