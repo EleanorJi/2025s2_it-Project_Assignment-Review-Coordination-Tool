@@ -1,5 +1,5 @@
-
-document.querySelectorAll('.nav-item').forEach(b=>{
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item').forEach(b=>{
     b.addEventListener('click',()=>{
       document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
@@ -11,10 +11,10 @@ document.querySelectorAll('.nav-item').forEach(b=>{
     const rawUser = localStorage.getItem("user");
     if (rawUser) {
       const user = JSON.parse(rawUser);
-      if (user && user.name) {
+      if (user) {
         const usernameEl = document.getElementById("username");
         if (usernameEl) {
-          usernameEl.textContent = user.name;
+          usernameEl.textContent = user.name || user.email || 'User';
         }
       }
     }
@@ -62,7 +62,8 @@ document.querySelectorAll('.nav-item').forEach(b=>{
   // 初始化dropdown
   const accountEl = document.querySelector('.account');
   const dropdown = document.querySelector('.dropdown-menu');
-  const logoutBtn = document.querySelector('.dropdown-item');
+  const allDropdownItems = document.querySelectorAll('.dropdown-item');
+  const logoutBtn = allDropdownItems.length > 1 ? allDropdownItems[1] : null;
 
   if (accountEl && dropdown) {
     accountEl.addEventListener('click', (e) => {
@@ -105,6 +106,7 @@ document.querySelectorAll('.nav-item').forEach(b=>{
       }
     });
   }
+});
 
   // 全局logout函数
   window.logout = async function() {
@@ -131,6 +133,11 @@ document.querySelectorAll('.nav-item').forEach(b=>{
       document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       window.location.href = '/login';
     }
+  };
+
+  // 全局goToResetPassword函数
+  window.goToResetPassword = function() {
+    window.location.href = '/reset-password';
   };
 
   // Dashboard data loading function
@@ -162,12 +169,12 @@ document.querySelectorAll('.nav-item').forEach(b=>{
         pendingTasksList.innerHTML = data.pendingAssignments.map(task => `
           <div class="task-item">
             <div class="task-meta">
-              <div class="task-title">${task.name}</div>
-              <div class="task-subtitle">${task.project_name} • Round ${task.round} • Due ${formatDate(task.due_at)}</div>
+              <div class="task-title">${task.project_name} - Assignment ${task.round}</div>
+              <div class="task-subtitle">Due ${formatDate(task.due_at)}</div>
             </div>
             <div class="task-actions">
               <span class="task-status ${task.urgency}">${getStatusText(task.urgency)}</span>
-              <button class="btn primary sm" onclick="window.location.href='/dashboard/marker/taskManagement'">Mark</button>
+              <button class="btn primary sm" onclick="window.location.href='/dashboard/marker/mark?project=${task.project_id}&assignment=assignment${task.round}'">Mark</button>
             </div>
           </div>
         `).join('');
@@ -181,11 +188,11 @@ document.querySelectorAll('.nav-item').forEach(b=>{
         completedTasksList.innerHTML = data.completedAssignments.map(task => `
           <div class="task-item">
             <div class="task-meta">
-              <div class="task-title">${task.name}</div>
-              <div class="task-subtitle">${task.project_name} • Round ${task.round} • Submitted ${formatDate(task.submitted_at)}</div>
+              <div class="task-title">${task.project_name} - Assignment ${task.round}</div>
+              <div class="task-subtitle">Submitted ${formatDate(task.submitted_at)}</div>
             </div>
             <div class="task-actions">
-              <a href="/dashboard/marker/taskManagement" class="link">View</a>
+              <button class="btn primary sm" onclick="window.location.href='/dashboard/marker/feedback?project=${task.project_id}&assignment_id=${task.assignment_id}'">View</button>
             </div>
           </div>
         `).join('');
@@ -197,10 +204,10 @@ document.querySelectorAll('.nav-item').forEach(b=>{
       const recentFeedbackList = document.getElementById('recent-feedback-list');
       if (data.recentFeedback && data.recentFeedback.length > 0) {
         recentFeedbackList.innerHTML = data.recentFeedback.map(feedback => `
-          <div class="feedback-item">
-            <div class="feedback-title">${feedback.assignment_name}</div>
-            <div class="feedback-content">${feedback.comment}</div>
-            <div class="feedback-meta">${feedback.project_name} • ${formatDate(feedback.created_at)}</div>
+          <div class="feedback-item" style="cursor: pointer;" onclick="window.location.href='/dashboard/marker/feedback?project=${feedback.project_id}&assignment_id=${feedback.assignment_id}'">
+            <div class="feedback-title">${feedback.project_name} - Assignment ${feedback.round}</div>
+            <div class="feedback-content">${truncateText(feedback.comment, 100)}</div>
+            <div class="feedback-meta">${formatDate(feedback.created_at)}</div>
           </div>
         `).join('');
       } else {
@@ -235,5 +242,11 @@ document.querySelectorAll('.nav-item').forEach(b=>{
       case 'normal': return 'On Track';
       default: return 'Active';
     }
+  }
+
+  function truncateText(text, maxLength) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   }
   

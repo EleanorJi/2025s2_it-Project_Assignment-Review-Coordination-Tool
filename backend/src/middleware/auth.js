@@ -12,7 +12,7 @@ const authenticate = async (req, res, next) => {
     if (!userId) {
       // Include the original URL as a redirect parameter
       const redirectUrl = encodeURIComponent(req.originalUrl);
-      res.redirect(`/login?redirect=${redirectUrl}`);
+      return res.redirect(`/login?redirect=${redirectUrl}`);
 //      return res.status(401).json({
 //        success: false,
 //        message: 'Authentication required. Please log in again.'

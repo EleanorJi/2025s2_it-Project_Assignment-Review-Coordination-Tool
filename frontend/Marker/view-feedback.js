@@ -18,10 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // console.log("User Info:", rawUser);
       if (rawUser) {
         const user = JSON.parse(rawUser);
-        if (user && user.name) {
+        if (user) {
           const usernameEl = document.getElementById("username");
           if (usernameEl) {
-            usernameEl.textContent = user.name;
+            usernameEl.textContent = user.name || user.email || 'User';
           }
         }
       }
@@ -475,7 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 初始化dropdown
   const accountEl = document.querySelector('.account');
   const dropdown = document.querySelector('.dropdown-menu');
-  const logoutBtn = document.querySelector('.dropdown-item');
+  const allDropdownItems = document.querySelectorAll('.dropdown-item');
+  const logoutBtn = allDropdownItems.length > 1 ? allDropdownItems[1] : null;
 
   if (accountEl && dropdown) {
     accountEl.addEventListener('click', (e) => {
@@ -685,3 +686,8 @@ document.addEventListener('DOMContentLoaded', () => {
     link.click();
   });
 });
+
+// 全局goToResetPassword函数
+window.goToResetPassword = function() {
+  window.location.href = '/reset-password';
+};

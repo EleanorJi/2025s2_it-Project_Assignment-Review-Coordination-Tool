@@ -321,7 +321,75 @@
     // 渲染完成后恢复展开状态
     setTimeout(() => {
       restoreExpandedStates();
+      
+      // Check URL parameters and auto-expand
+      handleURLParameters();
     }, 100);
+  }
+
+  // Handle URL parameters for auto-expanding specific tasks and assignments
+  function handleURLParameters() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('project');
+    const assignmentRound = urlParams.get('assignment');
+    
+    if (!projectId) return;
+    
+    console.log(`🔗 URL parameters detected: project=${projectId}, assignment=${assignmentRound}`);
+    
+    // Find and expand the task section
+    const taskSection = $(`.tm-task-section[data-task-id="${projectId}"]`);
+    if (!taskSection) {
+      console.warn(`⚠️ Task section not found for project_id=${projectId}`);
+      return;
+    }
+    
+    // Expand the task section
+    const taskContent = taskSection.querySelector('.tm-task-content');
+    const taskChevron = taskSection.querySelector('.tm-task-chevron');
+    if (taskContent && taskChevron) {
+      taskContent.classList.add('expanded');
+      taskChevron.classList.add('expanded');
+      console.log(`✅ Task section expanded for project_id=${projectId}`);
+    }
+    
+    // If assignment parameter is provided, expand that specific assignment
+    if (assignmentRound) {
+      const assignmentId = `assignment${assignmentRound}`;
+      const assignmentTitle = `Assignment ${assignmentRound}`;
+      
+      // Find the assignment section within the task
+      const assignmentSections = taskSection.querySelectorAll('.tm-assignment-item');
+      const targetAssignment = Array.from(assignmentSections).find(section => {
+        const title = section.querySelector('.tm-assignment-title');
+        return title && title.textContent === assignmentTitle;
+      });
+      
+      if (targetAssignment) {
+        const assignmentActions = targetAssignment.querySelector('.tm-assignment-actions');
+        const assignmentChevron = targetAssignment.querySelector('.tm-assignment-chevron');
+        if (assignmentActions && assignmentChevron) {
+          assignmentActions.classList.add('expanded');
+          assignmentChevron.classList.add('expanded');
+          console.log(`✅ Assignment ${assignmentRound} expanded`);
+          
+          // Scroll to the assignment
+          setTimeout(() => {
+            targetAssignment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+        }
+      } else {
+        console.warn(`⚠️ Assignment ${assignmentRound} not found in project ${projectId}`);
+      }
+    } else {
+      // If no specific assignment, just scroll to the task section
+      setTimeout(() => {
+        taskSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    }
+    
+    // Save the expanded state
+    saveExpandedStates();
   }
 
   function createTaskSection(task) {
@@ -513,6 +581,8 @@
     const titleContainer = document.createElement('div');
     titleContainer.style.display = 'flex';
     titleContainer.style.alignItems = 'center';
+    titleContainer.style.flexWrap = 'wrap';
+    titleContainer.style.gap = '8px';
 
     const title = document.createElement('div');
     title.className = 'tm-assignment-title';
@@ -534,8 +604,17 @@
       console.log(`❓ ${assignment.title} status: ${assignment.status} (Unknown status)`);
     }
 
+    // Add due date display
+    const dueDateSpan = document.createElement('span');
+    dueDateSpan.className = 'tm-assignment-due-date';
+    dueDateSpan.style.cssText = 'font-size:11px;color:var(--muted);font-weight:500;';
+    
+    // Fetch due date information
+    fetchAssignmentDueDate(task.project_id, assignment.id, dueDateSpan);
+
     titleContainer.appendChild(title);
     titleContainer.appendChild(status);
+    titleContainer.appendChild(dueDateSpan);
 
     const chevron = document.createElement('div');
     chevron.className = 'tm-assignment-chevron';
@@ -730,6 +809,51 @@
 
   // ---------- Interactive Functions ----------
 
+  // Fetch assignment due date information
+  async function fetchAssignmentDueDate(projectId, assignmentId, dueDateElement) {
+    try {
+      // Get latest IDs for the project
+      const idsResponse = await fetch(`/api/uploads/project/${projectId}/latest-ids`);
+      if (!idsResponse.ok) return;
+
+      const idsData = await idsResponse.json();
+      let targetAssignmentId = null;
+
+      if (assignmentId === 'assignment1' && idsData.assignment1) {
+        targetAssignmentId = idsData.assignment1.assignment_id;
+      } else if (assignmentId === 'assignment2' && idsData.assignment2) {
+        targetAssignmentId = idsData.assignment2.assignment_id;
+      }
+
+      if (!targetAssignmentId) {
+        dueDateElement.textContent = 'No due date set';
+        return;
+      }
+
+      // Get assignment status with due date
+      const statusResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/status`);
+      if (!statusResponse.ok) return;
+
+      const statusData = await statusResponse.json();
+      const assignment = statusData.assignment;
+
+      if (assignment.due_at_pretty) {
+        dueDateElement.textContent = `Due: ${assignment.due_at_pretty}`;
+      } else if (assignment.due_at_local_iso) {
+        const dueDate = new Date(assignment.due_at_local_iso);
+        dueDateElement.textContent = `Due: ${dueDate.toLocaleDateString()} ${dueDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+      } else if (assignment.due_at) {
+        const dueDate = new Date(assignment.due_at);
+        dueDateElement.textContent = `Due: ${dueDate.toLocaleDateString()} ${dueDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+      } else {
+        dueDateElement.textContent = 'No due date set';
+      }
+    } catch (error) {
+      console.warn('Failed to fetch assignment due date:', error);
+      dueDateElement.textContent = 'Due date unavailable';
+    }
+  }
+
   // Toggle task section expand/collapse
   function toggleTaskSection(section) {
     const content = section.querySelector('.tm-task-content');
@@ -818,10 +942,23 @@
         return;
       }
 
-      // Get assignment file info
+      // Get assignment file info and status
       const assignmentResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/files`);
+      const assignmentStatusResponse = await fetch(`/api/uploads/assignment/${targetAssignmentId}/status`);
+      
       if (assignmentResponse.ok) {
         assignmentData = await assignmentResponse.json();
+      }
+      
+      if (assignmentStatusResponse.ok) {
+        const statusData = await assignmentStatusResponse.json();
+        // Merge status data with file data
+        if (assignmentData && assignmentData.files && assignmentData.files.length > 0) {
+          assignmentData.files[0].due_at = statusData.assignment.due_at;
+          assignmentData.files[0].due_at_local_iso = statusData.assignment.due_at_local_iso;
+          assignmentData.files[0].due_at_pretty = statusData.assignment.due_at_pretty;
+          assignmentData.files[0].round = statusData.assignment.round;
+        }
       }
 
       // Get rubric info
@@ -840,7 +977,7 @@
 
       // Build content
       let rubricInfo = '<div style="color:var(--muted);font-style:italic;">No rubric uploaded</div>';
-      if (rubricData && rubricData.criteria) {
+      if (rubricData && rubricData.criteria && rubricData.criteria.length > 0) {
         rubricInfo = `
           <div style="font-size:14px;color:var(--text);">
             <div style="margin-bottom:8px;"><strong>Criteria Count:</strong> ${rubricData.criteria.length}</div>
@@ -860,12 +997,20 @@
       let assignmentInfo = '<div style="color:var(--muted);font-style:italic;">No assignment information</div>';
       if (assignmentData && assignmentData.files && assignmentData.files.length > 0) {
         const file = assignmentData.files[0];
-        const dueDate = file.due_at ? new Date(file.due_at).toLocaleString() : 'Not set';
+        let dueDateText = 'Not set';
+        if (file.due_at_pretty) {
+          dueDateText = file.due_at_pretty;
+        } else if (file.due_at_local_iso) {
+          dueDateText = new Date(file.due_at_local_iso).toLocaleString();
+        } else if (file.due_at) {
+          dueDateText = new Date(file.due_at).toLocaleString();
+        }
+        
         assignmentInfo = `
           <div style="font-size:14px;color:var(--text);">
             <div style="margin-bottom:8px;"><strong>File:</strong> ${file.file_name || 'Assignment file'}</div>
-            <div style="margin-bottom:8px;"><strong>Due Date:</strong> ${dueDate}</div>
-            <div style="margin-bottom:8px;"><strong>Round:</strong> ${file.round}</div>
+            <div style="margin-bottom:8px;"><strong>Due Date:</strong> ${dueDateText}</div>
+            <div style="margin-bottom:8px;"><strong>Round:</strong> ${file.round || 'undefined'}</div>
           </div>
         `;
       }
@@ -1227,7 +1372,8 @@
     // 初始化dropdown和logout功能
     const accountEl = document.querySelector('.account');
     const dropdown = document.querySelector('.dropdown-menu');
-    const logoutBtn = document.querySelector('.dropdown-item');
+    const allDropdownItems = document.querySelectorAll('.dropdown-item');
+    const logoutBtn = allDropdownItems.length > 1 ? allDropdownItems[1] : null;
 
     if (accountEl && dropdown) {
       accountEl.addEventListener('click', (e) => {
@@ -2005,5 +2151,10 @@
       }
     });
   }
+
+  // Global goToResetPassword function
+  window.goToResetPassword = function() {
+    window.location.href = '/reset-password';
+  };
 
 })();

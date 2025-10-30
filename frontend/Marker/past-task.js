@@ -9,10 +9,10 @@
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
         const user = JSON.parse(rawUser);
-        if (user && user.name) {
+        if (user) {
           const usernameEl = document.getElementById("username");
           if (usernameEl) {
-            usernameEl.textContent = user.name;
+            usernameEl.textContent = user.name || user.email || 'User';
           }
         }
       }
@@ -21,11 +21,17 @@
     }
   }
 
+  // 全局goToResetPassword函数
+  window.goToResetPassword = function() {
+    window.location.href = '/reset-password';
+  };
+
   // 初始化dropdown
   function initDropdown() {
     const usernameEl = document.getElementById('username');
     const dropdown = document.querySelector('.dropdown-menu');
-    const logoutBtn = document.querySelector('.dropdown-item');
+    const allDropdownItems = document.querySelectorAll('.dropdown-item');
+    const logoutBtn = allDropdownItems.length > 1 ? allDropdownItems[1] : null;
 
     if (usernameEl && dropdown) {
       usernameEl.addEventListener('click', (e) => {

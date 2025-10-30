@@ -540,6 +540,11 @@ function logout() {
   window.location.href = '/login';
 }
 
+// Global goToResetPassword function
+window.goToResetPassword = function() {
+  window.location.href = '/reset-password';
+};
+
 /* ===== 保存和恢复滚动位置 ===== */
 // 页面卸载前保存滚动位置
 window.addEventListener('beforeunload', () => {

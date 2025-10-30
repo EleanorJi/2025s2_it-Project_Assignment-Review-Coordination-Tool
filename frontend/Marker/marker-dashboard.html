@@ -18,6 +18,7 @@
     <div class="account dropdown">
       <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
       <div class="dropdown-menu">
+        <a href="#" class="dropdown-item" onclick="goToResetPassword()">Reset Password</a>
         <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
       </div>
     </div>
@@ -84,7 +85,6 @@
           <div class="panel inner">
             <div class="section-header">
               <div class="group-title">Recent Feedback</div>
-              <a href="/dashboard/marker/feedback" class="view-all-link">View All</a>
             </div>
             <div id="recent-feedback-list" class="feedback-list">
               <div class="loading-state">Loading feedback...</div>

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const db = require('../config/database');
 const { INVITATION_EXPIRY_HOURS } = require('../config/constants');
 const EmailService = require('../services/emailService');
+const { hashPassword } = require('../utils/passwordUtils');
 
 // Invite a marker
 exports.inviteMarker = async (req, res) => {
@@ -176,11 +177,14 @@ exports.completeSignup = async (req, res) => {
 
     const invitation = inviteResult.rows[0];
 
+    // Hash the password before storing
+    const hashedPassword = await hashPassword(password);
+    
     const userResult = await db.query(
       `INSERT INTO app_user (email, name, password_hash, role, is_active)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING user_id as id, email, name, role`,
-      [invitation.email, name, password, 'MARKER', true] // TODO: Password should be encrypted
+      [invitation.email, name, hashedPassword, 'MARKER', true]
     );
 
     await db.query(

@@ -17,6 +17,7 @@
     <div class="account dropdown">
       <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
       <div class="dropdown-menu">
+        <a href="#" class="dropdown-item" onclick="goToResetPassword()">Reset Password</a>
         <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
       </div>
     </div>
@@ -80,10 +81,13 @@
           <div class="panel inner">
             <div class="section-header">
               <div class="group-title">Monitoring & Feedback</div>
-              <a href="/dashboard/coordinator/feedback" class="view-all-link">View All</a>
+              <a href="/dashboard/coordinator/taskManagement" class="view-all-link">View All</a>
             </div>
             <div id="outliers-list" class="outliers-list">
               <div class="loading-state">Loading data...</div>
+            </div>
+            <div id="outliers-load-more" class="outliers-load-more" style="display:none;">
+              <button class="btn sm" onclick="loadMoreOutliers()">Show More</button>
             </div>
           </div>
 
@@ -91,7 +95,7 @@
           <div class="panel inner">
             <div class="section-header">
               <div class="group-title">Marker Management</div>
-              <a href="/dashboard/coordinator/invite" class="view-all-link">Manage</a>
+              <a href="/dashboard/coordinator/invite" class="view-all-link btn sm">Manage</a>
             </div>
             <div class="marker-stats">
               <div class="stat-item">
@@ -119,10 +123,6 @@
               <a href="/dashboard/coordinator/invite" class="action-card">
                 <div class="action-title">Invite Markers</div>
                 <div class="action-desc">Send invitations</div>
-              </a>
-              <a href="/dashboard/coordinator/feedback" class="action-card">
-                <div class="action-title">View Analytics</div>
-                <div class="action-desc">Check feedback</div>
               </a>
               <a href="/dashboard/coordinator/past" class="action-card">
                 <div class="action-title">Past Tasks</div>

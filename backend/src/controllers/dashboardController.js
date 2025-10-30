@@ -180,7 +180,7 @@ exports.getCoordinatorDashboardData = async (req, res) => {
     `);
     const completedAssignments = parseInt(completedAssignmentsResult.rows[0].count);
 
-    // Get recent assignments (same logic as task management)
+    // Get recent assignments (only active projects)
     const recentAssignmentsResult = await db.query(`
       SELECT 
         a.assignment_id,
@@ -195,7 +195,7 @@ exports.getCoordinatorDashboardData = async (req, res) => {
       FROM assignment a
       JOIN project p ON a.project_id = p.project_id
       LEFT JOIN marker_score ms ON a.assignment_id = ms.assignment_id
-      WHERE p.status IN ('active', 'draft')
+      WHERE p.status = 'active'
         AND a.version = (
           SELECT MAX(version) 
           FROM assignment a2 
@@ -207,11 +207,15 @@ exports.getCoordinatorDashboardData = async (req, res) => {
       LIMIT 5
     `);
 
-    // Get feedback/outliers
+    // Get feedback/outliers (only active projects)
     const outliersResult = await db.query(`
       SELECT 
         u.name as marker_name,
         a.name as assignment_name,
+        a.round,
+        a.assignment_id,
+        p.name as project_name,
+        p.project_id,
         rc.title as criterion_name,
         ms.score,
         rc.max_score,
@@ -219,8 +223,10 @@ exports.getCoordinatorDashboardData = async (req, res) => {
       FROM marker_score ms
       JOIN app_user u ON ms.marker_id = u.user_id
       JOIN assignment a ON ms.assignment_id = a.assignment_id
+      JOIN project p ON a.project_id = p.project_id
       JOIN rubric_criterion rc ON ms.criterion_id = rc.criterion_id
       WHERE ABS(ms.score - rc.max_score) / rc.max_score > 0.05
+        AND p.status = 'active'
       ORDER BY ABS(ms.score - rc.max_score) / rc.max_score DESC
       LIMIT 5
     `);
@@ -248,26 +254,47 @@ exports.getMarkerDashboardData = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const markerId = req.user.user_id;
+    const markerId = req.user.id;
 
-    // Get pending tasks count
+    // Get pending tasks count - tasks that are NOT finalized
     const pendingTasksResult = await db.query(`
       SELECT COUNT(DISTINCT a.assignment_id) as count
       FROM assignment a
       JOIN project p ON a.project_id = p.project_id
-      LEFT JOIN marker_score ms ON a.assignment_id = ms.assignment_id AND ms.marker_id = $1
+      LEFT JOIN (
+        SELECT assignment_id, marker_id, 
+               BOOL_AND(finalized) as all_finalized
+        FROM marker_score
+        WHERE marker_id = $1
+        GROUP BY assignment_id, marker_id
+      ) ms ON a.assignment_id = ms.assignment_id
       WHERE p.status = 'active' 
-        AND a.due_at > NOW()
-        AND (ms.score IS NULL OR ms.assignment_id IS NULL)
+        AND a.is_published = true
+        AND a.version = (
+          SELECT MAX(version) 
+          FROM assignment a2 
+          WHERE a2.project_id = a.project_id 
+          AND a2.round = a.round
+        )
+        AND (ms.all_finalized IS NULL OR ms.all_finalized = false)
     `, [markerId]);
     const pendingTasks = parseInt(pendingTasksResult.rows[0].count);
 
-    // Get completed tasks count
+    // Get completed tasks count - tasks where ALL criteria are finalized
     const completedTasksResult = await db.query(`
       SELECT COUNT(DISTINCT a.assignment_id) as count
       FROM assignment a
-      JOIN marker_score ms ON a.assignment_id = ms.assignment_id
-      WHERE ms.marker_id = $1 AND a.is_published = true
+      JOIN project p ON a.project_id = p.project_id
+      JOIN (
+        SELECT assignment_id, marker_id, 
+               BOOL_AND(finalized) as all_finalized
+        FROM marker_score
+        WHERE marker_id = $1
+        GROUP BY assignment_id, marker_id
+      ) ms ON a.assignment_id = ms.assignment_id
+      WHERE ms.all_finalized = true
+        AND a.is_published = true
+        AND p.status = 'active'
     `, [markerId]);
     const completedTasks = parseInt(completedTasksResult.rows[0].count);
 
@@ -280,7 +307,7 @@ exports.getMarkerDashboardData = async (req, res) => {
     `, [markerId]);
     const recentFeedback = parseInt(recentFeedbackResult.rows[0].count);
 
-    // Get pending assignments (same logic as task management)
+    // Get pending assignments - NOT finalized
     const pendingAssignmentsResult = await db.query(`
       SELECT 
         a.assignment_id,
@@ -296,7 +323,13 @@ exports.getMarkerDashboardData = async (req, res) => {
         END as urgency
       FROM assignment a
       JOIN project p ON a.project_id = p.project_id
-      LEFT JOIN marker_score ms ON a.assignment_id = ms.assignment_id AND ms.marker_id = $1
+      LEFT JOIN (
+        SELECT assignment_id, marker_id, 
+               BOOL_AND(finalized) as all_finalized
+        FROM marker_score
+        WHERE marker_id = $1
+        GROUP BY assignment_id, marker_id
+      ) ms ON a.assignment_id = ms.assignment_id
       WHERE p.status = 'active' 
         AND a.is_published = true
         AND a.version = (
@@ -305,12 +338,12 @@ exports.getMarkerDashboardData = async (req, res) => {
           WHERE a2.project_id = a.project_id 
           AND a2.round = a.round
         )
-        AND (ms.score IS NULL OR ms.assignment_id IS NULL)
+        AND (ms.all_finalized IS NULL OR ms.all_finalized = false)
       ORDER BY a.due_at ASC
       LIMIT 5
     `, [markerId]);
 
-    // Get completed assignments (same logic as task management)
+    // Get completed assignments - ALL criteria finalized
     const completedAssignmentsResult = await db.query(`
       SELECT 
         a.assignment_id,
@@ -319,19 +352,21 @@ exports.getMarkerDashboardData = async (req, res) => {
         a.due_at,
         p.name as project_name,
         p.project_id,
-        ms.submitted_at
+        MAX(ms.submitted_at) as submitted_at
       FROM assignment a
       JOIN project p ON a.project_id = p.project_id
-      JOIN marker_score ms ON a.assignment_id = ms.assignment_id
-      WHERE ms.marker_id = $1 
-        AND a.is_published = true
+      JOIN marker_score ms ON a.assignment_id = ms.assignment_id AND ms.marker_id = $1
+      WHERE a.is_published = true
+        AND p.status = 'active'
         AND a.version = (
           SELECT MAX(version) 
           FROM assignment a2 
           WHERE a2.project_id = a.project_id 
           AND a2.round = a.round
         )
-      ORDER BY ms.submitted_at DESC
+      GROUP BY a.assignment_id, a.name, a.round, a.due_at, p.name, p.project_id
+      HAVING BOOL_AND(ms.finalized) = true
+      ORDER BY MAX(ms.submitted_at) DESC
       LIMIT 5
     `, [markerId]);
 
@@ -342,12 +377,16 @@ exports.getMarkerDashboardData = async (req, res) => {
         f.content as comment,
         f.created_at,
         a.name as assignment_name,
-        p.name as project_name
+        a.round,
+        a.assignment_id,
+        p.name as project_name,
+        p.project_id
       FROM feedback f
       JOIN assignment a ON f.assignment_id = a.assignment_id
       JOIN project p ON a.project_id = p.project_id
       WHERE f.marker_id = $1
         AND f.created_at > NOW() - INTERVAL '30 days'
+        AND p.status = 'active'
       ORDER BY f.created_at DESC
       LIMIT 5
     `, [markerId]);
