@@ -97,6 +97,15 @@
   .btn:hover{background:#f8f9fa;border-color:#dee2e6}
   .ml-auto{margin-left:auto}
   .label-strong{font-weight:700}
+
+  /* Deviation Control */
+  .deviation-control{display:flex;gap:10px;align-items:center;margin-bottom:16px;padding:12px;background:#f8f9fa;border:1px solid var(--border);border-radius:var(--radius)}
+  .deviation-input-group{display:flex;align-items:center;gap:4px}
+  .deviation-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:#fff;font-weight:700;font-size:18px;cursor:pointer;transition:all 0.2s ease;color:var(--text)}
+  .deviation-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .deviation-btn:active{transform:scale(0.95)}
+  .deviation-input{width:80px;height:32px;border:1px solid var(--border);border-radius:8px;padding:0 10px;background:#fff;font-weight:600;text-align:center;font-size:14px}
+  .deviation-unit{font-weight:700;color:var(--text)}
   
   /* Table */
   .table-wrap{overflow:auto;border:2px solid var(--border);border-radius:var(--radius);background:#fff;max-height:600px}

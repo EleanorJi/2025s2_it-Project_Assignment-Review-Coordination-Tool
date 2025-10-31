@@ -8,8 +8,59 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/Coordinator/invite.css">
+  <link rel="stylesheet" href="/Coordinator/onboarding-modal.css" />
 </head>
 <body>
+  <!-- Onboarding Modal -->
+  <div class="onboarding-overlay" id="onboardingOverlay">
+    <div class="onboarding-modal">
+      <div class="onboarding-header">
+        <h2>Welcome to Coordinator Dashboard</h2>
+        <button class="onboarding-close" onclick="hideOnboarding()">×</button>
+      </div>
+      
+      <div class="onboarding-content">
+        <div class="guide-section">
+          <h3>Overview Dashboard</h3>
+          <p>Monitor your system at a glance. Track active projects, markers, pending invitations, and completed assignments in real-time.</p>
+          <button class="guide-button" onclick="window.location.href='/dashboard/coordinator'; hideOnboarding();">View Overview</button>
+        </div>
+        
+        <div class="guide-section">
+          <h3>Markers Management</h3>
+          <p>Invite new markers via email, manage existing markers, resend or revoke invitations, and track marker status.</p>
+          <ul class="guide-list">
+            <li><span class="guide-number">1</span><span class="guide-text">Send invitations by entering email addresses</span></li>
+            <li><span class="guide-number">2</span><span class="guide-text">Resend invitations if markers haven't responded</span></li>
+            <li><span class="guide-number">3</span><span class="guide-text">Revoke access if needed</span></li>
+          </ul>
+          <button class="guide-button" onclick="window.location.href='/dashboard/coordinator/invite'; hideOnboarding();">Manage Markers</button>
+        </div>
+        
+        <div class="guide-section">
+          <h3>Task Management</h3>
+          <p>Create and manage marking tasks. Upload rubrics and assignments, assign tasks to markers, and track progress.</p>
+          <ul class="guide-list">
+            <li><span class="guide-number">1</span><span class="guide-text">Click "Add New Task" to create a task</span></li>
+            <li><span class="guide-number">2</span><span class="guide-text">Upload rubric file (Excel format)</span></li>
+            <li><span class="guide-number">3</span><span class="guide-text">Upload assignment file (PDF format)</span></li>
+            <li><span class="guide-number">4</span><span class="guide-text">Assign to markers and publish</span></li>
+          </ul>
+          <button class="guide-button" onclick="window.location.href='/dashboard/coordinator/taskManagement'; hideOnboarding();">Manage Tasks</button>
+        </div>
+        
+        <div class="guide-section">
+          <h3>Past Tasks</h3>
+          <p>View completed and archived tasks. Access historical data and review past marking activities.</p>
+          <button class="guide-button" onclick="window.location.href='/dashboard/coordinator/past'; hideOnboarding();">View Archive</button>
+        </div>
+      </div>
+      
+      <div class="onboarding-footer">
+        <button class="guide-button" onclick="hideOnboarding()">Got it!</button>
+      </div>
+    </div>
+  </div>
   <!-- Top bar -->
   <header class="topbar">
     <div class="brand">
@@ -32,6 +83,7 @@
         <a class="nav-item active" href="/dashboard/coordinator/invite">Markers Management</a>
         <a class="nav-item" href="/dashboard/coordinator/taskManagement">Task Management</a>
         <a class="nav-item" href="/dashboard/coordinator/past">Past Task</a>
+        <a class="nav-item" href="#" onclick="showOnboarding(); return false;">User Guide</a>
       </nav>
     </aside>
 

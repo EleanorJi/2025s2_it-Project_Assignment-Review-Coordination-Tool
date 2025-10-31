@@ -7,8 +7,9 @@ let currentProjectId = null; // 保存当前项目ID
 let currentAssignmentInfo = null; // 保存当前assignment信息
 let currentRubricInfo = null; // 保存当前rubric信息
 let currentRubricData = null; // 保存当前rubric的详细数据
+let deviationPercent = 5.0; // 当前deviation百分比（默认5%）
 
-console.log('📊 Feedback.js v2.5 loaded - 3-tier color for Total (green≤2.5%, yellow≤5%, red>5%), 2-tier for criteria (green≤5%, red>5%)');
+console.log('📊 Feedback.js v2.6 loaded - adjustable deviation percentage');
 
 /* ===== 辅助函数 ===== */
 // 获取当前assignment ID
@@ -109,23 +110,49 @@ function isOut(v, lo, hi){ return v<lo || v>hi; }
 function getCellClass(value, row) {
   if (value == null) return '';
   
-  // 对于Total行，使用三级颜色系统
+  // 对于Total行，使用三级颜色系统（warning为50%的deviation）
   if (row.isTotal) {
-    if (value >= row.warningLower && value <= row.warningUpper) {
-      return 'good-cell'; // 在±2.5%以内，绿色
+    const warningPercent = deviationPercent * 0.5;
+    const warningLower = Math.round((row.chair * (1 - warningPercent / 100)) * 100) / 100;
+    const warningUpper = Math.round((row.chair * (1 + warningPercent / 100)) * 100) / 100;
+    
+    if (value >= warningLower && value <= warningUpper) {
+      return 'good-cell';
     } else if (value >= row.lower && value <= row.upper) {
-      return 'warning-cell'; // 在2.5%-5%之间，黄色
+      return 'warning-cell';
     } else {
-      return 'bad-cell'; // 超过±5%，红色
+      return 'bad-cell';
     }
   }
   
   // 对于普通criterion行，使用两级颜色系统
   if (value >= row.lower && value <= row.upper) {
-    return 'good-cell'; // 在±5%以内，绿色
+    return 'good-cell';
   } else {
-    return 'bad-cell'; // 超过±5%，红色
+    return 'bad-cell';
   }
+}
+
+/**
+ * 根据当前deviation百分比动态重新计算所有行的lower和upper
+ */
+function recalculateDeviationRanges() {
+  rows.forEach(row => {
+    // 动态计算lower和upper
+    row.lower = Math.round((row.chair * (1 - deviationPercent / 100)) * 100) / 100;
+    row.upper = Math.round((row.chair * (1 + deviationPercent / 100)) * 100) / 100;
+    
+    // 对于Total行，还需要更新warning范围
+    if (row.isTotal) {
+      const warningPercent = deviationPercent * 0.5;
+      row.warningLower = Math.round((row.chair * (1 - warningPercent / 100)) * 100) / 100;
+      row.warningUpper = Math.round((row.chair * (1 + warningPercent / 100)) * 100) / 100;
+    }
+  });
+  
+  // 重新渲染表格
+  renderAlignment(markerSelect.value);
+  renderDifferences(markerSelect.value);
 }
 
 /* ===== 从后端加载 Rubric 描述 ===== */
@@ -646,6 +673,43 @@ function restoreScrollPosition() {
 document.getElementById('backBtn')?.addEventListener('click', () => {
   window.history.back();
 });
+
+/* ===== Deviation Percentage Control ===== */
+const deviationPercentInput = document.getElementById('deviationPercent');
+const deviationUpBtn = document.getElementById('deviationUp');
+const deviationDownBtn = document.getElementById('deviationDown');
+
+// 初始化deviation百分比显示
+if (deviationPercentInput) {
+  deviationPercentInput.value = deviationPercent;
+
+  // 向上调整
+  deviationUpBtn?.addEventListener('click', () => {
+    const currentValue = parseFloat(deviationPercentInput.value) || 0;
+    const newValue = Math.min(currentValue + 0.1, 50);
+    deviationPercentInput.value = newValue.toFixed(1);
+    deviationPercent = newValue;
+    recalculateDeviationRanges();
+  });
+
+  // 向下调整
+  deviationDownBtn?.addEventListener('click', () => {
+    const currentValue = parseFloat(deviationPercentInput.value) || 0;
+    const newValue = Math.max(currentValue - 0.1, 0);
+    deviationPercentInput.value = newValue.toFixed(1);
+    deviationPercent = newValue;
+    recalculateDeviationRanges();
+  });
+
+  // 手动输入
+  deviationPercentInput.addEventListener('change', () => {
+    const newValue = parseFloat(deviationPercentInput.value) || 0;
+    const clampedValue = Math.max(0, Math.min(newValue, 50));
+    deviationPercentInput.value = clampedValue.toFixed(1);
+    deviationPercent = clampedValue;
+    recalculateDeviationRanges();
+  });
+}
 
 /* ===== 下载功能 ===== */
 document.getElementById('downloadRubric')?.addEventListener('click', () => {

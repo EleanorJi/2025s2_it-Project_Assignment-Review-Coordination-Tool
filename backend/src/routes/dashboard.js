@@ -14,8 +14,10 @@ router.get('/coordinator/analysis', authenticate, dashboardController.getCoordin
 router.get('/coordinator/taskManagement', authenticate, dashboardController.getCoordinatorTaskManagementPage);
 router.get('/coordinator/rubric', authenticate, dashboardController.getCoordinatorViewRubricPage);
 router.get('/coordinator/past', authenticate, dashboardController.getCoordinatorPastPage);
+router.get('/coordinator/onboarding', authenticate, dashboardController.getCoordinatorOnboardingPage);
 // Protect Marker Dashboard
 router.get('/marker', authenticate, dashboardController.getMarkerDashboard);
+router.get('/marker/onboarding', authenticate, dashboardController.getMarkerOnboardingPage);
 router.get('/marker/taskManagement', authenticate, dashboardController.getMarkerTaskManagementPage);
 router.get('/marker/mark', authenticate, dashboardController.getMarkerMarkPage);
 router.get('/marker/rubric', authenticate, dashboardController.getMarkerViewRubricPage);

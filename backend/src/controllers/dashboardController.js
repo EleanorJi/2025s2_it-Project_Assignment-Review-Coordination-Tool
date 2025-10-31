@@ -76,6 +76,15 @@ exports.getCoordinatorPastPage = (req, res) => {
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/past-assignment.html'));
 }
 
+exports.getCoordinatorOnboardingPage = (req, res) => {
+    // 检查角色权限
+    if (req.user.role !== 'COORDINATOR') {
+        return res.redirect('/login?error=access_denied');
+    }
+    // 发送对应的HTML文件
+    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/onboarding.html'));
+}
+
 exports.getMarkerDashboard = (req, res) => {
   if (req.user.role !== 'MARKER') {
     return res.redirect('/login');
@@ -122,6 +131,13 @@ exports.getMarkerPastTaskPage = (req, res) => {
     return res.redirect('/login?error=access_denied');
   }
   res.sendFile(path.join(__dirname, '../../frontend/Marker/past-task.html'));
+};
+
+exports.getMarkerOnboardingPage = (req, res) => {
+  if (req.user.role !== 'MARKER') {
+    return res.redirect('/login?error=access_denied');
+  }
+  res.sendFile(path.join(__dirname, '../../frontend/Marker/onboarding.html'));
 };
 
 exports.redirectToRoleDashboard = (req, res) => {
