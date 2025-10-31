@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { 
             font-family: Inter, Roboto, Arial, "PingFang SC", "Microsoft YaHei", sans-serif; 
@@ -25,6 +26,7 @@
             position: relative;
         }
         .header { 
+            background-color: #3b82f6; /* Outlook降级方案 */
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white; 
             padding: 24px; 
@@ -63,8 +65,9 @@
         }
         .button {
             display: inline-block;
+            background-color: #0F172A; /* Outlook降级方案 */
             background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%);
-            color: white;
+            color: white !important;
             padding: 12px 24px;
             text-decoration: none;
             border-radius: 12px;
@@ -75,6 +78,7 @@
             transition: all 0.2s ease;
         }
         .button:hover {
+            background-color: #1e293b; /* Outlook降级方案 */
             background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             transform: translateY(-2px);
             box-shadow: 0 4px 16px rgba(15,23,42,0.3);
@@ -102,6 +106,71 @@
         }
         .footer p {
             margin: 8px 0;
+        }
+
+        /* 响应式设计 - 手机适配 */
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 20px auto;
+                padding: 0 16px;
+            }
+            .panel {
+                padding: 24px 20px 32px 20px;
+                border-radius: 16px;
+            }
+            .header {
+                padding: 20px 16px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+            .header h1 {
+                font-size: 18px;
+            }
+            .content p {
+                font-size: 14px;
+                margin: 12px 0;
+            }
+            .info-box {
+                padding: 12px;
+                margin: 16px 0;
+                border-radius: 6px;
+            }
+            .info-box p {
+                font-size: 13px;
+            }
+            .button {
+                padding: 10px 20px;
+                font-size: 14px;
+                border-radius: 8px;
+                display: block;
+                text-align: center;
+                margin: 16px auto;
+            }
+            .link-box {
+                padding: 12px;
+                font-size: 12px;
+                border-radius: 8px;
+                margin: 12px 0;
+            }
+            .footer {
+                margin-top: 24px;
+                padding: 16px;
+                font-size: 12px;
+                border-radius: 8px;
+            }
+        }
+        
+        /* 超小屏幕适配 */
+        @media only screen and (max-width: 360px) {
+            .container {
+                padding: 0 12px;
+            }
+            .panel {
+                padding: 20px 16px 24px 16px;
+            }
+            .header h1 {
+                font-size: 16px;
+            }
         }
     </style>
 </head>
