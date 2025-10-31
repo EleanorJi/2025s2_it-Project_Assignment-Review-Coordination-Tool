@@ -20,5 +20,6 @@ router.post('/revoke', authenticate, requireCoordinator, invitationController.re
 router.post('/close', authenticate, requireCoordinator, invitationController.closeUser);
 router.post('/reopen', authenticate, requireCoordinator, invitationController.reopenUser);
 router.get('/suggest', authenticate, requireCoordinator, invitationController.getMarkerSuggestions);
+router.post('/update-nickname', authenticate, requireCoordinator, invitationController.updateUserNickname);
 
 module.exports = router;

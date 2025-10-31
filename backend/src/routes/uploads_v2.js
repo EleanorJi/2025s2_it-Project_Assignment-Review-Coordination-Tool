@@ -2031,7 +2031,7 @@ router.get('/scoring/marker/:assignment_id/:marker_id', async (req, res) => {
     const result = await db.query(
       `SELECT ms.*, rc.title as criterion_title, rc.max_score as criterion_max_score,
               cgl.level_name, cgl.min_score as level_min_score, cgl.max_score as level_max_score, 
-              cgl.description as level_description, au.name as marker_name
+              cgl.description as level_description, COALESCE(au.nickname, au.name) as marker_name
        FROM marker_score ms
        JOIN rubric_criterion rc ON ms.criterion_id = rc.criterion_id
        JOIN app_user au ON ms.marker_id = au.user_id
@@ -2224,7 +2224,7 @@ router.get('/assignment/:assignment_id/pending-markers', authenticate, requireCo
          GROUP BY marker_id
        )
        SELECT u.user_id       AS marker_id,
-              u.name          AS marker_name,
+              COALESCE(u.nickname, u.name) AS marker_name,
               u.email         AS marker_email,
               COALESCE(ms.total_count, 0)     AS submitted_count,
               COALESCE(ms.finalized_count, 0) AS finalized_count
@@ -2232,7 +2232,7 @@ router.get('/assignment/:assignment_id/pending-markers', authenticate, requireCo
        LEFT JOIN ms ON ms.marker_id = u.user_id
        WHERE u.role = 'MARKER' AND u.is_active = true
          AND COALESCE(ms.finalized_count, 0) = 0
-       ORDER BY u.name ASC`,
+       ORDER BY COALESCE(u.nickname, u.name) ASC`,
       [assignment_id]
     );
     console.log('[pending-markers] result count:', result.rows.length);
@@ -2944,7 +2944,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         bs.score as baseline_score,
         bs.comment as baseline_comment,
         ms.marker_id,
-        u.name as marker_name,
+        COALESCE(u.nickname, u.name) as marker_name,
         ms.score as marker_score,
         ms.comment as marker_comment
       FROM baseline_score bs
@@ -2953,7 +2953,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         AND bs.criterion_id = ms.criterion_id
       LEFT JOIN app_user u ON ms.marker_id = u.user_id
       WHERE bs.assignment_id = $1
-      ORDER BY rc.seq_no, u.name
+      ORDER BY rc.seq_no, COALESCE(u.nickname, u.name)
     `;
 
     const result = await db.query(mainQuery, [assignment_id]);

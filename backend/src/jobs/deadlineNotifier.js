@@ -125,7 +125,7 @@ async function notifyUsersForAssignment(assignment, users) {
   // Build list of active markers who have NOT finalized any score for this assignment
   // Strategy: all active users with role 'MARKER' MINUS those who finalized for this assignment
   const pendingMarkers = await db.query(
-    `SELECT u.user_id, u.name, u.email
+    `SELECT u.user_id, COALESCE(u.nickname, u.name) as name, u.email
        FROM app_user u
       WHERE u.is_active = true
         AND UPPER(u.role) = 'MARKER'
@@ -135,7 +135,7 @@ async function notifyUsersForAssignment(assignment, users) {
              AND ms.marker_id = u.user_id
              AND ms.finalized = true
         )
-      ORDER BY u.name`,
+      ORDER BY COALESCE(u.nickname, u.name)`,
     [assignment.assignment_id]
   );
 

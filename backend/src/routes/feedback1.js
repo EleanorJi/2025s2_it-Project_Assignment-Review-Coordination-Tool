@@ -174,7 +174,7 @@ router.get('/assignment/:assignmentId', async (req, res) => {
     try {
         const feedbackResult = await db.query(
             `SELECT f.feedback_id AS id, f.assignment_id, f.marker_id, f.content, f.title, 
-                    f.created_by, f.created_at, u.name as marker_name, u2.name as created_by_name
+                    f.created_by, f.created_at, COALESCE(u.nickname, u.name) as marker_name, u2.name as created_by_name
              FROM feedback f
              LEFT JOIN app_user u ON f.marker_id = u.user_id
              LEFT JOIN app_user u2 ON f.created_by = u2.user_id

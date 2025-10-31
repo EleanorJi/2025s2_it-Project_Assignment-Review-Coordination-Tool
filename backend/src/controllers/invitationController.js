@@ -325,6 +325,9 @@ exports.listInvitations = async (req, res) => {
        SELECT
          COALESCE('user_' || u.user_id, 'invitation_' || li.id) as id,
          COALESCE(u.email, li.email) as email,
+         u.user_id,
+         u.name,
+         u.nickname,
          CASE
            WHEN u.user_id IS NOT NULL THEN
              CASE WHEN u.is_active = true THEN 'active' ELSE 'closed' END
@@ -349,7 +352,7 @@ exports.listInvitations = async (req, res) => {
     );
     console.log('Data returned to frontend:');
     result.rows.forEach((row, index) => {
-      console.log(`Record ${index + 1}: email=${row.email}, status=${row.status}, sent_at=${row.sent_at}`);
+      console.log(`Record ${index + 1}: email=${row.email}, status=${row.status}, sent_at=${row.sent_at}, nickname=${row.nickname}`);
     });
 
     res.json({ items: result.rows });
@@ -590,6 +593,64 @@ exports.getMarkerSuggestions = async (req, res) => {
     res.json({ emails });
   } catch (error) {
     console.error('Marker suggestions error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Update user nickname
+exports.updateUserNickname = async (req, res) => {
+  const { email, nickname } = req.body;
+  const currentUserId = req.user.id;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  try {
+    // Check if the user exists and is a marker
+    const userExists = await db.query(
+      `SELECT user_id FROM app_user WHERE email = $1 AND role = 'MARKER'`,
+      [email]
+    );
+
+    if (userExists.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found or not a marker'
+      });
+    }
+
+    // Check if current coordinator has permission (invited this user)
+    const permissionCheck = await db.query(
+      `SELECT 1 FROM invitations WHERE email = $1 AND created_by = $2`,
+      [email, currentUserId]
+    );
+
+    if (permissionCheck.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'No permission to update this user'
+      });
+    }
+
+    // Update nickname
+    const result = await db.query(
+      `UPDATE app_user
+       SET nickname = $1
+       WHERE email = $2 AND role = 'MARKER'
+       RETURNING user_id, email, name, nickname`,
+      [nickname || null, email]
+    );
+
+    console.log(`Coordinator ${req.user.name} updated nickname for ${email} to: ${nickname}`);
+
+    res.json({
+      success: true,
+      message: 'Nickname updated successfully',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Update nickname error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

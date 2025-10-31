@@ -312,6 +312,88 @@
 
       const tdEmail = document.createElement('td'); tdEmail.textContent = item.email;
 
+      // Nickname column - editable for active users
+      const tdNickname = document.createElement('td');
+      if (item.user_id && (s === 'active' || s === 'accepted')) {
+        // Container for both display and edit modes
+        const container = document.createElement('div');
+        
+        // Display mode - clickable text with border (styled like close button)
+        const displayContainer = document.createElement('div');
+        displayContainer.className = 'action-btn close';
+        displayContainer.style.display = 'inline-block';
+        displayContainer.style.cursor = 'pointer';
+        displayContainer.title = 'Click to edit nickname';
+        
+        const displaySpan = document.createElement('span');
+        displaySpan.className = 'nickname-display';
+        displaySpan.textContent = item.nickname || item.name || '—';
+        
+        displayContainer.appendChild(displaySpan);
+        
+        // Edit mode - input + Save button (hidden by default)
+        const editContainer = document.createElement('div');
+        editContainer.style.display = 'none';
+        editContainer.style.gap = '8px';
+        editContainer.style.alignItems = 'center';
+        
+        const nicknameInput = document.createElement('input');
+        nicknameInput.type = 'text';
+        nicknameInput.className = 'nickname-input';
+        nicknameInput.value = item.nickname || item.name || '';
+        nicknameInput.placeholder = 'Enter nickname';
+        nicknameInput.style.width = '140px';
+        nicknameInput.style.padding = '4px 8px';
+        nicknameInput.style.border = '1px solid #ddd';
+        nicknameInput.style.borderRadius = '4px';
+        nicknameInput.style.fontSize = '13px';
+        
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.className = 'action-btn close';
+        
+        // Click display box to enter edit mode
+        displayContainer.addEventListener('click', () => {
+          displayContainer.style.display = 'none';
+          editContainer.style.display = 'flex';
+          nicknameInput.focus();
+          nicknameInput.select();
+        });
+        
+        // Save on button click
+        saveBtn.addEventListener('click', async () => {
+          const newNickname = nicknameInput.value.trim();
+          await updateNickname(item.email, newNickname, displayContainer, editContainer, displaySpan);
+        });
+        
+        // Save on Enter key
+        nicknameInput.addEventListener('keypress', async (e) => {
+          if (e.key === 'Enter') {
+            const newNickname = nicknameInput.value.trim();
+            await updateNickname(item.email, newNickname, displayContainer, editContainer, displaySpan);
+          }
+        });
+        
+        // Cancel on Escape key
+        nicknameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            editContainer.style.display = 'none';
+            displayContainer.style.display = 'inline-block';
+          }
+        });
+        
+        editContainer.appendChild(nicknameInput);
+        editContainer.appendChild(saveBtn);
+        
+        container.appendChild(displayContainer);
+        container.appendChild(editContainer);
+        tdNickname.appendChild(container);
+      } else {
+        // For non-active users, just show name or placeholder
+        tdNickname.textContent = item.name || '—';
+        tdNickname.style.color = '#999';
+      }
+
       const tdStatus= document.createElement('td');
       const pill = document.createElement('span');
       const {pillClass, pillText} = mapStatus(s);
@@ -343,7 +425,7 @@
       
       tdAct.appendChild(actionContainer);
 
-      tr.append(tdEmail, tdStatus, tdDate, tdAct);
+      tr.append(tdEmail, tdNickname, tdStatus, tdDate, tdAct);
       tbody.appendChild(tr);
     });
   }
@@ -442,6 +524,32 @@
       await refreshTable(); 
     }
     catch(err){ setStatus(err.message || 'Failed to reopen ' + email, 'err'); }
+  }
+
+  async function updateNickname(email, nickname, displayContainer, editContainer, displaySpan){
+    try{ 
+      const r = await fetch('/api/invitations/update-nickname', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        credentials: 'include',
+        body: JSON.stringify({ email, nickname }) 
+      }); 
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to update nickname');
+      }
+      setStatus('Nickname updated for ' + email, 'ok');
+      // Update display text and switch back to display mode
+      displaySpan.textContent = nickname || email.split('@')[0];
+      editContainer.style.display = 'none';
+      displayContainer.style.display = 'inline-block';
+      // Refresh table to get latest data
+      await refreshTable(); 
+    }
+    catch(err){ 
+      setStatus(err.message || 'Failed to update nickname for ' + email, 'err');
+      alert(err.message || 'Failed to update nickname');
+    }
   }
 
   // ========= initialization =========

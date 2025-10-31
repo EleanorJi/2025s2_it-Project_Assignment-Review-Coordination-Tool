@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.app_user
     last_login timestamp with time zone NOT NULL DEFAULT now(),
 	reset_token VARCHAR(64),                    -- 新增
     reset_token_expiry TIMESTAMP WITH TIME ZONE, -- 新增
+    nickname text COLLATE pg_catalog."default",  -- 备注名
     CONSTRAINT app_user_pkey PRIMARY KEY (user_id),
     CONSTRAINT uq_app_user_email UNIQUE (email)
 );
