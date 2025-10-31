@@ -1,10 +1,12 @@
 const authController = require('./authController');
 const db = require('../config/database');
 const EmailService = require('../services/emailService');
+const { comparePassword } = require('../utils/passwordUtils');
 
 // Mock dependencies
 jest.mock('../config/database');
 jest.mock('../services/emailService');
+jest.mock('../utils/passwordUtils');
 
 describe('Auth Controller', () => {
   let mockReq;
@@ -134,13 +136,15 @@ describe('Auth Controller', () => {
             id: 1,
             email: 'test@example.com',
             name: 'Test User',
-            password_hash: 'password123',
+            password_hash: 'hashedpassword123',
             role: 'MARKER',
             status: true,
             last_login: new Date()
           }]
         })
         .mockResolvedValueOnce({ rows: [] });
+      
+      comparePassword.mockResolvedValue(true);
       
       await authController.login(mockReq, mockRes);
       
@@ -169,13 +173,15 @@ describe('Auth Controller', () => {
             id: 2,
             email: 'test@example.com',
             name: 'testuser',
-            password_hash: 'password123',
+            password_hash: 'hashedpassword123',
             role: 'COORDINATOR',
             status: true,
             last_login: new Date()
           }]
         })
         .mockResolvedValueOnce({ rows: [] });
+      
+      comparePassword.mockResolvedValue(true);
       
       await authController.login(mockReq, mockRes);
       
@@ -197,7 +203,7 @@ describe('Auth Controller', () => {
         password: 'password123'
       };
 
-      db.query.mockRejectedValue(new Error('Database connection failed'));
+      db.query.mockRejectedValueOnce(new Error('Database connection failed'));
       
       await authController.login(mockReq, mockRes);
       
@@ -348,7 +354,7 @@ describe('Auth Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Password must be at least 6 characters long.'
+        message: 'Password must be at least 8 characters long.'
       });
     });
 
