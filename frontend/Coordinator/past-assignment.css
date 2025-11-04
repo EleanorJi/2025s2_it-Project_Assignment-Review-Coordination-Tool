@@ -8,10 +8,17 @@
     --card-h:430px; --drop-h:190px; --pub-w:110px;
   }
   *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
   html,body{height:100%}
   body{
     margin:0;background:var(--bg);color:var(--text);
     font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+    opacity:0;
+    animation:fadeIn 0.2s ease forwards
+  }
+  @keyframes fadeIn{
+    from{opacity:0}
+    to{opacity:1}
   }
   
   /* ===================== Topbar & Layout - Professional Design ===================== */

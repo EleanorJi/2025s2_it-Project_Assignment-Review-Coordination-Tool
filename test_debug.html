@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Feedback</title>
+</head>
+<body>
+    <h1>Debug Information</h1>
+    <div id="output"></div>
+    <script>
+        fetch('/dashboard/coordinator/feedback?project=1&assignment=assignment1')
+            .then(r => r.text())
+            .then(html => {
+                console.log('Page loaded');
+                document.getElementById('output').innerHTML = html.substring(0, 500);
+            });
+    </script>
+</body>
+</html>

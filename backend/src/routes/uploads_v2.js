@@ -2665,6 +2665,90 @@ router.post('/scoring/baseline/submit', async (req, res) => {
     }
 });
 
+/**
+ * Coordinator exclusive - update deviation percentage for a criterion
+ * PUT /api/uploads/assignments/:assignment_id/deviation-percent
+ */
+router.put('/assignments/:assignment_id/deviation-percent', async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    const { criterion_id, deviation_percent } = req.body;
+
+    // Validate required fields
+    if (!criterion_id || deviation_percent === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: criterion_id, deviation_percent'
+      });
+    }
+
+    const deviationValue = parseFloat(deviation_percent);
+    if (isNaN(deviationValue) || deviationValue < 0 || deviationValue > 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Deviation percent must be a number between 0 and 50'
+      });
+    }
+
+    // Verify assignment exists and is the latest version
+    const assignmentCheck = await db.query(
+      `SELECT a.assignment_id, a.project_id, a.version, a.round
+       FROM assignment a
+       WHERE a.assignment_id = $1
+         AND a.version = (
+           SELECT MAX(version) 
+           FROM assignment 
+           WHERE project_id = a.project_id AND round = a.round
+         )`,
+      [assignment_id]
+    );
+
+    if (assignmentCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Assignment not found or not latest version',
+        message: 'Only the latest version of assignment can be modified'
+      });
+    }
+
+    // Update baseline_score deviation_percent
+    const updateResult = await db.query(
+      `UPDATE baseline_score
+       SET deviation_percent = $1
+       WHERE assignment_id = $2 AND criterion_id = $3
+       RETURNING *`,
+      [deviationValue, assignment_id, criterion_id]
+    );
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Baseline score not found for this criterion'
+      });
+    }
+
+    console.log(`✅ Deviation percent updated: assignment_id=${assignment_id}, criterion_id=${criterion_id}, deviation=${deviationValue}%`);
+
+    res.json({
+      success: true,
+      message: 'Deviation percent updated successfully',
+      data: {
+        assignment_id: parseInt(assignment_id),
+        criterion_id: parseInt(criterion_id),
+        deviation_percent: deviationValue
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to update deviation percent:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update deviation percent',
+      details: error.message
+    });
+  }
+});
+
 
 /**
  * Marker exclusive - batch set/update marker scores
@@ -2934,6 +3018,28 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
 
     const assignment = assignmentCheck.rows[0];
 
+    // Check if deviation_percent column exists, add it if not
+    try {
+      const columnCheck = await db.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'baseline_score' 
+        AND column_name = 'deviation_percent'
+      `);
+      
+      if (columnCheck.rows.length === 0) {
+        console.log('⚠️ deviation_percent column not found, adding it...');
+        await db.query(`
+          ALTER TABLE baseline_score 
+          ADD COLUMN IF NOT EXISTS deviation_percent NUMERIC(5, 2) DEFAULT 5.0
+        `);
+        console.log('✅ deviation_percent column added');
+      }
+    } catch (alterError) {
+      console.warn('⚠️ Could not check/add deviation_percent column:', alterError.message);
+      // Continue anyway, will use default value in query
+    }
+
     // Get complete data for baseline scores and marker scores
     const mainQuery = `
       SELECT 
@@ -2943,6 +3049,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         rc.seq_no,
         bs.score as baseline_score,
         bs.comment as baseline_comment,
+        bs.deviation_percent as deviation_percent,
         ms.marker_id,
         COALESCE(u.nickname, u.name) as marker_name,
         ms.score as marker_score,
@@ -2978,6 +3085,8 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         const baselineScore = parseFloat(row.baseline_score);
         const maxScore = parseFloat(row.criterion_max_score);
         const baselinePercentage = Math.round((baselineScore / maxScore) * 100 * 100) / 100;
+        const deviationPercent = parseFloat(row.deviation_percent) || 5.0;
+        const deviationMultiplier = 1 - (deviationPercent / 100);
         
         criteriaMap.set(criterionId, {
           criterion_id: criterionId,
@@ -2987,8 +3096,9 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           baseline_score: baselineScore,
           baseline_comment: row.baseline_comment || null,
           baseline_percentage: baselinePercentage, // Current score/maximum score percentage
-          range_lower: Math.round(baselineScore * 0.95 * 100) / 100, // ±5%
-          range_upper: Math.round(baselineScore * 1.05 * 100) / 100,
+          deviation_percent: deviationPercent, // Deviation percentage for this criterion
+          range_lower: Math.round(baselineScore * deviationMultiplier * 100) / 100,
+          range_upper: Math.round(baselineScore * (2 - deviationMultiplier) * 100) / 100,
           marker_scores: []
         });
       }
@@ -3103,9 +3213,11 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
 
   } catch (error) {
     console.error('❌ Failed to generate moderation report:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       error: 'Failed to generate moderation report',
-      details: error.message
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

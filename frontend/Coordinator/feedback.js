@@ -112,7 +112,8 @@ function getCellClass(value, row) {
   
   // 对于Total行，使用三级颜色系统（warning为50%的deviation）
   if (row.isTotal) {
-    const warningPercent = deviationPercent * 0.5;
+    const rowDeviation = row.deviationPercent || 5.0;
+    const warningPercent = rowDeviation * 0.5;
     const warningLower = Math.round((row.chair * (1 - warningPercent / 100)) * 100) / 100;
     const warningUpper = Math.round((row.chair * (1 + warningPercent / 100)) * 100) / 100;
     
@@ -134,17 +135,18 @@ function getCellClass(value, row) {
 }
 
 /**
- * 根据当前deviation百分比动态重新计算所有行的lower和upper
+ * 根据每行的deviation百分比动态重新计算所有行的lower和upper
  */
 function recalculateDeviationRanges() {
   rows.forEach(row => {
+    const rowDeviation = row.deviationPercent || 5.0;
     // 动态计算lower和upper
-    row.lower = Math.round((row.chair * (1 - deviationPercent / 100)) * 100) / 100;
-    row.upper = Math.round((row.chair * (1 + deviationPercent / 100)) * 100) / 100;
+    row.lower = Math.round((row.chair * (1 - rowDeviation / 100)) * 100) / 100;
+    row.upper = Math.round((row.chair * (1 + rowDeviation / 100)) * 100) / 100;
     
     // 对于Total行，还需要更新warning范围
     if (row.isTotal) {
-      const warningPercent = deviationPercent * 0.5;
+      const warningPercent = rowDeviation * 0.5;
       row.warningLower = Math.round((row.chair * (1 - warningPercent / 100)) * 100) / 100;
       row.warningUpper = Math.round((row.chair * (1 + warningPercent / 100)) * 100) / 100;
     }
@@ -307,11 +309,34 @@ function downloadExcelFile(excelBuffer, filename) {
 
 /* ===== 从后端加载 Moderation Report ===== */
 async function loadModerationReport(assignmentId) {
+  console.log('📥 Loading moderation report for assignment:', assignmentId);
   try {
     const res = await fetch(`/api/uploads/assignments/${assignmentId}/moderation-report`);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    
     const data = await res.json();
+    console.log('📥 Moderation report response:', data);
+    
     if (data.error) {
       console.error("加载报告失败:", data.error);
+      if (alignBody) {
+        alignBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--bad);">
+          ❌ ${data.error || 'Failed to load moderation report'}
+        </td></tr>`;
+      }
+      return;
+    }
+    
+    if (!data.criteria || !Array.isArray(data.criteria)) {
+      console.error("Invalid data format: criteria is missing or not an array");
+      if (alignBody) {
+        alignBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--bad);">
+          ❌ Invalid data format received from server
+        </td></tr>`;
+      }
       return;
     }
 
@@ -320,6 +345,7 @@ async function loadModerationReport(assignmentId) {
       name: m.marker_name || `Marker ${m.marker_id}`
     }));
     markerKeys = markersInfo.map(m => m.id);
+    console.log('👥 Markers info:', markersInfo);
 
     rows = data.criteria.map(c => {
       const markersObj = {};
@@ -343,7 +369,9 @@ async function loadModerationReport(assignmentId) {
         markers: markersObj,
         markerComments: markerCommentsObj, // 添加marker comments
         description: rubricDescriptions[c.title] || "",
-        total: null
+        total: null,
+        deviationPercent: c.deviation_percent || 5.0, // 从API获取deviation_percent
+        criterion_id: c.criterion_id // 保存criterion_id用于保存deviation
       };
     });
 
@@ -366,11 +394,13 @@ async function loadModerationReport(assignmentId) {
       markerComments: {}, // 总分行没有comments
       description: "",
       total: null,
-      isTotal: true // 标记这是总分行
+      isTotal: true, // 标记这是总分行
+      deviationPercent: 5.0 // 默认deviation为5%
     });
 
-    renderAlignment('all');
-    renderDifferences('all');
+    // 先根据每行的deviation百分比重新计算范围和颜色
+    console.log('📊 Recalculating deviation ranges and updating selectors');
+    recalculateDeviationRanges();
     updateMarkerSelectors();
     
     // 恢复滚动位置（在所有内容加载完成后）
@@ -378,12 +408,19 @@ async function loadModerationReport(assignmentId) {
 
   } catch (err) {
     console.error("获取 moderation report 出错:", err);
+    // 显示错误信息给用户
+    if (alignBody) {
+      alignBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--bad);">
+        ❌ Failed to load moderation report: ${err.message || 'Unknown error'}
+      </td></tr>`;
+    }
   }
 }
 
 /* ===== Alignment 表格 ===== */
 function renderAlignment(selected='all'){
-  let headers = ["Criterion","Unit Chair","Range Lower","Range Upper"];
+  console.log('🎨 renderAlignment called, selected:', selected, 'rows:', rows.length);
+  let headers = ["Criterion","Unit Chair","Deviation %","Range Lower","Range Upper"];
   if(selected==='all'){
     headers = headers.concat(markerKeys.map(id=>{
       const m = markersInfo.find(mi=>mi.id===id);
@@ -396,13 +433,35 @@ function renderAlignment(selected='all'){
     // 单个marker视图：只添加Comment列，不添加Total列
     headers.push('Comment');
   }
+  
+  if (!alignHeader) {
+    console.error('❌ alignHeader not found!');
+    return;
+  }
+  if (!alignBody) {
+    console.error('❌ alignBody not found!');
+    return;
+  }
+  
   alignHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
   alignBody.innerHTML='';
-  rows.forEach(r=>{
+  
+  if (!rows || rows.length === 0) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = `<td colspan="${headers.length}" style="text-align:center;padding:20px;color:var(--muted);">
+      No data available. Please ensure the assignment has been marked.
+    </td>`;
+    alignBody.appendChild(emptyRow);
+    return;
+  }
+  
+  rows.forEach((r,index)=>{
+    const deviationPercent = r.deviationPercent || 5.0;
     const tds = [
       `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
       `<td>${fmt(r.chair)}</td>`,
+      `<td><input type="number" class="deviation-input-row" value="${deviationPercent}" min="0" max="50" step="0.1" data-row-index="${index}" /></td>`,
       `<td>${fmt(r.lower)}</td>`,
       `<td>${fmt(r.upper)}</td>`
     ];
@@ -429,10 +488,15 @@ function renderAlignment(selected='all'){
 
 /* ===== Difference 表格（支持 all 和单 marker） ===== */
 function renderDifferences(selected='all'){
+  if (!allDiffSection || !diffSection || !allDiffHeader || !allDiffBody || !diffHeader || !diffBody) {
+    console.error('❌ Difference table elements not found!');
+    return;
+  }
+  
   allDiffSection.classList.add('hidden');
   diffSection.classList.add('hidden');
-  allDiffHeader.innerHTML=''; allDiffBody.innerHTML='';
-  diffHeader.innerHTML=''; diffBody.innerHTML='';
+  allDiffHeader.innerHTML=''; if (allDiffBody) allDiffBody.innerHTML='';
+  diffHeader.innerHTML=''; if (diffBody) diffBody.innerHTML='';
 
   if (selected === 'all') {
     allDiffSection.classList.remove('hidden');
@@ -444,6 +508,15 @@ function renderDifferences(selected='all'){
       headers.push('Percent');
     });
     allDiffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
+
+    if (!rows || rows.length === 0) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = `<td colspan="${headers.length}" style="text-align:center;padding:20px;color:var(--muted);">
+        No data available. Please ensure the assignment has been marked.
+      </td>`;
+      allDiffBody.appendChild(emptyRow);
+      return;
+    }
 
     rows.forEach(r=>{
       const cells = [
@@ -477,6 +550,15 @@ function renderDifferences(selected='all'){
     const headers = ['Criterion','Unit Chair','Difference', m ? m.name : `Marker ${selected}`,'Percent'];
     diffHeader.innerHTML = headers.map(h=>`<th>${h}</th>`).join('');
 
+    if (!rows || rows.length === 0) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = `<td colspan="${headers.length}" style="text-align:center;padding:20px;color:var(--muted);">
+        No data available. Please ensure the assignment has been marked.
+      </td>`;
+      diffBody.appendChild(emptyRow);
+      return;
+    }
+
     rows.forEach(r=>{
       const v = r.markers?.[selected]; // marker的分数
       const coordinatorScore = r.chair; // coordinator的分数（从后端baseline_score提取）
@@ -507,26 +589,46 @@ function renderDifferences(selected='all'){
 
 /* ===== 更新下拉框 ===== */
 function updateMarkerSelectors(){
+  console.log('🔍 updateMarkerSelectors called, markersInfo:', markersInfo);
   const sel = document.getElementById("markerSelect");
+  if (!sel) {
+    console.error('❌ markerSelect element not found!');
+    return;
+  }
+  
   sel.innerHTML = `<option value="all">All Markers</option>`;
   markersInfo.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
 
   // 恢复之前选择的marker（如果有）
   const savedMarker = sessionStorage.getItem('selectedMarker');
+  console.log('📝 Saved marker:', savedMarker);
+  
   if (savedMarker && savedMarker !== 'all') {
     // 检查这个marker是否还存在
     const markerExists = markersInfo.some(m => m.id.toString() === savedMarker);
     if (markerExists) {
+      console.log('✅ Restoring saved marker:', savedMarker);
       sel.value = savedMarker;
       // 触发change事件来更新显示
       const event = new Event('change');
       sel.dispatchEvent(event);
+      return; // 已触发change，直接返回
     }
   }
+  
+  // 如果没有保存的marker或marker不存在，默认选择'all'并触发change事件来渲染表格
+  console.log('📋 Setting default to "all" and triggering change');
+  sel.value = 'all';
+  const event = new Event('change');
+  sel.dispatchEvent(event);
 
   const allSel = document.getElementById("allFbSelect");
-  allSel.innerHTML = "";
-  markersInfo.forEach(m => allSel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+  if (allSel) {
+    allSel.innerHTML = "";
+    markersInfo.forEach(m => allSel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+  } else {
+    console.warn('⚠️ allFbSelect element not found');
+  }
 }
 
 /* ===== 用户名显示和下拉菜单 ===== */
@@ -590,6 +692,7 @@ function restoreScrollPosition() {
 
 /* ===== 初始化 ===== */
 (async function init() {
+  console.log('🚀 Initializing feedback page...');
   // Initialize user info display
   initUserInfo();
 
@@ -597,8 +700,12 @@ function restoreScrollPosition() {
   const projectIdParam = urlParams.get("project");
   const assignmentParam = urlParams.get("assignment"); // assignment1 / assignment2 或 数字ID
 
+  console.log('📋 URL params - project:', projectIdParam, 'assignment:', assignmentParam);
+
   // 先尝试直接解析 assignmentId（兼容历史链接：completed/archived 从 Past Assignment 进入）
   const directAssignmentId = getCurrentAssignmentId();
+  console.log('🔍 Direct assignment ID:', directAssignmentId);
+  
   if (directAssignmentId) {
     try {
       // 通过 assignmentId 反查 projectId
@@ -674,41 +781,62 @@ document.getElementById('backBtn')?.addEventListener('click', () => {
   window.history.back();
 });
 
-/* ===== Deviation Percentage Control ===== */
-const deviationPercentInput = document.getElementById('deviationPercent');
-const deviationUpBtn = document.getElementById('deviationUp');
-const deviationDownBtn = document.getElementById('deviationDown');
-
-// 初始化deviation百分比显示
-if (deviationPercentInput) {
-  deviationPercentInput.value = deviationPercent;
-
-  // 向上调整
-  deviationUpBtn?.addEventListener('click', () => {
-    const currentValue = parseFloat(deviationPercentInput.value) || 0;
-    const newValue = Math.min(currentValue + 0.1, 50);
-    deviationPercentInput.value = newValue.toFixed(1);
-    deviationPercent = newValue;
-    recalculateDeviationRanges();
-  });
-
-  // 向下调整
-  deviationDownBtn?.addEventListener('click', () => {
-    const currentValue = parseFloat(deviationPercentInput.value) || 0;
-    const newValue = Math.max(currentValue - 0.1, 0);
-    deviationPercentInput.value = newValue.toFixed(1);
-    deviationPercent = newValue;
-    recalculateDeviationRanges();
-  });
-
-  // 手动输入
-  deviationPercentInput.addEventListener('change', () => {
-    const newValue = parseFloat(deviationPercentInput.value) || 0;
+/* ===== Deviation Percentage Control (per row) ===== */
+// 使用事件委托处理动态添加的输入框
+document.addEventListener('change', (e) => {
+  if (e.target.classList.contains('deviation-input-row')) {
+    const rowIndex = parseInt(e.target.getAttribute('data-row-index'));
+    const newValue = parseFloat(e.target.value) || 0;
     const clampedValue = Math.max(0, Math.min(newValue, 50));
-    deviationPercentInput.value = clampedValue.toFixed(1);
-    deviationPercent = clampedValue;
-    recalculateDeviationRanges();
-  });
+    e.target.value = clampedValue.toFixed(1);
+    
+    // 更新对应行的deviation
+    if (rows[rowIndex]) {
+      rows[rowIndex].deviationPercent = clampedValue;
+      recalculateDeviationRanges();
+      
+      // 保存到后端
+      saveDeviationPercent(rowIndex, clampedValue);
+    }
+  }
+});
+
+// 保存deviation百分比到后端
+async function saveDeviationPercent(rowIndex, deviationPercent) {
+  try {
+    const row = rows[rowIndex];
+    if (!row || !row.criterion_id || row.isTotal) {
+      // 总分行不保存deviation到数据库
+      return;
+    }
+    
+    const assignmentId = getCurrentAssignmentId();
+    if (!assignmentId) {
+      console.error('Unable to get current assignment ID');
+      return;
+    }
+    
+    const response = await fetch(`/api/uploads/assignments/${assignmentId}/deviation-percent`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        criterion_id: row.criterion_id,
+        deviation_percent: deviationPercent
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to save deviation percent');
+    }
+    
+    console.log(`Deviation percent saved: ${deviationPercent}% for criterion ${row.criterion_id}`);
+  } catch (error) {
+    console.error('Error saving deviation percent:', error);
+    // Silently fail - deviation will still work in this session
+  }
 }
 
 /* ===== 下载功能 ===== */
@@ -789,7 +917,12 @@ const fbHint = document.getElementById('fbHint');
 let currentMarkerId = null;
 
 /* ===== Marker切换事件（合并版本，避免重复监听） ===== */
-markerSelect.addEventListener('change', e=>{
+console.log('🔧 Setting up markerSelect event listener');
+if (!markerSelect) {
+  console.error('❌ markerSelect is null when setting up event listener!');
+} else {
+  markerSelect.addEventListener('change', e=>{
+  console.log('🔄 markerSelect change event triggered, value:', e.target.value);
   const selected = e.target.value;
   currentMarkerId = selected !== 'all' ? selected : null;
   
@@ -800,6 +933,7 @@ markerSelect.addEventListener('change', e=>{
   sessionStorage.setItem('selectedMarker', selected);
   
   // 渲染表格
+  console.log('🎨 Rendering tables for:', selected);
   renderAlignment(selected);
   renderDifferences(selected);
   
@@ -828,15 +962,17 @@ markerSelect.addEventListener('change', e=>{
     window.scrollTo(0, scrollPosition);
   });
 });
+} // end of else block for markerSelect
 
 // 点击 Send Feedback 按钮
-fbSend.addEventListener('click', async () => {
-  if (!currentMarkerId) return alert('Please select a marker first.');
-  const content = fbTextarea.value.trim();
-  if (!content) return alert('Please write some feedback before sending.');
+if (fbSend && fbTextarea && fbHint) {
+  fbSend.addEventListener('click', async () => {
+    if (!currentMarkerId) return alert('Please select a marker first.');
+    const content = fbTextarea.value.trim();
+    if (!content) return alert('Please write some feedback before sending.');
 
-  fbSend.disabled = true;
-  fbHint.textContent = 'Sending...';
+    fbSend.disabled = true;
+    fbHint.textContent = 'Sending...';
 
   try {
     // 获取当前assignment ID (从URL或全局变量)
@@ -883,22 +1019,26 @@ fbSend.addEventListener('click', async () => {
   } finally {
     fbSend.disabled = false;
   }
-});
+  });
+} else {
+  console.warn('⚠️ Feedback elements (fbSend, fbTextarea, fbHint) not found');
+}
 /* ===== All markers Feedback 事件绑定 ===== */
 const allFbTextarea = document.getElementById('allFbTextarea');
 const allFbSend = document.getElementById('allFbSend');
 const allFbSelect = document.getElementById('allFbSelect');
 const allFbHint = document.getElementById('allFbHint');
 
-allFbSend.addEventListener('click', async () => {
-  const markerId = allFbSelect.value;
-  const content = allFbTextarea.value.trim();
+if (allFbSend && allFbTextarea && allFbSelect && allFbHint) {
+  allFbSend.addEventListener('click', async () => {
+    const markerId = allFbSelect.value;
+    const content = allFbTextarea.value.trim();
 
-  if (!markerId) return alert('Please select a marker to send feedback.');
-  if (!content) return alert('Please write feedback content.');
+    if (!markerId) return alert('Please select a marker to send feedback.');
+    if (!content) return alert('Please write feedback content.');
 
-  allFbSend.disabled = true;
-  allFbHint.textContent = 'Sending...';
+    allFbSend.disabled = true;
+    allFbHint.textContent = 'Sending...';
 
   try {
     // 获取当前assignment ID
@@ -945,5 +1085,8 @@ allFbSend.addEventListener('click', async () => {
   } finally {
     allFbSend.disabled = false;
   }
-});
+  });
+} else {
+  console.warn('⚠️ All markers feedback elements (allFbSend, allFbTextarea, allFbSelect, allFbHint) not found');
+}
 
