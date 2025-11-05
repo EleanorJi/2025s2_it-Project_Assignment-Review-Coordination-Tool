@@ -885,6 +885,7 @@ function restoreScrollPosition() {
 /* ===== 初始化 ===== */
 (async function init() {
    console.log('🚀 Initializing feedback page...');
+   initUserInfo();
 
    const urlParams = new URLSearchParams(window.location.search);
    const projectIdParam = urlParams.get("project");
