@@ -113,9 +113,10 @@
   .deviation-input-row:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,23,42,0.1)}
   
   /* Table */
-  .table-wrap{overflow:auto;border:2px solid var(--border);border-radius:var(--radius);background:#fff;max-height:600px}
+  .table-wrap{overflow-x:auto;overflow-y:auto;border:2px solid var(--border);border-radius:var(--radius);background:#fff;max-height:600px}
   .mb-12{margin-bottom:16px}
   table{width:100%;border-collapse:collapse;min-width:1400px}
+  tbody{position:relative}
   thead th{
     position:sticky;top:0;z-index:1;background:#F9FAFB;border-bottom:2px solid var(--border);
     padding:12px 10px;font-weight:800;text-align:center;white-space:nowrap;font-size:14px;
@@ -228,6 +229,61 @@
     color: var(--muted);
     font-style: italic;
     padding: 20px;
+  }
+  
+  /* Grade Level Badge Styles */
+  .grade-level-badge {
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  
+  .grade-level-badge:hover {
+    background: #e0e0e0 !important;
+    border-color: #bbb !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  /* Tooltip for grade level description - using JavaScript */
+  .grade-level-tooltip {
+    position: fixed;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    font-size: 12px;
+    font-weight: normal;
+    white-space: pre-wrap;
+    min-width: 250px;
+    max-width: 400px;
+    width: max-content;
+    border-radius: 6px;
+    z-index: 10000;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    line-height: 1.5;
+    word-wrap: break-word;
+  }
+  
+  .grade-level-tooltip::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: rgba(0, 0, 0, 0.9);
+  }
+  
+  .grade-level-tooltip.tooltip-left::before {
+    left: auto;
+    right: -6px;
+    border-right-color: transparent;
+    border-left-color: rgba(0, 0, 0, 0.9);
+  }
+  
+  /* Score with grade container */
+  .score-with-grade {
+    position: relative;
   }
   
   /* Responsive design */

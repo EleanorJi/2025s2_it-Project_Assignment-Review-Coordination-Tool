@@ -2666,6 +2666,87 @@ router.post('/scoring/baseline/submit', async (req, res) => {
 });
 
 /**
+ * Coordinator exclusive - update total deviation percentage for an assignment
+ * PUT /api/uploads/assignments/:assignment_id/total-deviation-percent
+ */
+router.put('/assignments/:assignment_id/total-deviation-percent', async (req, res) => {
+  try {
+    const { assignment_id } = req.params;
+    const { deviation_percent } = req.body;
+
+    // Validate required fields
+    if (deviation_percent === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: deviation_percent'
+      });
+    }
+
+    const deviationValue = parseFloat(deviation_percent);
+    if (isNaN(deviationValue) || deviationValue < 0 || deviationValue > 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Deviation percent must be a number between 0 and 50'
+      });
+    }
+
+    // Verify assignment exists and is the latest version
+    const assignmentCheck = await db.query(
+      `SELECT a.assignment_id, a.project_id, a.version, a.round
+       FROM assignment a
+       WHERE a.assignment_id = $1
+         AND a.version = (
+           SELECT MAX(version) 
+           FROM assignment 
+           WHERE project_id = a.project_id AND round = a.round
+         )`,
+      [assignment_id]
+    );
+
+    if (assignmentCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Assignment not found or not latest version',
+        message: 'Only the latest version of assignment can be modified'
+      });
+    }
+
+    // Update assignment total_deviation_percent
+    const updateResult = await db.query(
+      `UPDATE assignment
+       SET total_deviation_percent = $1
+       WHERE assignment_id = $2
+       RETURNING assignment_id, total_deviation_percent`,
+      [deviationValue, assignment_id]
+    );
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    console.log(`✅ Total deviation percent updated: assignment_id=${assignment_id}, deviation_percent=${deviationValue}`);
+
+    res.json({
+      success: true,
+      message: 'Total deviation percent updated successfully',
+      assignment_id: parseInt(assignment_id),
+      total_deviation_percent: parseFloat(updateResult.rows[0].total_deviation_percent)
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to update total deviation percent:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update total deviation percent',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Coordinator exclusive - update deviation percentage for a criterion
  * PUT /api/uploads/assignments/:assignment_id/deviation-percent
  */
@@ -2996,29 +3077,7 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
   try {
     const { assignment_id } = req.params;
 
-    // Verify assignment exists and is the latest version
-    const assignmentCheck = await db.query(
-      `SELECT a.assignment_id, a.name, a.project_id, a.version, a.round
-       FROM assignment a
-       WHERE a.assignment_id = $1
-         AND a.version = (
-           SELECT MAX(version) 
-           FROM assignment 
-           WHERE project_id = a.project_id AND round = a.round
-         )`,
-      [assignment_id]
-    );
-
-    if (assignmentCheck.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Assignment not found or not latest version',
-        message: 'Moderation report can only be generated for the latest version of assignment'
-      });
-    }
-
-    const assignment = assignmentCheck.rows[0];
-
-    // Check if deviation_percent column exists, add it if not
+    // Check if deviation_percent column exists in baseline_score table, add it if not
     try {
       const columnCheck = await db.query(`
         SELECT column_name 
@@ -3040,7 +3099,54 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
       // Continue anyway, will use default value in query
     }
 
-    // Get complete data for baseline scores and marker scores
+    // Check if total_deviation_percent column exists in assignment table, add it if not
+    // This MUST be done before querying the assignment table
+    try {
+      const assignmentColumnCheck = await db.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'assignment' 
+        AND column_name = 'total_deviation_percent'
+      `);
+      
+      if (assignmentColumnCheck.rows.length === 0) {
+        console.log('⚠️ total_deviation_percent column not found in assignment table, adding it...');
+        await db.query(`
+          ALTER TABLE assignment 
+          ADD COLUMN IF NOT EXISTS total_deviation_percent NUMERIC(5, 2) DEFAULT 5.0
+        `);
+        console.log('✅ total_deviation_percent column added to assignment table');
+      }
+    } catch (alterError) {
+      console.warn('⚠️ Could not check/add total_deviation_percent column:', alterError.message);
+      // Continue anyway, will use default value
+    }
+
+    // Verify assignment exists and is the latest version
+    const assignmentCheck = await db.query(
+      `SELECT a.assignment_id, a.name, a.project_id, a.version, a.round, 
+              COALESCE(a.total_deviation_percent, 5.0) as total_deviation_percent
+       FROM assignment a
+       WHERE a.assignment_id = $1
+         AND a.version = (
+           SELECT MAX(version) 
+           FROM assignment 
+           WHERE project_id = a.project_id AND round = a.round
+         )`,
+      [assignment_id]
+    );
+
+    if (assignmentCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Assignment not found or not latest version',
+        message: 'Moderation report can only be generated for the latest version of assignment'
+      });
+    }
+
+    const assignment = assignmentCheck.rows[0];
+    const totalDeviationPercent = parseFloat(assignment.total_deviation_percent) || 5.0;
+
+    // Get complete data for baseline scores and marker scores with grade levels
     const mainQuery = `
       SELECT 
         bs.criterion_id,
@@ -3050,15 +3156,25 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         bs.score as baseline_score,
         bs.comment as baseline_comment,
         bs.deviation_percent as deviation_percent,
+        bs_gl.level_name as baseline_level_name,
+        bs_gl.description as baseline_level_description,
         ms.marker_id,
         COALESCE(u.nickname, u.name) as marker_name,
         ms.score as marker_score,
-        ms.comment as marker_comment
+        ms.comment as marker_comment,
+        ms_gl.level_name as marker_level_name,
+        ms_gl.description as marker_level_description
       FROM baseline_score bs
       JOIN rubric_criterion rc ON bs.criterion_id = rc.criterion_id  
+      LEFT JOIN criterion_grade_level bs_gl ON bs.criterion_id = bs_gl.criterion_id 
+        AND bs.score >= bs_gl.min_score 
+        AND bs.score <= bs_gl.max_score
       LEFT JOIN marker_score ms ON bs.assignment_id = ms.assignment_id 
         AND bs.criterion_id = ms.criterion_id
       LEFT JOIN app_user u ON ms.marker_id = u.user_id
+      LEFT JOIN criterion_grade_level ms_gl ON ms.criterion_id = ms_gl.criterion_id 
+        AND ms.score >= ms_gl.min_score 
+        AND ms.score <= ms_gl.max_score
       WHERE bs.assignment_id = $1
       ORDER BY rc.seq_no, COALESCE(u.nickname, u.name)
     `;
@@ -3095,6 +3211,8 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           seq_no: row.seq_no,
           baseline_score: baselineScore,
           baseline_comment: row.baseline_comment || null,
+          baseline_level_name: row.baseline_level_name || null,
+          baseline_level_description: row.baseline_level_description || null,
           baseline_percentage: baselinePercentage, // Current score/maximum score percentage
           deviation_percent: deviationPercent, // Deviation percentage for this criterion
           range_lower: Math.round(baselineScore * deviationMultiplier * 100) / 100,
@@ -3119,6 +3237,8 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
           marker_name: row.marker_name,
           score: markerScore,
           comment: row.marker_comment || null,
+          level_name: row.marker_level_name || null,
+          level_description: row.marker_level_description || null,
           percentage: markerPercentage, // Current score/maximum score percentage
           percentage_difference: percentageDifference, // Percentage difference from baseline, can be positive or negative
           within_range: withinRange
@@ -3150,11 +3270,15 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
     const baselineTotalRounded = Math.round(baselineTotal * 100) / 100;
     const baselineTotalPercentage = Math.round((baselineTotal / maxTotalScore) * 100 * 100) / 100;
 
-    // Calculate total score range (±5% for red, ±2.5% for warning threshold)
-    const totalRangeLower = Math.round(baselineTotalRounded * 0.95 * 100) / 100;
-    const totalRangeUpper = Math.round(baselineTotalRounded * 1.05 * 100) / 100;
-    const totalWarningLower = Math.round(baselineTotalRounded * 0.975 * 100) / 100;
-    const totalWarningUpper = Math.round(baselineTotalRounded * 1.025 * 100) / 100;
+    // Calculate total score range using total_deviation_percent from assignment
+    const totalDeviationMultiplier = 1 - (totalDeviationPercent / 100);
+    const totalRangeLower = Math.round(baselineTotalRounded * totalDeviationMultiplier * 100) / 100;
+    const totalRangeUpper = Math.round(baselineTotalRounded * (2 - totalDeviationMultiplier) * 100) / 100;
+    // Warning range is 50% of deviation (e.g., if deviation is 5%, warning is 2.5%)
+    const warningDeviationPercent = totalDeviationPercent * 0.5;
+    const warningDeviationMultiplier = 1 - (warningDeviationPercent / 100);
+    const totalWarningLower = Math.round(baselineTotalRounded * warningDeviationMultiplier * 100) / 100;
+    const totalWarningUpper = Math.round(baselineTotalRounded * (2 - warningDeviationMultiplier) * 100) / 100;
 
     // Calculate marker total scores and determine if within range
     const markerTotals = Array.from(markersMap.values()).map(marker => {
@@ -3193,10 +3317,11 @@ router.get('/assignments/:assignment_id/moderation-report', async (req, res) => 
         baseline_total: baselineTotalRounded,
         baseline_percentage: baselineTotalPercentage, // baseline total score percentage
         max_total_score: maxTotalScore, // maximum total score
-        range_lower: totalRangeLower, // ±5% range for red alert
+        range_lower: totalRangeLower, // range for red alert (based on total_deviation_percent)
         range_upper: totalRangeUpper,
-        warning_lower: totalWarningLower, // ±2.5% range for yellow warning
+        warning_lower: totalWarningLower, // range for yellow warning (50% of total_deviation_percent)
         warning_upper: totalWarningUpper,
+        deviation_percent: totalDeviationPercent, // total deviation percentage for this assignment
         marker_totals: markerTotals
       },
       summary: {

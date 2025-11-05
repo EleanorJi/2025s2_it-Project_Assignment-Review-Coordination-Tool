@@ -102,6 +102,129 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<
 function isOut(v, lo, hi){ return v<lo || v>hi; }
 
 /**
+ * 生成带grade level标签的分数显示
+ * @param {number} score - 分数
+ * @param {string|null} levelName - Grade level名称
+ * @param {string|null} levelDescription - Grade level描述
+ * @param {boolean} showGradeLevel - 是否显示grade level标签（默认true）
+ * @param {string} cellClass - 单元格颜色类（'good-cell', 'warning-cell', 'bad-cell'等）
+ * @returns {string} - HTML字符串
+ */
+function formatScoreWithGradeLevel(score, levelName, levelDescription, showGradeLevel = true, cellClass = '') {
+  const scoreHtml = fmt(score);
+  
+  // 如果不显示grade level或没有levelName，只返回分数
+  if (!showGradeLevel || !levelName) {
+    return scoreHtml;
+  }
+  
+  const escapedLevelName = escapeHtml(levelName);
+  const escapedDescription = levelDescription ? escapeHtml(levelDescription) : '';
+  
+  // 如果description存在，显示在data-description中
+  const dataDesc = escapedDescription ? `data-description="${escapedLevelName}: ${escapedDescription}"` : '';
+  
+  // 根据cellClass设置标签颜色
+  let badgeStyle = 'font-size:11px;padding:2px 6px;border-radius:4px;cursor:help;font-weight:600;border:1px solid;position:relative;';
+  
+  if (cellClass === 'bad-cell') {
+    badgeStyle += 'background:#FEF2F2;color:#DC2626;border-color:#FCA5A5;';
+  } else if (cellClass === 'warning-cell') {
+    badgeStyle += 'background:#FEF3C7;color:#D97706;border-color:#FCD34D;';
+  } else if (cellClass === 'good-cell') {
+    badgeStyle += 'background:#ECFDF5;color:#16a34a;border-color:#86EFAC;';
+  } else {
+    badgeStyle += 'background:#f0f0f0;color:#666;border-color:#ddd;';
+  }
+  
+  return `
+    <div class="score-with-grade" style="display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span>${scoreHtml}</span>
+      <span class="grade-level-badge" 
+            ${dataDesc}
+            style="${badgeStyle}">
+        ${escapedLevelName}
+      </span>
+    </div>
+  `;
+}
+
+/**
+ * 动态定位tooltip，确保完全可见
+ */
+function setupGradeLevelTooltips() {
+  // 移除旧的事件监听器，避免重复绑定
+  document.querySelectorAll('.grade-level-badge[data-description]').forEach(badge => {
+    // 移除可能存在的旧事件监听器
+    const newBadge = badge.cloneNode(true);
+    badge.parentNode.replaceChild(newBadge, badge);
+  });
+  
+  document.querySelectorAll('.grade-level-badge[data-description]').forEach(badge => {
+    let tooltip = null;
+    
+    badge.addEventListener('mouseenter', function(e) {
+      const badgeRect = this.getBoundingClientRect();
+      const description = this.getAttribute('data-description');
+      if (!description) return;
+      
+      // 创建tooltip元素
+      tooltip = document.createElement('div');
+      tooltip.className = 'grade-level-tooltip';
+      tooltip.textContent = description;
+      document.body.appendChild(tooltip);
+      
+      // 先计算tooltip的尺寸（需要先添加到DOM）
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const tooltipWidth = tooltipRect.width;
+      const tooltipHeight = tooltipRect.height;
+      
+      // 计算可用空间
+      const spaceRight = window.innerWidth - badgeRect.right;
+      const spaceLeft = badgeRect.left;
+      const spaceTop = badgeRect.top;
+      const spaceBottom = window.innerHeight - badgeRect.bottom;
+      
+      let left = badgeRect.right + 8;
+      let top = badgeRect.top + (badgeRect.height / 2);
+      let showOnLeft = false;
+      
+      // 如果右侧空间不足，显示在左侧
+      if (spaceRight < tooltipWidth + 20 && spaceLeft > tooltipWidth + 20) {
+        left = badgeRect.left - tooltipWidth - 8;
+        showOnLeft = true;
+        tooltip.classList.add('tooltip-left');
+      }
+      
+      // 调整垂直位置，确保不超出视口
+      // 尝试垂直居中
+      top = badgeRect.top + (badgeRect.height / 2);
+      
+      // 如果tooltip底部超出视口，向上调整
+      if (top + tooltipHeight / 2 > window.innerHeight - 10) {
+        top = window.innerHeight - tooltipHeight / 2 - 10;
+      }
+      
+      // 如果tooltip顶部超出视口，向下调整
+      if (top - tooltipHeight / 2 < 10) {
+        top = tooltipHeight / 2 + 10;
+      }
+      
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+      tooltip.style.transform = 'translateY(-50%)';
+    });
+    
+    badge.addEventListener('mouseleave', function() {
+      if (tooltip) {
+        tooltip.remove();
+        tooltip = null;
+      }
+    });
+  });
+}
+
+/**
  * 获取单元格颜色类
  * @param {number} value - marker的分数
  * @param {object} row - 行数据
@@ -350,11 +473,19 @@ async function loadModerationReport(assignmentId) {
     rows = data.criteria.map(c => {
       const markersObj = {};
       const markerCommentsObj = {}; // 添加marker comments存储
+      const markerGradeLevelsObj = {}; // 存储marker的grade level信息
       (c.marker_scores || []).forEach(ms => {
         markersObj[ms.marker_id] = ms.score;
         // 存储marker的comment
         if (ms.comment) {
           markerCommentsObj[ms.marker_id] = ms.comment;
+        }
+        // 存储marker的grade level信息
+        if (ms.level_name) {
+          markerGradeLevelsObj[ms.marker_id] = {
+            level_name: ms.level_name,
+            level_description: ms.level_description || ''
+          };
         }
       });
       return {
@@ -362,12 +493,15 @@ async function loadModerationReport(assignmentId) {
         title: c.title,
         chair: c.baseline_score, // ⚡ Coordinator的分数，从后端baseline_score提取
         chairComment: c.baseline_comment || '', // 添加baseline comment
+        chairLevelName: c.baseline_level_name || null, // Coordinator分数的grade level名称
+        chairLevelDescription: c.baseline_level_description || null, // Coordinator分数的grade level描述
         lower: c.range_lower,
         upper: c.range_upper,
         percent: c.baseline_percentage,
         maxScore: c.max_score, // 保存criterion的总分
         markers: markersObj,
         markerComments: markerCommentsObj, // 添加marker comments
+        markerGradeLevels: markerGradeLevelsObj, // 添加marker grade levels
         description: rubricDescriptions[c.title] || "",
         total: null,
         deviationPercent: c.deviation_percent || 5.0, // 从API获取deviation_percent
@@ -375,7 +509,7 @@ async function loadModerationReport(assignmentId) {
       };
     });
 
-    // 添加总分行 (Note: Total row uses ±5% range for red, ±2.5% for warning, individual criteria use ±5% range)
+    // 添加总分行 (Note: Total row uses deviation_percent from assignment table)
     const totals = data.totals;
     const totalMarkersObj = {};
     (totals.marker_totals || []).forEach(mt => {
@@ -384,10 +518,10 @@ async function loadModerationReport(assignmentId) {
     rows.push({
       criterion: "Total / " + totals.max_total_score,
       chair: totals.baseline_total, // ⚡ Coordinator的总分，从后端baseline_total提取
-      lower: totals.range_lower, // ±5% for Total row (red threshold)
-      upper: totals.range_upper, // ±5% for Total row (red threshold)
-      warningLower: totals.warning_lower, // ±2.5% for Total row (warning threshold)
-      warningUpper: totals.warning_upper, // ±2.5% for Total row (warning threshold)
+      lower: totals.range_lower, // range for Total row (based on total_deviation_percent)
+      upper: totals.range_upper, // range for Total row (based on total_deviation_percent)
+      warningLower: totals.warning_lower, // warning range for Total row (50% of total_deviation_percent)
+      warningUpper: totals.warning_upper, // warning range for Total row (50% of total_deviation_percent)
       percent: totals.baseline_percentage,
       maxScore: totals.max_total_score, // 保存总分
       markers: totalMarkersObj,
@@ -395,7 +529,7 @@ async function loadModerationReport(assignmentId) {
       description: "",
       total: null,
       isTotal: true, // 标记这是总分行
-      deviationPercent: 5.0 // 默认deviation为5%
+      deviationPercent: totals.deviation_percent || 5.0 // 从API获取total的deviation_percent
     });
 
     // 先根据每行的deviation百分比重新计算范围和颜色
@@ -458,9 +592,28 @@ function renderAlignment(selected='all'){
   
   rows.forEach((r,index)=>{
     const deviationPercent = r.deviationPercent || 5.0;
+    
+    // 处理description，移除重复的title部分
+    let displayDescription = r.description || "";
+    if (displayDescription && r.title) {
+      // 如果description以title开头，移除title部分
+      const titleTrimmed = r.title.trim();
+      if (displayDescription.trim().startsWith(titleTrimmed)) {
+        displayDescription = displayDescription.trim().substring(titleTrimmed.length).trim();
+        // 如果移除后以标点符号开头，也移除
+        if (displayDescription.match(/^[:\-\s]/)) {
+          displayDescription = displayDescription.replace(/^[:\-\s]+/, '').trim();
+        }
+      }
+    }
+    
+    // 只在单个marker视图显示grade level标签，All Markers视图不显示
+    const showGradeLevel = selected !== 'all';
+    
+    // Coordinator的grade level标签保持灰色（不传递cellClass，使用默认灰色）
     const tds = [
-      `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
-      `<td>${fmt(r.chair)}</td>`,
+      `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div>${displayDescription ? `<div style="font-size:12px;color:#666;">${escapeHtml(displayDescription)}</div>` : ''}</td>`,
+      `<td>${formatScoreWithGradeLevel(r.chair, r.chairLevelName, r.chairLevelDescription, showGradeLevel, '')}</td>`,
       `<td><input type="number" class="deviation-input-row" value="${deviationPercent}" min="0" max="50" step="0.1" data-row-index="${index}" /></td>`,
       `<td>${fmt(r.lower)}</td>`,
       `<td>${fmt(r.upper)}</td>`
@@ -469,13 +622,22 @@ function renderAlignment(selected='all'){
       markerKeys.forEach(id=>{
         const v=r.markers?.[id];
         if(v==null) tds.push('<td class="muted">–</td>');
-        else tds.push(`<td class="${getCellClass(v, r)}">${fmt(v)}</td>`);
+        else {
+          // All Markers视图：不显示grade level标签
+          tds.push(`<td class="${getCellClass(v, r)}">${fmt(v)}</td>`);
+        }
       });
       // All Markers视图：不添加Total和Comment列
     } else {
       const v=r.markers?.[selected];
       if(v==null) tds.push('<td class="muted">–</td>');
-      else tds.push(`<td class="${getCellClass(v, r)}">${fmt(v)}</td>`);
+      else {
+        // 单个marker视图：显示grade level标签，颜色与单元格颜色同步
+        const gradeLevel = r.markerGradeLevels?.[selected];
+        const cellClass = getCellClass(v, r);
+        const cellContent = formatScoreWithGradeLevel(v, gradeLevel?.level_name, gradeLevel?.level_description, true, cellClass);
+        tds.push(`<td class="${cellClass}">${cellContent}</td>`);
+      }
 
       // 单个marker视图：只添加Comment列，不添加Total列
       const comment = r.markerComments?.[selected] || '';
@@ -484,6 +646,9 @@ function renderAlignment(selected='all'){
 
     const tr=document.createElement('tr'); tr.innerHTML=tds.join(''); alignBody.appendChild(tr);
   });
+  
+  // 设置tooltip事件监听
+  setTimeout(setupGradeLevelTooltips, 0);
 }
 
 /* ===== Difference 表格（支持 all 和单 marker） ===== */
@@ -519,8 +684,21 @@ function renderDifferences(selected='all'){
     }
 
     rows.forEach(r=>{
+      // 处理description，移除重复的title部分
+      let displayDescription = r.description || "";
+      if (displayDescription && r.title) {
+        const titleTrimmed = r.title.trim();
+        if (displayDescription.trim().startsWith(titleTrimmed)) {
+          displayDescription = displayDescription.trim().substring(titleTrimmed.length).trim();
+          if (displayDescription.match(/^[:\-\s]/)) {
+            displayDescription = displayDescription.replace(/^[:\-\s]+/, '').trim();
+          }
+        }
+      }
+      
+      // All Markers视图：不显示grade level标签
       const cells = [
-        `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
+        `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div>${displayDescription ? `<div style="font-size:12px;color:#666;">${escapeHtml(displayDescription)}</div>` : ''}</td>`,
         `<td>${fmt(r.chair)}</td>`
       ];
       markerKeys.forEach(id=>{
@@ -536,6 +714,7 @@ function renderDifferences(selected='all'){
         
         // 移除标红逻辑，不再使用bad-cell类
         // 顺序改为：Difference, Marker, Percent
+        // All Markers视图不显示grade level标签
         cells.push(`<td>${diff==null?'—':fmt(diff)}</td>`);
         cells.push(`<td>${v==null?'—':fmt(v)}</td>`);
         cells.push(`<td>${percent==null?'—':fmt(percent)+'%'}</td>`);
@@ -544,6 +723,9 @@ function renderDifferences(selected='all'){
       tr.innerHTML = cells.join('');
       allDiffBody.appendChild(tr);
     });
+    
+    // 设置tooltip事件监听
+    setTimeout(setupGradeLevelTooltips, 0);
   } else {
     diffSection.classList.remove('hidden');
     const m = markersInfo.find(mi=>mi.id==selected);
@@ -573,17 +755,34 @@ function renderDifferences(selected='all'){
       // 移除标红逻辑，不再使用bad-cell类
       // 顺序改为：Criterion, Unit Chair, Difference, Marker, Percent
 
+      // 处理description，移除重复的title部分
+      let displayDescription = r.description || "";
+      if (displayDescription && r.title) {
+        const titleTrimmed = r.title.trim();
+        if (displayDescription.trim().startsWith(titleTrimmed)) {
+          displayDescription = displayDescription.trim().substring(titleTrimmed.length).trim();
+          if (displayDescription.match(/^[:\-\s]/)) {
+            displayDescription = displayDescription.replace(/^[:\-\s]+/, '').trim();
+          }
+        }
+      }
+
+      const gradeLevel = r.markerGradeLevels?.[selected];
+      // Difference表格中所有grade level标签都保持灰色（不传递cellClass）
       const cells = [
-        `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div><div style="font-size:12px;color:#666;">${escapeHtml(r.description)}</div></td>`,
-        `<td>${fmt(coordinatorScore)}</td>`,
+        `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div>${displayDescription ? `<div style="font-size:12px;color:#666;">${escapeHtml(displayDescription)}</div>` : ''}</td>`,
+        `<td>${formatScoreWithGradeLevel(coordinatorScore, r.chairLevelName, r.chairLevelDescription, true, '')}</td>`,
         `<td>${diff==null?'—':fmt(diff)}</td>`,
-        `<td>${v==null?'—':fmt(v)}</td>`,
+        `<td>${v==null?'—':formatScoreWithGradeLevel(v, gradeLevel?.level_name, gradeLevel?.level_description, true, '')}</td>`,
         `<td>${percent==null?'—':fmt(percent)+'%'}</td>`
       ];
       const tr = document.createElement('tr');
       tr.innerHTML = cells.join('');
       diffBody.appendChild(tr);
     });
+    
+    // 设置tooltip事件监听
+    setTimeout(setupGradeLevelTooltips, 0);
   }
 }
 
@@ -805,14 +1004,39 @@ document.addEventListener('change', (e) => {
 async function saveDeviationPercent(rowIndex, deviationPercent) {
   try {
     const row = rows[rowIndex];
-    if (!row || !row.criterion_id || row.isTotal) {
-      // 总分行不保存deviation到数据库
+    if (!row) {
       return;
     }
     
     const assignmentId = getCurrentAssignmentId();
     if (!assignmentId) {
       console.error('Unable to get current assignment ID');
+      return;
+    }
+    
+    // 如果是总分行，保存到assignment表
+    if (row.isTotal) {
+      const response = await fetch(`/api/uploads/assignments/${assignmentId}/total-deviation-percent`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          deviation_percent: deviationPercent
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save total deviation percent');
+      }
+      
+      console.log(`✅ Total deviation percent saved: ${deviationPercent}% for assignment ${assignmentId}`);
+      return;
+    }
+    
+    // 如果是普通criterion行，保存到baseline_score表
+    if (!row.criterion_id) {
       return;
     }
     
@@ -832,9 +1056,9 @@ async function saveDeviationPercent(rowIndex, deviationPercent) {
       throw new Error('Failed to save deviation percent');
     }
     
-    console.log(`Deviation percent saved: ${deviationPercent}% for criterion ${row.criterion_id}`);
+    console.log(`✅ Deviation percent saved: ${deviationPercent}% for criterion ${row.criterion_id}`);
   } catch (error) {
-    console.error('Error saving deviation percent:', error);
+    console.error('❌ Error saving deviation percent:', error);
     // Silently fail - deviation will still work in this session
   }
 }

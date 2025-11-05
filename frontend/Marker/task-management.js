@@ -516,7 +516,7 @@
     if (hasMarked) {
       // 如果已经mark过且finalized=true，显示Check Feedback按钮
       const feedbackBtn = createButton('Check Feedback', () => {
-        location.href = `/dashboard/marker/feedback?project=${projectId}&assignment_id=${assignment.assignment_id}`;
+        location.href = `/dashboard/marker/taskManagement`;
         console.log('assignment.id:', assignment.id, 'projectId:', projectId,'assignment_id:', assignment.assignment_id);
       });
       feedbackBtn.className = 'btn primary';

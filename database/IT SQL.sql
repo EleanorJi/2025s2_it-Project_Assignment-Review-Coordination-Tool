@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.assignment
     version integer DEFAULT 1,
     created_at timestamp without time zone DEFAULT now(),
     is_published boolean NOT NULL DEFAULT false,
+    total_deviation_percent numeric(5, 2) DEFAULT 5.0,
     CONSTRAINT assignment_pkey PRIMARY KEY (assignment_id),
     CONSTRAINT uq_assignment_project_round_version UNIQUE (project_id, round, version)
 );

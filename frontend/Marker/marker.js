@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="task-subtitle">Submitted ${formatDate(task.submitted_at)}</div>
             </div>
             <div class="task-actions">
-              <button class="btn primary sm" onclick="window.location.href='/dashboard/marker/feedback?project=${task.project_id}&assignment_id=${task.assignment_id}'">View</button>
+              <button class="btn primary sm" onclick="window.location.href='/dashboard/marker/taskManagement'">View</button>
             </div>
           </div>
         `).join('');
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const recentFeedbackList = document.getElementById('recent-feedback-list');
       if (data.recentFeedback && data.recentFeedback.length > 0) {
         recentFeedbackList.innerHTML = data.recentFeedback.map(feedback => `
-          <div class="feedback-item" style="cursor: pointer;" onclick="window.location.href='/dashboard/marker/feedback?project=${feedback.project_id}&assignment_id=${feedback.assignment_id}'">
+          <div class="feedback-item" style="cursor: pointer;" onclick="window.location.href='/dashboard/marker/taskManagement'">
             <div class="feedback-title">${feedback.project_name} - Assignment ${feedback.round}</div>
             <div class="feedback-content">${truncateText(feedback.comment, 100)}</div>
             <div class="feedback-meta">${formatDate(feedback.created_at)}</div>
