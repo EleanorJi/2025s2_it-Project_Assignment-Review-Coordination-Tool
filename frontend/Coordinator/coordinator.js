@@ -326,4 +326,27 @@ function initCommonNav() {
     displayOutliers();
   };
 
+  // Onboarding modal functions
+  window.showOnboarding = function() {
+    const overlay = document.getElementById('onboardingOverlay');
+    if (overlay) {
+      overlay.classList.add('active');
+    }
+  };
+
+  window.hideOnboarding = function() {
+    const overlay = document.getElementById('onboardingOverlay');
+    if (overlay) {
+      overlay.classList.remove('active');
+    }
+  };
+
+  // Close onboarding when clicking overlay
+  document.addEventListener('click', function(e) {
+    const overlay = document.getElementById('onboardingOverlay');
+    if (overlay && e.target === overlay) {
+      hideOnboarding();
+    }
+  });
+
 })();

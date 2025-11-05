@@ -516,7 +516,7 @@
     if (hasMarked) {
       // 如果已经mark过且finalized=true，显示Check Feedback按钮
       const feedbackBtn = createButton('Check Feedback', () => {
-        location.href = `/dashboard/marker/feedback?project=${projectId}&assignment_id=${assignment.assignment_id}`;
+        location.href = `/dashboard/marker/taskManagement`;
         console.log('assignment.id:', assignment.id, 'projectId:', projectId,'assignment_id:', assignment.assignment_id);
       });
       feedbackBtn.className = 'btn primary';
@@ -716,5 +716,28 @@
   window.goToResetPassword = function() {
     window.location.href = '/reset-password';
   };
+
+  // Onboarding modal functions
+  window.showOnboarding = function() {
+    const overlay = document.getElementById('onboardingOverlay');
+    if (overlay) {
+      overlay.classList.add('active');
+    }
+  };
+
+  window.hideOnboarding = function() {
+    const overlay = document.getElementById('onboardingOverlay');
+    if (overlay) {
+      overlay.classList.remove('active');
+    }
+  };
+
+  // Close onboarding when clicking overlay
+  document.addEventListener('click', function(e) {
+    const overlay = document.getElementById('onboardingOverlay');
+    if (overlay && e.target === overlay) {
+      hideOnboarding();
+    }
+  });
 
 })();

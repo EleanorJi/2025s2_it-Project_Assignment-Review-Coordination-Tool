@@ -1594,10 +1594,27 @@
         try {
           await submitMarks();
           showNotification('Marks submitted successfully', 'success');
-          // 提交后锁定所有输入框
-          lockAllInputs();
-          // 提交后禁用按钮
-          disableActionButtons();
+          
+          // 如果是Marker，提交成功后跳转到task-management页面
+          const currentUser = getCurrentUser();
+          if (currentUser.role === 'MARKER') {
+            setTimeout(() => {
+              // 从URL获取project参数
+              const urlParams = new URLSearchParams(window.location.search);
+              const projectId = urlParams.get('project');
+              if (projectId) {
+                window.location.href = `/dashboard/marker/taskManagement?project=${projectId}`;
+              } else {
+                window.location.href = '/dashboard/marker/taskManagement';
+              }
+            }, 1000); // 延迟1秒让用户看到成功消息
+          } else {
+            // Coordinator保留原有逻辑
+            // 提交后锁定所有输入框
+            lockAllInputs();
+            // 提交后禁用按钮
+            disableActionButtons();
+          }
         } catch (error) {
           console.error('Error submitting marks:', error);
           showNotification('Failed to submit marks', 'error');

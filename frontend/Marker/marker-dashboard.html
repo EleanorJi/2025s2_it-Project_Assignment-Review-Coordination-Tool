@@ -8,8 +8,59 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/Marker/marker-dashboard.css" />
+  <link rel="stylesheet" href="/Marker/onboarding-modal.css" />
 </head>
 <body>
+  <!-- Onboarding Modal -->
+  <div class="onboarding-overlay" id="onboardingOverlay">
+    <div class="onboarding-modal">
+      <div class="onboarding-header">
+        <h2>Welcome to Marker Dashboard</h2>
+        <button class="onboarding-close" onclick="hideOnboarding()">×</button>
+      </div>
+      
+      <div class="onboarding-content">
+        <div class="guide-section">
+          <h3>Overview Dashboard</h3>
+          <p>View your pending tasks, completed assignments, and recent feedback from coordinators at a glance.</p>
+          <button class="guide-button" onclick="window.location.href='/dashboard/marker'; hideOnboarding();">View Overview</button>
+        </div>
+        
+        <div class="guide-section">
+          <h3>Task Management</h3>
+          <p>View all your assigned marking tasks, download assignments and rubrics, and start marking work.</p>
+          <ul class="guide-list">
+            <li><span class="guide-number">1</span><span class="guide-text">Check your assigned tasks</span></li>
+            <li><span class="guide-number">2</span><span class="guide-text">Download rubric and assignment files</span></li>
+            <li><span class="guide-number">3</span><span class="guide-text">Start marking by clicking "Start Marking"</span></li>
+          </ul>
+          <button class="guide-button" onclick="window.location.href='/dashboard/marker/taskManagement'; hideOnboarding();">View Tasks</button>
+        </div>
+        
+        <div class="guide-section">
+          <h3>Marking Process</h3>
+          <p>Score assignments using the rubric, add detailed comments for each criterion, and save your work.</p>
+          <ul class="guide-list">
+            <li><span class="guide-number">1</span><span class="guide-text">Review the rubric criteria</span></li>
+            <li><span class="guide-number">2</span><span class="guide-text">Score each criterion</span></li>
+            <li><span class="guide-number">3</span><span class="guide-text">Add comments for justification</span></li>
+            <li><span class="guide-number">4</span><span class="guide-text">Submit when complete</span></li>
+          </ul>
+          <button class="guide-button" onclick="window.location.href='/dashboard/marker/taskManagement'; hideOnboarding();">Start Marking</button>
+        </div>
+        
+        <div class="guide-section">
+          <h3>View Feedback</h3>
+          <p>Check feedback from coordinators, compare your scores with baseline scores, and see detailed comments.</p>
+          <button class="guide-button" onclick="window.location.href='/dashboard/marker/taskManagement'; hideOnboarding();">View Feedback</button>
+        </div>
+      </div>
+      
+      <div class="onboarding-footer">
+        <button class="guide-button" onclick="hideOnboarding()">Got it!</button>
+      </div>
+    </div>
+  </div>
   <!-- Top bar -->
   <header class="topbar">
     <div class="brand">
@@ -30,6 +81,7 @@
       <nav class="nav">
         <a class="nav-item active" href="/dashboard/marker">Overview</a>
         <a class="nav-item" href="/dashboard/marker/taskManagement">Task Management</a>
+        <a class="nav-item" href="#" onclick="showOnboarding(); return false;">User Guide</a>
       </nav>
     </aside>
 
@@ -98,10 +150,6 @@
               <a href="/dashboard/marker/taskManagement" class="action-card">
                 <div class="action-title">Task Management</div>
                 <div class="action-desc">Manage your assignments</div>
-              </a>
-              <a href="/dashboard/marker/feedback" class="action-card">
-                <div class="action-title">View Feedback</div>
-                <div class="action-desc">Check coordinator feedback</div>
               </a>
             </div>
           </div>

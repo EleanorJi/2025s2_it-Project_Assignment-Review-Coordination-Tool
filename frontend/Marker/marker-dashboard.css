@@ -4,8 +4,13 @@
   --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);
-  font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif
+}
 
 /* Top bar - Professional Design */
 .topbar{
@@ -39,14 +44,10 @@ body{margin:0;background:var(--bg);color:var(--text);
 .dropdown-item:hover{background:linear-gradient(90deg,#f8fafc 0%,#fff 100%);border-left-color:#0F172A;text-decoration:none;padding-left:20px}
 
 /* Layout */
-.app{
-  display:grid;grid-template-columns:280px 1fr;gap:0;
-  background:#fff;
-}
+.app{display:grid;grid-template-columns:280px 1fr;gap:0;padding:16px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow)}
 .sidebar{
-  background:#edf0f2;border-right:1px solid var(--border);
-  padding:16px;height:calc(100vh - 70px);
-  position:sticky;top:70px;overflow-y:auto;
+  background:#edf0f2;border-right:1px solid var(--border);border-radius:var(--radius) 0 0 var(--radius);padding:16px;
+  height:calc(100vh - 96px);position:sticky;top:86px;
 }
 .nav{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .nav-item{
@@ -61,10 +62,7 @@ body{margin:0;background:var(--bg);color:var(--text);
 .nav-item.active::before,[aria-current="page"].nav-item::before{background:#fff;transform:scaleY(1)}
 
 .main{padding:16px}
-.panel{
-  background:#fff;
-  padding:18px 18px 22px;
-}
+.panel{background:#fff;border-radius:0 var(--radius) var(--radius) 0;padding:18px 18px 22px}
 
 /* Typography & cards */
 h1{font-size:32px;font-weight:800;margin:-18px 0 14px -2px;letter-spacing:-0.5px}

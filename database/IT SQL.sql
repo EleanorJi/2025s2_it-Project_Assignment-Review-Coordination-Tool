@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.assignment
     version integer DEFAULT 1,
     created_at timestamp without time zone DEFAULT now(),
     is_published boolean NOT NULL DEFAULT false,
+    total_deviation_percent numeric(5, 2) DEFAULT 5.0,
     CONSTRAINT assignment_pkey PRIMARY KEY (assignment_id),
     CONSTRAINT uq_assignment_project_round_version UNIQUE (project_id, round, version)
 );
@@ -51,6 +52,7 @@ CREATE TABLE IF NOT EXISTS public.baseline_score
     criterion_id bigint NOT NULL,
     score numeric(5, 2) NOT NULL,
 	finalized boolean DEFAULT false,
+	deviation_percent NUMERIC(5, 2) DEFAULT 5.0,
     comment text COLLATE pg_catalog."default",
     CONSTRAINT baseline_score_pkey PRIMARY KEY (baseline_id),
     CONSTRAINT uq_baseline_assignment_criterion UNIQUE (assignment_id, criterion_id)

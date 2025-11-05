@@ -19,16 +19,10 @@ router.get('/:assignmentId/:markerId', async (req, res) => {
         [assignmentId, markerId]
         );
 
-        if (feedbackResult.rows.length === 0) {
-        return res.status(404).json({
-            success: false,
-            message: 'No feedback found for the specified assignment and marker.'
-        });
-        }
-
+        // 返回空数组而不是404，让前端处理空状态
         res.json({
         success: true,
-        data: feedbackResult.rows
+        data: feedbackResult.rows || []
         });
     } catch (error) {
         console.error('Error fetching feedback:', error);
