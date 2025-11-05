@@ -168,24 +168,40 @@
       return projBlock;
     }
 
-    function renderAssignmentRow(item, projectId) {
-      const row = document.createElement('div');
-      row.className = 'pa-row';
-  
-      const left = document.createElement('div');
-      left.className = 'pa-muted';
-      left.textContent = item.title;
-  
-      const acts = document.createElement('div');
-      acts.className = 'pa-actions';
-      acts.append(
-        makeBtn('View report', () => openOrToast(`/dashboard/coordinator/feedback?project=${projectId}&assignment=${item.assignment_id}`,'Feedback not available')),
-        makeBtn('Open rubric', () => openOrToast(`/dashboard/coordinator/rubric?project=${projectId}`,'Rubric not available'))
-      );
-  
-      row.append(left, acts);
-      return row;
-    }
+function renderAssignmentRow(item, projectId) {
+  const row = document.createElement('div');
+  row.className = 'pa-row';
+
+  const left = document.createElement('div');
+  left.className = 'pa-muted';
+  left.textContent = item.title;
+
+  const acts = document.createElement('div');
+  acts.className = 'pa-actions';
+
+  // 推断 assignment round（根据标题或其他逻辑）
+  let assignmentRound = 'assignment1'; // 默认值
+
+  // 方法1：根据标题推断
+  if (item.title && item.title.toLowerCase().includes('assignment 2')) {
+    assignmentRound = 'assignment2';
+  } else if (item.title && item.title.toLowerCase().includes('assignment 1')) {
+    assignmentRound = 'assignment1';
+  }
+
+  // 方法2：如果有 assignment_id，可以根据 ID 模式推断
+  // 或者从数据中直接获取 round 字段
+
+  const feedbackUrl = `/dashboard/coordinator/feedback?project=${projectId}&assignment=${assignmentRound}`;
+
+  acts.append(
+    makeBtn('View report', () => openOrToast(feedbackUrl, 'Feedback not available')),
+    makeBtn('Open rubric', () => openOrToast(`/dashboard/coordinator/rubric?project=${projectId}`, 'Rubric not available'))
+  );
+
+  row.append(left, acts);
+  return row;
+}
   
     function makeBtn(text, onClick) {
       const b = document.createElement('button');
@@ -197,7 +213,7 @@
   
     function openOrToast(url, fallbackMsg) {
       if (url && url !== '#') {
-        window.open(url, '_blank', 'noopener');
+        window.location.href = url;
       } else {
         toast(fallbackMsg);
       }

@@ -14,25 +14,18 @@ console.log('📊 Feedback.js v2.6 loaded - adjustable deviation percentage');
 /* ===== 辅助函数 ===== */
 // 获取当前assignment ID
 function getCurrentAssignmentId() {
-  // 从URL参数获取assignment ID（兼容 assignment_id 与 assignment=数字）
-  const urlParams = new URLSearchParams(window.location.search);
-  const assignmentIdParam = urlParams.get('assignment_id') || urlParams.get('assignment');
-
-  if (assignmentIdParam && /^\d+$/.test(String(assignmentIdParam))) {
-    return parseInt(assignmentIdParam);
-  }
-
-  // 或者从全局变量获取
+  // 直接从全局变量获取，确保初始化时已经正确设置
   if (window.currentAssignmentId) {
     return window.currentAssignmentId;
   }
 
-  // 或者从localStorage获取
+  // 备用：从 localStorage 获取
   const stored = localStorage.getItem('currentAssignmentId');
   if (stored && /^\d+$/.test(String(stored))) {
     return parseInt(stored);
   }
 
+  console.warn('⚠️ 无法获取 currentAssignmentId');
   return null;
 }
 
@@ -447,7 +440,7 @@ async function loadModerationReport(assignmentId) {
       console.error("加载报告失败:", data.error);
       if (alignBody) {
         alignBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--bad);">
-          ❌ ${data.error || 'Failed to load moderation report'}
+          ❌ ${'Failed to load moderation report, no data available.'}
         </td></tr>`;
       }
       return;
@@ -545,7 +538,7 @@ async function loadModerationReport(assignmentId) {
     // 显示错误信息给用户
     if (alignBody) {
       alignBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--bad);">
-        ❌ Failed to load moderation report: ${err.message || 'Unknown error'}
+        ❌ Failed to load moderation report: ${'No data available.'}
       </td></tr>`;
     }
   }
@@ -891,89 +884,88 @@ function restoreScrollPosition() {
 
 /* ===== 初始化 ===== */
 (async function init() {
-  console.log('🚀 Initializing feedback page...');
-  // Initialize user info display
-  initUserInfo();
+   console.log('🚀 Initializing feedback page...');
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const projectIdParam = urlParams.get("project");
-  const assignmentParam = urlParams.get("assignment"); // assignment1 / assignment2 或 数字ID
+   const urlParams = new URLSearchParams(window.location.search);
+   const projectIdParam = urlParams.get("project");
+   const assignmentParam = urlParams.get("assignment"); // assignment1 或 assignment2
 
-  console.log('📋 URL params - project:', projectIdParam, 'assignment:', assignmentParam);
+   console.log('🔍 [前端初始化] URL参数:', {
+     projectIdParam,
+     assignmentParam,
+     fullURL: window.location.href
+   });
 
-  // 先尝试直接解析 assignmentId（兼容历史链接：completed/archived 从 Past Assignment 进入）
-  const directAssignmentId = getCurrentAssignmentId();
-  console.log('🔍 Direct assignment ID:', directAssignmentId);
-  
-  if (directAssignmentId) {
-    try {
-      // 通过 assignmentId 反查 projectId
-      const asRes = await fetch(`/api/uploads/assignment/${directAssignmentId}/status`);
-      if (!asRes.ok) throw new Error('Failed to fetch assignment status');
-      const asData = await asRes.json();
-      const projectId = asData.assignment?.project_id;
-      if (!projectId) throw new Error('Project ID not found for assignment');
+   if (!projectIdParam || !assignmentParam) {
+     console.error("❌ 缺少 project 或 assignment 参数");
+     return;
+   }
 
-      // 保存项目与作业信息
-      currentProjectId = projectId;
-      window.currentAssignmentId = directAssignmentId;
-      localStorage.setItem('currentAssignmentId', String(directAssignmentId));
-      console.log(`✅ Assignment ID (direct) stored: ${directAssignmentId}`);
+   // 解析 round 信息
+   let round = null;
+   if (assignmentParam === "assignment1") {
+     round = 1;
+   } else if (assignmentParam === "assignment2") {
+     round = 2;
+   } else {
+     console.error("❌ 无效的 assignment 参数:", assignmentParam);
+     return;
+   }
 
-      // 加载Rubric与文件信息后渲染
-      await loadRubricDescriptions(projectId);
-      await loadProjectFileInfo(projectId);
-      debugCurrentState();
-      loadModerationReport(directAssignmentId);
-      return; // 已完成初始化
-    } catch (err) {
-      console.error('通过 assignmentId 初始化失败，回退到项目方式:', err);
-      // 继续尝试使用 project + assignmentKey 方式
-    }
-  }
+   console.log('🔍 [前端初始化] 解析出的 round:', round);
 
-  // Fallback：使用 project + assignmentKey（assignment1/assignment2）方式
-  if (!projectIdParam || !assignmentParam) {
-    console.warn("缺少 project 或 assignment 参数");
-    return;
-  }
+   // 保存项目ID到全局变量
+   currentProjectId = projectIdParam;
 
-  // 保存项目ID到全局变量
-  currentProjectId = projectIdParam;
-  await loadRubricDescriptions(projectIdParam);
+   try {
+     // 使用 latest-ids 接口获取对应的 assignment ID
+     console.log('🔍 [前端初始化] 调用 latest-ids API, projectId:', projectIdParam);
+     const res = await fetch(`/api/uploads/project/${projectIdParam}/latest-ids`);
 
-  try {
-    const res = await fetch(`/api/uploads/project/${projectIdParam}/latest-ids`);
-    const data = await res.json();
+     if (!res.ok) {
+       throw new Error(`latest-ids API 返回错误: ${res.status}`);
+     }
 
-    let assignmentId = null;
-    if (assignmentParam === "assignment1" && data.assignment1) {
-      assignmentId = data.assignment1.assignment_id;
-    } else if (assignmentParam === "assignment2" && data.assignment2) {
-      assignmentId = data.assignment2.assignment_id;
-    }
+     const data = await res.json();
+     console.log('🔍 [前端初始化] latest-ids API 响应:', data);
 
-    if (!assignmentId) {
-      console.error("未找到对应的 assignmentId");
-      return;
-    }
+     // 根据 round 获取对应的 assignment ID
+     let assignmentId = null;
+     if (round === 1 && data.assignment1) {
+       assignmentId = data.assignment1.assignment_id;
+       console.log('🔍 [前端初始化] 使用 assignment1 ID:', assignmentId);
+     } else if (round === 2 && data.assignment2) {
+       assignmentId = data.assignment2.assignment_id;
+       console.log('🔍 [前端初始化] 使用 assignment2 ID:', assignmentId);
+     }
 
-    // 将assignment ID存储到全局变量和localStorage中，供feedback功能使用
-    window.currentAssignmentId = assignmentId;
-    localStorage.setItem('currentAssignmentId', assignmentId.toString());
-    console.log(`✅ Assignment ID stored: ${assignmentId}`);
+     if (!assignmentId) {
+       console.error(`❌ 未找到 project ${projectIdParam} 的 round ${round} 的 assignment`);
+       console.error('❌ latest-ids 数据:', data);
+       return;
+     }
 
-    // 调试当前状态
-    debugCurrentState();
+     // 存储 assignment ID
+     window.currentAssignmentId = assignmentId;
+     localStorage.setItem('currentAssignmentId', assignmentId.toString());
 
-    // 加载项目文件信息
-    await loadProjectFileInfo(projectIdParam);
-    
-    loadModerationReport(assignmentId);
-  } catch (err) {
-    console.error("初始化失败:", err);
-  }
-})();
+     console.log('🔍 [前端初始化] 最终存储:', {
+       projectId: projectIdParam,
+       round: round,
+       assignmentId: assignmentId
+     });
+
+     // 加载 rubric 描述和项目文件信息
+     await loadRubricDescriptions(projectIdParam);
+     await loadProjectFileInfo(projectIdParam);
+
+     // 加载 moderation report
+     loadModerationReport(assignmentId);
+
+   } catch (err) {
+     console.error("❌ 初始化失败:", err);
+   }
+ })();
 
 /* ===== Back按钮和Export CSV按钮 ===== */
 document.getElementById('backBtn')?.addEventListener('click', () => {
