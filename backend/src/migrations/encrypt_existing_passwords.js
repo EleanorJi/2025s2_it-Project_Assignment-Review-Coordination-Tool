@@ -5,7 +5,7 @@ async function encryptExistingPasswords() {
   try {
     console.log('Starting password encryption migration...');
     
-    // 获取所有用户
+    // Get all users
     const usersResult = await db.query('SELECT user_id, password_hash FROM app_user');
     const users = usersResult.rows;
     
@@ -16,7 +16,7 @@ async function encryptExistingPasswords() {
     
     for (const user of users) {
       try {
-        // 检查密码是否已经是加密的（bcrypt hash通常以$2a$、$2b$或$2y$开头）
+        // Check if password is already encrypted (bcrypt hash usually starts with $2a$, $2b$ or $2y$)
         if (user.password_hash.startsWith('$2a$') || 
             user.password_hash.startsWith('$2b$') || 
             user.password_hash.startsWith('$2y$')) {
@@ -24,10 +24,10 @@ async function encryptExistingPasswords() {
           continue;
         }
         
-        // 加密密码
+        // Encrypt password
         const hashedPassword = await hashPassword(user.password_hash);
         
-        // 更新数据库
+        // Update database
         await db.query(
           'UPDATE app_user SET password_hash = $1 WHERE user_id = $2',
           [hashedPassword, user.user_id]
@@ -50,7 +50,7 @@ async function encryptExistingPasswords() {
   }
 }
 
-// 如果直接运行此脚本
+// If running this script directly
 if (require.main === module) {
   encryptExistingPasswords()
     .then(() => {

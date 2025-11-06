@@ -351,11 +351,11 @@ router.post('/batch-commit', async (req, res) => {
         );
         console.log(`✅ Database record inserted successfully: upload_id=${rows[0].upload_id}`);
 
-        // 移动文件 - 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
-        console.log('📂 移动文件...');
+        // Move file - use copyFile + unlink instead of rename to solve cross filesystem issues
+        console.log('📂 Moving file...');
         await fsp.copyFile(tempAbs, permAbs);
         await fsp.unlink(tempAbs);
-        console.log(`✅ 文件移动成功: ${tempAbs} -> ${permAbs}`);
+        console.log(`✅ File moved successfully: ${tempAbs} -> ${permAbs}`);
 
         uploadResults.push({
           file_type: file.name,

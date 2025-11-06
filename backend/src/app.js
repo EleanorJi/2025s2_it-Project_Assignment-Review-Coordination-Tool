@@ -16,7 +16,7 @@ app.use(cookieParser());
 
 // Static file service
 app.use(express.static(path.join(__dirname, '../../frontend'))); // Frontend static files
-// Serve frontend static files新增
+// Serve frontend static files (new)
 
 app.use('/static', express.static(path.join(__dirname, '../../uploads')));
 

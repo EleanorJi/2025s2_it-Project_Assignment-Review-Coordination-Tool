@@ -8,11 +8,11 @@ const dashboardRoutes = require('./dashboard');
 router.use('/dashboard', dashboardRoutes);
 
 router.get('/login', (req, res) => {
-  // 返回HTML页面给浏览器渲染（保持路由隐藏）
+  // Return HTML page for browser rendering (keep route hidden)
   res.sendFile(path.join(__dirname, '../../frontend/login.html'));
 });
 
-// 添加邀请式注册页面路由
+// Add invitation-based registration page route
 router.get('/signup', async (req, res) => {
   const { token } = req.query;
 
@@ -21,7 +21,7 @@ router.get('/signup', async (req, res) => {
   }
 
   try {
-    // 验证token是否有效（与invitationController中的逻辑一致）
+    // Validate if token is valid (consistent with logic in invitationController)
     const result = await db.query(
       'SELECT * FROM invitations WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()',
       [token]
@@ -31,7 +31,7 @@ router.get('/signup', async (req, res) => {
       return res.status(400).send('Invalid or expired invitation token');
     }
 
-    // token有效，发送注册页面
+    // Token is valid, send registration page
     res.sendFile(path.join(__dirname, '../../frontend/signup.html'));
   } catch (error) {
     console.error('Signup page error:', error);
@@ -46,7 +46,7 @@ router.get('/reset-password', async (req, res) => {
   // If token is provided, validate it (for forgot password flow)
   if (token) {
     try {
-      // 验证token是否有效
+      // Validate if token is valid
       const userResult = await db.query(
         'SELECT user_id as id, reset_token_expiry FROM app_user WHERE reset_token = $1 AND reset_token_expiry > NOW()',
         [token]
@@ -56,7 +56,7 @@ router.get('/reset-password', async (req, res) => {
         return res.status(400).send('Invalid or expired reset token');
       }
 
-      // 发送重置密码页面 (with valid token)
+      // Send reset password page (with valid token)
       res.sendFile(path.join(__dirname, '../../frontend/reset-password.html'));
       return;
     } catch (error) {
