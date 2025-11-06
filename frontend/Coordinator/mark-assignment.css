@@ -630,7 +630,7 @@ body {
   overflow-x: hidden;
   padding: 0;
   position: relative;
-  /* 启用原生滚动 */
+  /* Enable native scrolling */
   overscroll-behavior: auto;
 }
 
@@ -646,9 +646,9 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   max-width: 100%;
   height: auto;
-  /* A4比例设置 */
+  /* A4 ratio settings */
   width: 100%;
-  max-width: 800px; /* 设置最大宽度 */
+  max-width: 800px; /* Set maximum width */
 }
 
 #pdf-canvas {
@@ -719,14 +719,14 @@ body {
   text-align: center;
 }
 
-/* 重复的document-viewer规则已删除，使用上面的设置 */
+/* Duplicate document-viewer rules removed, using settings above */
 
 .document-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  flex-shrink: 0; /* 防止控制栏被压缩 */
+  flex-shrink: 0; /* Prevent control bar from being compressed */
 }
 
 /* Add scrollbar styles */

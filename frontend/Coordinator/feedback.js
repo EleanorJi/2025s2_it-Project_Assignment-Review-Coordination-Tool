@@ -1,35 +1,35 @@
-/* ===== 全局变量 ===== */
+/* ===== Global Variables ===== */
 let rows = [];
 let markerKeys = [];
 let markersInfo = [];
-let rubricDescriptions = {}; // 新增：保存 rubric description
-let currentProjectId = null; // 保存当前项目ID
-let currentAssignmentInfo = null; // 保存当前assignment信息
-let currentRubricInfo = null; // 保存当前rubric信息
-let currentRubricData = null; // 保存当前rubric的详细数据
-let deviationPercent = 5.0; // 当前deviation百分比（默认5%）
+let rubricDescriptions = {}; // New: Store rubric description
+let currentProjectId = null; // Store current project ID
+let currentAssignmentInfo = null; // Store current assignment information
+let currentRubricInfo = null; // Store current rubric information
+let currentRubricData = null; // Store detailed rubric data
+let deviationPercent = 5.0; // Current deviation percentage (default 5%)
 
 console.log('📊 Feedback.js v2.6 loaded - adjustable deviation percentage');
 
-/* ===== 辅助函数 ===== */
-// 获取当前assignment ID
+/* ===== Helper Functions ===== */
+// Get current assignment ID
 function getCurrentAssignmentId() {
-  // 直接从全局变量获取，确保初始化时已经正确设置
+  // Get directly from global variable, ensuring it's correctly set during initialization
   if (window.currentAssignmentId) {
     return window.currentAssignmentId;
   }
 
-  // 备用：从 localStorage 获取
+  // Fallback: Get from localStorage
   const stored = localStorage.getItem('currentAssignmentId');
   if (stored && /^\d+$/.test(String(stored))) {
     return parseInt(stored);
   }
 
-  console.warn('⚠️ 无法获取 currentAssignmentId');
+  console.warn('⚠️ Unable to get currentAssignmentId');
   return null;
 }
 
-// 调试函数：显示当前状态
+// Debug function: Display current state
 function debugCurrentState() {
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get('project');
@@ -45,9 +45,9 @@ function debugCurrentState() {
 }
 
 
-// 获取当前用户ID
+// Get current user ID
 function getCurrentUserId() {
-  // 从localStorage获取用户信息
+  // Get user info from localStorage
   const userInfo = localStorage.getItem('userInfo');
   if (userInfo) {
     try {
@@ -58,12 +58,12 @@ function getCurrentUserId() {
     }
   }
 
-  // 或者从全局变量获取
+  // Or get from global variable
   if (window.currentUserId) {
     return window.currentUserId;
   }
 
-  // 兜底：从 cookie 读取 userId（后端认证中间件写入）
+  // Fallback: Read userId from cookie (set by backend auth middleware)
   try {
     const cookieStr = document.cookie || '';
     const match = cookieStr.match(/(?:^|;\s*)userId=([^;]+)/);
@@ -73,12 +73,12 @@ function getCurrentUserId() {
     }
   } catch (_) {}
 
-  // 临时修复：使用默认的coordinator ID
+  // Temporary fix: Use default coordinator ID
   console.warn('⚠️ No user info found, using default coordinator ID: 1');
-  return 1; // 默认使用admin用户作为coordinator
+  return 1; // Default to admin user as coordinator
 }
 
-// DOM 元素
+// DOM Elements
 const alignBody   = document.querySelector('#alignmentTable tbody');
 const alignHeader = document.getElementById('alignHeader');
 const diffSection = document.getElementById('diffSection');
@@ -89,24 +89,24 @@ const allDiffSection = document.getElementById('allDiffSection');
 const allDiffHeader  = document.getElementById('allDiffHeader');
 const allDiffBody    = document.querySelector('#allDifferenceTable tbody');
 
-/* ===== 工具函数 ===== */
+/* ===== Utility Functions ===== */
 function fmt(n){ const v=Number(n); if(Number.isNaN(v)) return ''; return (v%1===0)? v.toString() : v.toFixed(2); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function isOut(v, lo, hi){ return v<lo || v>hi; }
 
 /**
- * 生成带grade level标签的分数显示
- * @param {number} score - 分数
- * @param {string|null} levelName - Grade level名称
- * @param {string|null} levelDescription - Grade level描述
- * @param {boolean} showGradeLevel - 是否显示grade level标签（默认true）
- * @param {string} cellClass - 单元格颜色类（'good-cell', 'warning-cell', 'bad-cell'等）
- * @returns {string} - HTML字符串
+ * Generate score display with grade level badge
+ * @param {number} score - Score value
+ * @param {string|null} levelName - Grade level name
+ * @param {string|null} levelDescription - Grade level description
+ * @param {boolean} showGradeLevel - Whether to show grade level badge (default true)
+ * @param {string} cellClass - Cell color class ('good-cell', 'warning-cell', 'bad-cell', etc.)
+ * @returns {string} - HTML string
  */
 function formatScoreWithGradeLevel(score, levelName, levelDescription, showGradeLevel = true, cellClass = '') {
   const scoreHtml = fmt(score);
   
-  // 如果不显示grade level或没有levelName，只返回分数
+  // If not showing grade level or no levelName, return only score
   if (!showGradeLevel || !levelName) {
     return scoreHtml;
   }
@@ -114,10 +114,10 @@ function formatScoreWithGradeLevel(score, levelName, levelDescription, showGrade
   const escapedLevelName = escapeHtml(levelName);
   const escapedDescription = levelDescription ? escapeHtml(levelDescription) : '';
   
-  // 如果description存在，显示在data-description中
+  // If description exists, display in data-description
   const dataDesc = escapedDescription ? `data-description="${escapedLevelName}: ${escapedDescription}"` : '';
   
-  // 根据cellClass设置标签颜色
+  // Set badge color based on cellClass
   let badgeStyle = 'font-size:11px;padding:2px 6px;border-radius:4px;cursor:help;font-weight:600;border:1px solid;position:relative;';
   
   if (cellClass === 'bad-cell') {
@@ -143,12 +143,12 @@ function formatScoreWithGradeLevel(score, levelName, levelDescription, showGrade
 }
 
 /**
- * 动态定位tooltip，确保完全可见
+ * Dynamically position tooltip to ensure it's fully visible
  */
 function setupGradeLevelTooltips() {
-  // 移除旧的事件监听器，避免重复绑定
+  // Remove old event listeners to avoid duplicate bindings
   document.querySelectorAll('.grade-level-badge[data-description]').forEach(badge => {
-    // 移除可能存在的旧事件监听器
+    // Remove any existing old event listeners
     const newBadge = badge.cloneNode(true);
     badge.parentNode.replaceChild(newBadge, badge);
   });
@@ -161,18 +161,18 @@ function setupGradeLevelTooltips() {
       const description = this.getAttribute('data-description');
       if (!description) return;
       
-      // 创建tooltip元素
+      // Create tooltip element
       tooltip = document.createElement('div');
       tooltip.className = 'grade-level-tooltip';
       tooltip.textContent = description;
       document.body.appendChild(tooltip);
       
-      // 先计算tooltip的尺寸（需要先添加到DOM）
+      // Calculate tooltip dimensions first (needs to be added to DOM)
       const tooltipRect = tooltip.getBoundingClientRect();
       const tooltipWidth = tooltipRect.width;
       const tooltipHeight = tooltipRect.height;
       
-      // 计算可用空间
+      // Calculate available space
       const spaceRight = window.innerWidth - badgeRect.right;
       const spaceLeft = badgeRect.left;
       const spaceTop = badgeRect.top;
@@ -182,23 +182,23 @@ function setupGradeLevelTooltips() {
       let top = badgeRect.top + (badgeRect.height / 2);
       let showOnLeft = false;
       
-      // 如果右侧空间不足，显示在左侧
+      // If right side space is insufficient, display on left
       if (spaceRight < tooltipWidth + 20 && spaceLeft > tooltipWidth + 20) {
         left = badgeRect.left - tooltipWidth - 8;
         showOnLeft = true;
         tooltip.classList.add('tooltip-left');
       }
       
-      // 调整垂直位置，确保不超出视口
-      // 尝试垂直居中
+      // Adjust vertical position to ensure it doesn't exceed viewport
+      // Try vertical centering
       top = badgeRect.top + (badgeRect.height / 2);
       
-      // 如果tooltip底部超出视口，向上调整
+      // If tooltip bottom exceeds viewport, adjust upward
       if (top + tooltipHeight / 2 > window.innerHeight - 10) {
         top = window.innerHeight - tooltipHeight / 2 - 10;
       }
       
-      // 如果tooltip顶部超出视口，向下调整
+      // If tooltip top exceeds viewport, adjust downward
       if (top - tooltipHeight / 2 < 10) {
         top = tooltipHeight / 2 + 10;
       }
@@ -218,15 +218,15 @@ function setupGradeLevelTooltips() {
 }
 
 /**
- * 获取单元格颜色类
- * @param {number} value - marker的分数
- * @param {object} row - 行数据
- * @returns {string} - CSS类名
+ * Get cell color class
+ * @param {number} value - Marker's score
+ * @param {object} row - Row data
+ * @returns {string} - CSS class name
  */
 function getCellClass(value, row) {
   if (value == null) return '';
   
-  // 对于Total行，使用三级颜色系统（warning为50%的deviation）
+  // For Total row, use three-level color system (warning is 50% of deviation)
   if (row.isTotal) {
     const rowDeviation = row.deviationPercent || 5.0;
     const warningPercent = rowDeviation * 0.5;
@@ -242,7 +242,7 @@ function getCellClass(value, row) {
     }
   }
   
-  // 对于普通criterion行，使用两级颜色系统
+  // For regular criterion rows, use two-level color system
   if (value >= row.lower && value <= row.upper) {
     return 'good-cell';
   } else {
@@ -251,16 +251,16 @@ function getCellClass(value, row) {
 }
 
 /**
- * 根据每行的deviation百分比动态重新计算所有行的lower和upper
+ * Dynamically recalculate lower and upper for all rows based on each row's deviation percentage
  */
 function recalculateDeviationRanges() {
   rows.forEach(row => {
     const rowDeviation = row.deviationPercent || 5.0;
-    // 动态计算lower和upper
+    // Dynamically calculate lower and upper
     row.lower = Math.round((row.chair * (1 - rowDeviation / 100)) * 100) / 100;
     row.upper = Math.round((row.chair * (1 + rowDeviation / 100)) * 100) / 100;
     
-    // 对于Total行，还需要更新warning范围
+    // For Total row, also update warning range
     if (row.isTotal) {
       const warningPercent = rowDeviation * 0.5;
       row.warningLower = Math.round((row.chair * (1 - warningPercent / 100)) * 100) / 100;
@@ -268,12 +268,12 @@ function recalculateDeviationRanges() {
     }
   });
   
-  // 重新渲染表格
+  // Re-render tables
   renderAlignment(markerSelect.value);
   renderDifferences(markerSelect.value);
 }
 
-/* ===== 从后端加载 Rubric 描述 ===== */
+/* ===== Load Rubric Descriptions from Backend ===== */
 async function loadRubricDescriptions(projectId) {
   try {
     const res = await fetch(`/api/uploads/project/${projectId}/status`);
@@ -282,10 +282,10 @@ async function loadRubricDescriptions(projectId) {
       const rubricRes = await fetch(`/api/uploads/rubric/${data.rubric.rubric_id}/details`);
       const rubricData = await rubricRes.json();
       
-      // 保存完整的rubric数据
+      // Save complete rubric data
       currentRubricData = rubricData;
       
-      // 保存rubric描述用于显示
+      // Save rubric descriptions for display
       rubricDescriptions = {};
       (rubricData.criteria || []).forEach(c => {
         rubricDescriptions[c.title] = c.description || "";
@@ -294,11 +294,11 @@ async function loadRubricDescriptions(projectId) {
       console.log("✅ Full rubric data loaded:", currentRubricData);
     }
   } catch (e) {
-    console.error("加载 rubric 描述失败:", e);
+    console.error("Failed to load rubric descriptions:", e);
   }
 }
 
-/* ===== 获取当前项目的文件信息 ===== */
+/* ===== Get Current Project File Information ===== */
 async function loadProjectFileInfo(projectId) {
   try {
     const res = await fetch(`/api/uploads/project/${projectId}/status`);
@@ -310,7 +310,7 @@ async function loadProjectFileInfo(projectId) {
     }
     
     if (data?.assignments && data.assignments.length > 0) {
-      // 获取当前assignment的信息
+      // Get current assignment information
       const assignmentId = getCurrentAssignmentId();
       if (assignmentId) {
         const assignment = data.assignments.find(a => a.assignment_id === assignmentId);
@@ -321,22 +321,22 @@ async function loadProjectFileInfo(projectId) {
       }
     }
   } catch (e) {
-    console.error("加载项目文件信息失败:", e);
+    console.error("Failed to load project file information:", e);
   }
 }
 
-/* ===== 生成Excel文件 ===== */
+/* ===== Generate Excel File ===== */
 function generateExcelFromRubric(rubricData) {
-  // 创建新的工作簿
+  // Create new workbook
   const wb = XLSX.utils.book_new();
   
-  // 准备数据
+  // Prepare data
   const worksheetData = [];
   
-  // 添加标题行 - Max Score列移到最后
+  // Add header row - Max Score column moved to last
   const headers = ['Criterion', 'Description'];
   
-  // 获取所有grade levels
+  // Get all grade levels
   const allGradeLevels = [];
   rubricData.criteria.forEach(criterion => {
     criterion.grade_levels.forEach(level => {
@@ -351,67 +351,67 @@ function generateExcelFromRubric(rubricData) {
     });
   });
   
-  // 按seq_no排序
+  // Sort by seq_no
   allGradeLevels.sort((a, b) => a.seq_no - b.seq_no);
   
-  // 添加grade level列标题
+  // Add grade level column headers
   allGradeLevels.forEach(level => {
     headers.push(`${level.level_name} (${level.min_score}-${level.max_score})`);
   });
   
-  // 添加Criteria Score列标题（在最后）
+  // Add Criteria Score column header (at the end)
   headers.push('Criteria Score');
   
   worksheetData.push(headers);
   
-  // 添加每个criterion的数据
+  // Add data for each criterion
   rubricData.criteria.forEach(criterion => {
     const row = [
       criterion.title,
       criterion.description || ''
     ];
     
-    // 为每个grade level添加描述
+    // Add description for each grade level
     allGradeLevels.forEach(level => {
       const gradeLevel = criterion.grade_levels.find(gl => gl.level_name === level.level_name);
       row.push(gradeLevel ? gradeLevel.description : '');
     });
     
-    // 添加Criteria Score（在最后，添加"/"前缀）
+    // Add Criteria Score (at the end, with "/" prefix)
     row.push(`/${criterion.max_score}`);
     
     worksheetData.push(row);
   });
   
-  // 创建工作表
+  // Create worksheet
   const ws = XLSX.utils.aoa_to_sheet(worksheetData);
   
-  // 设置列宽
+  // Set column widths
   const colWidths = [
     { wch: 20 }, // Criterion
     { wch: 30 }, // Description
   ];
   
-  // 为grade level列设置宽度
+  // Set width for grade level columns
   allGradeLevels.forEach(() => {
     colWidths.push({ wch: 25 });
   });
   
-  // 为Criteria Score列设置宽度
+  // Set width for Criteria Score column
   colWidths.push({ wch: 15 }); // Criteria Score
   
   ws['!cols'] = colWidths;
   
-  // 添加工作表到工作簿
+  // Add worksheet to workbook
   XLSX.utils.book_append_sheet(wb, ws, 'Rubric');
   
-  // 生成Excel文件
+  // Generate Excel file
   const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   
   return excelBuffer;
 }
 
-/* ===== 下载Excel文件 ===== */
+/* ===== Download Excel File ===== */
 function downloadExcelFile(excelBuffer, filename) {
   const blob = new Blob([excelBuffer], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
@@ -423,7 +423,7 @@ function downloadExcelFile(excelBuffer, filename) {
   link.click();
 }
 
-/* ===== 从后端加载 Moderation Report ===== */
+/* ===== Load Moderation Report from Backend ===== */
 async function loadModerationReport(assignmentId) {
   console.log('📥 Loading moderation report for assignment:', assignmentId);
   try {
@@ -437,7 +437,7 @@ async function loadModerationReport(assignmentId) {
     console.log('📥 Moderation report response:', data);
     
     if (data.error) {
-      console.error("加载报告失败:", data.error);
+      console.error("Failed to load report:", data.error);
       if (alignBody) {
         alignBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--bad);">
           ❌ ${'Failed to load moderation report, no data available.'}
@@ -465,15 +465,15 @@ async function loadModerationReport(assignmentId) {
 
     rows = data.criteria.map(c => {
       const markersObj = {};
-      const markerCommentsObj = {}; // 添加marker comments存储
-      const markerGradeLevelsObj = {}; // 存储marker的grade level信息
+      const markerCommentsObj = {}; // Store marker comments
+      const markerGradeLevelsObj = {}; // Store marker's grade level information
       (c.marker_scores || []).forEach(ms => {
         markersObj[ms.marker_id] = ms.score;
-        // 存储marker的comment
+        // Store marker's comment
         if (ms.comment) {
           markerCommentsObj[ms.marker_id] = ms.comment;
         }
-        // 存储marker的grade level信息
+        // Store marker's grade level information
         if (ms.level_name) {
           markerGradeLevelsObj[ms.marker_id] = {
             level_name: ms.level_name,
@@ -484,25 +484,25 @@ async function loadModerationReport(assignmentId) {
       return {
         criterion: `${c.title} / ${c.max_score}`,
         title: c.title,
-        chair: c.baseline_score, // ⚡ Coordinator的分数，从后端baseline_score提取
-        chairComment: c.baseline_comment || '', // 添加baseline comment
-        chairLevelName: c.baseline_level_name || null, // Coordinator分数的grade level名称
-        chairLevelDescription: c.baseline_level_description || null, // Coordinator分数的grade level描述
+        chair: c.baseline_score, // ⚡ Coordinator's score, extracted from backend baseline_score
+        chairComment: c.baseline_comment || '', // Add baseline comment
+        chairLevelName: c.baseline_level_name || null, // Coordinator score's grade level name
+        chairLevelDescription: c.baseline_level_description || null, // Coordinator score's grade level description
         lower: c.range_lower,
         upper: c.range_upper,
         percent: c.baseline_percentage,
-        maxScore: c.max_score, // 保存criterion的总分
+        maxScore: c.max_score, // Store criterion's total score
         markers: markersObj,
-        markerComments: markerCommentsObj, // 添加marker comments
-        markerGradeLevels: markerGradeLevelsObj, // 添加marker grade levels
+        markerComments: markerCommentsObj, // Add marker comments
+        markerGradeLevels: markerGradeLevelsObj, // Add marker grade levels
         description: rubricDescriptions[c.title] || "",
         total: null,
-        deviationPercent: c.deviation_percent || 5.0, // 从API获取deviation_percent
-        criterion_id: c.criterion_id // 保存criterion_id用于保存deviation
+        deviationPercent: c.deviation_percent || 5.0, // Get deviation_percent from API
+        criterion_id: c.criterion_id // Store criterion_id for saving deviation
       };
     });
 
-    // 添加总分行 (Note: Total row uses deviation_percent from assignment table)
+    // Add total row (Note: Total row uses deviation_percent from assignment table)
     const totals = data.totals;
     const totalMarkersObj = {};
     (totals.marker_totals || []).forEach(mt => {
@@ -510,32 +510,32 @@ async function loadModerationReport(assignmentId) {
     });
     rows.push({
       criterion: "Total / " + totals.max_total_score,
-      chair: totals.baseline_total, // ⚡ Coordinator的总分，从后端baseline_total提取
+      chair: totals.baseline_total, // ⚡ Coordinator's total score, extracted from backend baseline_total
       lower: totals.range_lower, // range for Total row (based on total_deviation_percent)
       upper: totals.range_upper, // range for Total row (based on total_deviation_percent)
       warningLower: totals.warning_lower, // warning range for Total row (50% of total_deviation_percent)
       warningUpper: totals.warning_upper, // warning range for Total row (50% of total_deviation_percent)
       percent: totals.baseline_percentage,
-      maxScore: totals.max_total_score, // 保存总分
+      maxScore: totals.max_total_score, // Store total score
       markers: totalMarkersObj,
-      markerComments: {}, // 总分行没有comments
+      markerComments: {}, // Total row has no comments
       description: "",
       total: null,
-      isTotal: true, // 标记这是总分行
-      deviationPercent: totals.deviation_percent || 5.0 // 从API获取total的deviation_percent
+      isTotal: true, // Mark this as total row
+      deviationPercent: totals.deviation_percent || 5.0 // Get total's deviation_percent from API
     });
 
-    // 先根据每行的deviation百分比重新计算范围和颜色
+    // First recalculate ranges and colors based on each row's deviation percentage
     console.log('📊 Recalculating deviation ranges and updating selectors');
     recalculateDeviationRanges();
     updateMarkerSelectors();
     
-    // 恢复滚动位置（在所有内容加载完成后）
+    // Restore scroll position (after all content is loaded)
     setTimeout(restoreScrollPosition, 100);
 
   } catch (err) {
-    console.error("获取 moderation report 出错:", err);
-    // 显示错误信息给用户
+    console.error("Error getting moderation report:", err);
+    // Display error message to user
     if (alignBody) {
       alignBody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--bad);">
         ❌ Failed to load moderation report: ${'No data available.'}
@@ -544,7 +544,7 @@ async function loadModerationReport(assignmentId) {
   }
 }
 
-/* ===== Alignment 表格 ===== */
+/* ===== Alignment Table ===== */
 function renderAlignment(selected='all'){
   console.log('🎨 renderAlignment called, selected:', selected, 'rows:', rows.length);
   let headers = ["Criterion","Unit Chair","Deviation %","Range Lower","Range Upper"];
@@ -553,11 +553,11 @@ function renderAlignment(selected='all'){
       const m = markersInfo.find(mi=>mi.id===id);
       return m ? m.name : `Marker ${id}`;
     }));
-    // All Markers视图：不添加Total和Comment列
+    // All Markers view: Don't add Total and Comment columns
   } else {
     const m = markersInfo.find(mi=>mi.id==selected);
     headers.push(m ? m.name : `Marker ${selected}`);
-    // 单个marker视图：只添加Comment列，不添加Total列
+    // Single marker view: Only add Comment column, don't add Total column
     headers.push('Comment');
   }
   
@@ -586,24 +586,24 @@ function renderAlignment(selected='all'){
   rows.forEach((r,index)=>{
     const deviationPercent = r.deviationPercent || 5.0;
     
-    // 处理description，移除重复的title部分
+    // Process description, remove duplicate title part
     let displayDescription = r.description || "";
     if (displayDescription && r.title) {
-      // 如果description以title开头，移除title部分
+      // If description starts with title, remove title part
       const titleTrimmed = r.title.trim();
       if (displayDescription.trim().startsWith(titleTrimmed)) {
         displayDescription = displayDescription.trim().substring(titleTrimmed.length).trim();
-        // 如果移除后以标点符号开头，也移除
+        // If it starts with punctuation after removal, also remove it
         if (displayDescription.match(/^[:\-\s]/)) {
           displayDescription = displayDescription.replace(/^[:\-\s]+/, '').trim();
         }
       }
     }
     
-    // 只在单个marker视图显示grade level标签，All Markers视图不显示
+    // Only show grade level badge in single marker view, not in All Markers view
     const showGradeLevel = selected !== 'all';
     
-    // Coordinator的grade level标签保持灰色（不传递cellClass，使用默认灰色）
+    // Coordinator's grade level badge stays gray (don't pass cellClass, use default gray)
     const tds = [
       `<td style="text-align:left"><div>${escapeHtml(r.criterion)}</div>${displayDescription ? `<div style="font-size:12px;color:#666;">${escapeHtml(displayDescription)}</div>` : ''}</td>`,
       `<td>${formatScoreWithGradeLevel(r.chair, r.chairLevelName, r.chairLevelDescription, showGradeLevel, '')}</td>`,
@@ -616,23 +616,23 @@ function renderAlignment(selected='all'){
         const v=r.markers?.[id];
         if(v==null) tds.push('<td class="muted">–</td>');
         else {
-          // All Markers视图：不显示grade level标签
+          // All Markers view: Don't show grade level badge
           tds.push(`<td class="${getCellClass(v, r)}">${fmt(v)}</td>`);
         }
       });
-      // All Markers视图：不添加Total和Comment列
+      // All Markers view: Don't add Total and Comment columns
     } else {
       const v=r.markers?.[selected];
       if(v==null) tds.push('<td class="muted">–</td>');
       else {
-        // 单个marker视图：显示grade level标签，颜色与单元格颜色同步
+        // Single marker view: Show grade level badge, color synchronized with cell color
         const gradeLevel = r.markerGradeLevels?.[selected];
         const cellClass = getCellClass(v, r);
         const cellContent = formatScoreWithGradeLevel(v, gradeLevel?.level_name, gradeLevel?.level_description, true, cellClass);
         tds.push(`<td class="${cellClass}">${cellContent}</td>`);
       }
 
-      // 单个marker视图：只添加Comment列，不添加Total列
+      // Single marker view: Only add Comment column, don't add Total column
       const comment = r.markerComments?.[selected] || '';
       tds.push(`<td style="text-align:left;max-width:200px;word-wrap:break-word;">${comment ? escapeHtml(comment) : '<span class="muted">—</span>'}</td>`);
     }
@@ -640,11 +640,11 @@ function renderAlignment(selected='all'){
     const tr=document.createElement('tr'); tr.innerHTML=tds.join(''); alignBody.appendChild(tr);
   });
   
-  // 设置tooltip事件监听
+  // Setup tooltip event listeners
   setTimeout(setupGradeLevelTooltips, 0);
 }
 
-/* ===== Difference 表格（支持 all 和单 marker） ===== */
+/* ===== Difference Table (supports all and single marker) ===== */
 function renderDifferences(selected='all'){
   if (!allDiffSection || !diffSection || !allDiffHeader || !allDiffBody || !diffHeader || !diffBody) {
     console.error('❌ Difference table elements not found!');
@@ -677,7 +677,7 @@ function renderDifferences(selected='all'){
     }
 
     rows.forEach(r=>{
-      // 处理description，移除重复的title部分
+      // Process description, remove duplicate title part
       let displayDescription = r.description || "";
       if (displayDescription && r.title) {
         const titleTrimmed = r.title.trim();
@@ -689,25 +689,25 @@ function renderDifferences(selected='all'){
         }
       }
       
-      // All Markers视图：不显示grade level标签
+      // All Markers view: Don't show grade level badge
       const cells = [
         `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div>${displayDescription ? `<div style="font-size:12px;color:#666;">${escapeHtml(displayDescription)}</div>` : ''}</td>`,
         `<td>${fmt(r.chair)}</td>`
       ];
       markerKeys.forEach(id=>{
-        const v = r.markers?.[id]; // marker的分数
-        const coordinatorScore = r.chair; // coordinator的分数（从后端baseline_score提取）
-        const maxScore = r.maxScore; // criterion的总分
+        const v = r.markers?.[id]; // Marker's score
+        const coordinatorScore = r.chair; // Coordinator's score (extracted from backend baseline_score)
+        const maxScore = r.maxScore; // Criterion's total score
         
-        // Percent = marker的分数 / criterion的总分 * 100
+        // Percent = marker's score / criterion's total score * 100
         const percent = (v!=null && maxScore!=null && maxScore > 0) ? Number(((v / maxScore) * 100).toFixed(2)) : null;
         
-        // Difference = marker的分数 - coordinator的分数
+        // Difference = marker's score - coordinator's score
         const diff = (v!=null && coordinatorScore!=null) ? Number((v - coordinatorScore).toFixed(2)) : null;
         
-        // 移除标红逻辑，不再使用bad-cell类
-        // 顺序改为：Difference, Marker, Percent
-        // All Markers视图不显示grade level标签
+        // Remove red highlighting logic, no longer using bad-cell class
+        // Order changed to: Difference, Marker, Percent
+        // All Markers view doesn't show grade level badge
         cells.push(`<td>${diff==null?'—':fmt(diff)}</td>`);
         cells.push(`<td>${v==null?'—':fmt(v)}</td>`);
         cells.push(`<td>${percent==null?'—':fmt(percent)+'%'}</td>`);
@@ -717,7 +717,7 @@ function renderDifferences(selected='all'){
       allDiffBody.appendChild(tr);
     });
     
-    // 设置tooltip事件监听
+    // Setup tooltip event listeners
     setTimeout(setupGradeLevelTooltips, 0);
   } else {
     diffSection.classList.remove('hidden');
@@ -735,20 +735,20 @@ function renderDifferences(selected='all'){
     }
 
     rows.forEach(r=>{
-      const v = r.markers?.[selected]; // marker的分数
-      const coordinatorScore = r.chair; // coordinator的分数（从后端baseline_score提取）
-      const maxScore = r.maxScore; // criterion的总分
+      const v = r.markers?.[selected]; // Marker's score
+      const coordinatorScore = r.chair; // Coordinator's score (extracted from backend baseline_score)
+      const maxScore = r.maxScore; // Criterion's total score
       
-      // Percent = marker的分数 / criterion的总分 * 100
+      // Percent = marker's score / criterion's total score * 100
       const percent = (v!=null && maxScore!=null && maxScore > 0) ? Number(((v / maxScore) * 100).toFixed(2)) : null;
       
-      // Difference = marker的分数 - coordinator的分数
+      // Difference = marker's score - coordinator's score
       const diff = (v!=null && coordinatorScore!=null) ? Number((v - coordinatorScore).toFixed(2)) : null;
       
-      // 移除标红逻辑，不再使用bad-cell类
-      // 顺序改为：Criterion, Unit Chair, Difference, Marker, Percent
+      // Remove red highlighting logic, no longer using bad-cell class
+      // Order changed to: Criterion, Unit Chair, Difference, Marker, Percent
 
-      // 处理description，移除重复的title部分
+      // Process description, remove duplicate title part
       let displayDescription = r.description || "";
       if (displayDescription && r.title) {
         const titleTrimmed = r.title.trim();
@@ -761,7 +761,7 @@ function renderDifferences(selected='all'){
       }
 
       const gradeLevel = r.markerGradeLevels?.[selected];
-      // Difference表格中所有grade level标签都保持灰色（不传递cellClass）
+      // All grade level badges in Difference table stay gray (don't pass cellClass)
       const cells = [
         `<td style="text-align:left;max-width:250px;overflow:hidden;text-overflow:ellipsis"><div>${escapeHtml(r.criterion)}</div>${displayDescription ? `<div style="font-size:12px;color:#666;">${escapeHtml(displayDescription)}</div>` : ''}</td>`,
         `<td>${formatScoreWithGradeLevel(coordinatorScore, r.chairLevelName, r.chairLevelDescription, true, '')}</td>`,
@@ -774,12 +774,12 @@ function renderDifferences(selected='all'){
       diffBody.appendChild(tr);
     });
     
-    // 设置tooltip事件监听
+    // Setup tooltip event listeners
     setTimeout(setupGradeLevelTooltips, 0);
   }
 }
 
-/* ===== 更新下拉框 ===== */
+/* ===== Update Dropdown ===== */
 function updateMarkerSelectors(){
   console.log('🔍 updateMarkerSelectors called, markersInfo:', markersInfo);
   const sel = document.getElementById("markerSelect");
@@ -791,24 +791,24 @@ function updateMarkerSelectors(){
   sel.innerHTML = `<option value="all">All Markers</option>`;
   markersInfo.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
 
-  // 恢复之前选择的marker（如果有）
+  // Restore previously selected marker (if any)
   const savedMarker = sessionStorage.getItem('selectedMarker');
   console.log('📝 Saved marker:', savedMarker);
   
   if (savedMarker && savedMarker !== 'all') {
-    // 检查这个marker是否还存在
+    // Check if this marker still exists
     const markerExists = markersInfo.some(m => m.id.toString() === savedMarker);
     if (markerExists) {
       console.log('✅ Restoring saved marker:', savedMarker);
       sel.value = savedMarker;
-      // 触发change事件来更新显示
+      // Trigger change event to update display
       const event = new Event('change');
       sel.dispatchEvent(event);
-      return; // 已触发change，直接返回
+      return; // Change event already triggered, return directly
     }
   }
   
-  // 如果没有保存的marker或marker不存在，默认选择'all'并触发change事件来渲染表格
+  // If no saved marker or marker doesn't exist, default to 'all' and trigger change event to render table
   console.log('📋 Setting default to "all" and triggering change');
   sel.value = 'all';
   const event = new Event('change');
@@ -816,14 +816,14 @@ function updateMarkerSelectors(){
 
   const allSel = document.getElementById("allFbSelect");
   if (allSel) {
-    allSel.innerHTML = "";
-    markersInfo.forEach(m => allSel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+  allSel.innerHTML = "";
+  markersInfo.forEach(m => allSel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
   } else {
     console.warn('⚠️ allFbSelect element not found');
   }
 }
 
-/* ===== 用户名显示和下拉菜单 ===== */
+/* ===== Username Display and Dropdown Menu ===== */
 function initUserInfo() {
   // Get user info from localStorage
   const userStr = localStorage.getItem('user');
@@ -866,115 +866,115 @@ window.goToResetPassword = function() {
   window.location.href = '/reset-password';
 };
 
-/* ===== 保存和恢复滚动位置 ===== */
-// 页面卸载前保存滚动位置
+/* ===== Save and Restore Scroll Position ===== */
+// Save scroll position before page unload
 window.addEventListener('beforeunload', () => {
   sessionStorage.setItem('scrollPosition', window.scrollY || window.pageYOffset);
 });
 
-// 恢复滚动位置
+// Restore scroll position
 function restoreScrollPosition() {
   const savedPosition = sessionStorage.getItem('scrollPosition');
   if (savedPosition) {
     window.scrollTo(0, parseInt(savedPosition));
-    // 清除保存的位置（可选）
+    // Clear saved position (optional)
     // sessionStorage.removeItem('scrollPosition');
   }
 }
 
-/* ===== 初始化 ===== */
+/* ===== Initialization ===== */
 (async function init() {
-   console.log('🚀 Initializing feedback page...');
-   initUserInfo();
+  console.log('🚀 Initializing feedback page...');
+  initUserInfo();
 
-   const urlParams = new URLSearchParams(window.location.search);
-   const projectIdParam = urlParams.get("project");
-   const assignmentParam = urlParams.get("assignment"); // assignment1 或 assignment2
+  const urlParams = new URLSearchParams(window.location.search);
+  const projectIdParam = urlParams.get("project");
+   const assignmentParam = urlParams.get("assignment"); // assignment1 or assignment2
 
-   console.log('🔍 [前端初始化] URL参数:', {
+   console.log('🔍 [Frontend Init] URL parameters:', {
      projectIdParam,
      assignmentParam,
      fullURL: window.location.href
    });
 
    if (!projectIdParam || !assignmentParam) {
-     console.error("❌ 缺少 project 或 assignment 参数");
+     console.error("❌ Missing project or assignment parameter");
      return;
    }
 
-   // 解析 round 信息
+   // Parse round information
    let round = null;
    if (assignmentParam === "assignment1") {
      round = 1;
    } else if (assignmentParam === "assignment2") {
      round = 2;
    } else {
-     console.error("❌ 无效的 assignment 参数:", assignmentParam);
-     return;
-   }
+     console.error("❌ Invalid assignment parameter:", assignmentParam);
+    return;
+  }
 
-   console.log('🔍 [前端初始化] 解析出的 round:', round);
+   console.log('🔍 [Frontend Init] Parsed round:', round);
+   
+   // Save project ID to global variable
+  currentProjectId = projectIdParam;
 
-   // 保存项目ID到全局变量
-   currentProjectId = projectIdParam;
-
-   try {
-     // 使用 latest-ids 接口获取对应的 assignment ID
-     console.log('🔍 [前端初始化] 调用 latest-ids API, projectId:', projectIdParam);
-     const res = await fetch(`/api/uploads/project/${projectIdParam}/latest-ids`);
+  try {
+     // Use latest-ids API to get corresponding assignment ID
+     console.log('🔍 [Frontend Init] Calling latest-ids API, projectId:', projectIdParam);
+    const res = await fetch(`/api/uploads/project/${projectIdParam}/latest-ids`);
 
      if (!res.ok) {
-       throw new Error(`latest-ids API 返回错误: ${res.status}`);
+       throw new Error(`latest-ids API returned error: ${res.status}`);
      }
 
-     const data = await res.json();
-     console.log('🔍 [前端初始化] latest-ids API 响应:', data);
+    const data = await res.json();
+     console.log('🔍 [Frontend Init] latest-ids API response:', data);
 
-     // 根据 round 获取对应的 assignment ID
-     let assignmentId = null;
+     // Get corresponding assignment ID based on round
+    let assignmentId = null;
      if (round === 1 && data.assignment1) {
-       assignmentId = data.assignment1.assignment_id;
-       console.log('🔍 [前端初始化] 使用 assignment1 ID:', assignmentId);
+      assignmentId = data.assignment1.assignment_id;
+       console.log('🔍 [Frontend Init] Using assignment1 ID:', assignmentId);
      } else if (round === 2 && data.assignment2) {
-       assignmentId = data.assignment2.assignment_id;
-       console.log('🔍 [前端初始化] 使用 assignment2 ID:', assignmentId);
-     }
+      assignmentId = data.assignment2.assignment_id;
+       console.log('🔍 [Frontend Init] Using assignment2 ID:', assignmentId);
+    }
 
-     if (!assignmentId) {
-       console.error(`❌ 未找到 project ${projectIdParam} 的 round ${round} 的 assignment`);
-       console.error('❌ latest-ids 数据:', data);
-       return;
-     }
+    if (!assignmentId) {
+       console.error(`❌ Assignment not found for project ${projectIdParam} round ${round}`);
+       console.error('❌ latest-ids data:', data);
+      return;
+    }
 
-     // 存储 assignment ID
-     window.currentAssignmentId = assignmentId;
-     localStorage.setItem('currentAssignmentId', assignmentId.toString());
+     // Store assignment ID
+    window.currentAssignmentId = assignmentId;
+    localStorage.setItem('currentAssignmentId', assignmentId.toString());
 
-     console.log('🔍 [前端初始化] 最终存储:', {
+     console.log('🔍 [Frontend Init] Final storage:', {
        projectId: projectIdParam,
        round: round,
        assignmentId: assignmentId
      });
 
-     // 加载 rubric 描述和项目文件信息
+     // Load rubric descriptions and project file information
      await loadRubricDescriptions(projectIdParam);
-     await loadProjectFileInfo(projectIdParam);
+    await loadProjectFileInfo(projectIdParam);
+    
+     // Load moderation report
+    loadModerationReport(assignmentId);
 
-     // 加载 moderation report
-     loadModerationReport(assignmentId);
+  } catch (err) {
+     console.error("❌ Initialization failed:", err);
+  }
+})();
 
-   } catch (err) {
-     console.error("❌ 初始化失败:", err);
-   }
- })();
-
-/* ===== Back按钮和Export CSV按钮 ===== */
+/* ===== Back Button and Export CSV Button ===== */
 document.getElementById('backBtn')?.addEventListener('click', () => {
   window.history.back();
 });
 
 /* ===== Deviation Percentage Control (per row) ===== */
-// 使用事件委托处理动态添加的输入框
+// Use event delegation to handle dynamically added input fields
 document.addEventListener('change', (e) => {
   if (e.target.classList.contains('deviation-input-row')) {
     const rowIndex = parseInt(e.target.getAttribute('data-row-index'));
@@ -982,18 +982,18 @@ document.addEventListener('change', (e) => {
     const clampedValue = Math.max(0, Math.min(newValue, 50));
     e.target.value = clampedValue.toFixed(1);
     
-    // 更新对应行的deviation
+    // Update deviation for corresponding row
     if (rows[rowIndex]) {
       rows[rowIndex].deviationPercent = clampedValue;
       recalculateDeviationRanges();
       
-      // 保存到后端
+      // Save to backend
       saveDeviationPercent(rowIndex, clampedValue);
     }
   }
 });
 
-// 保存deviation百分比到后端
+// Save deviation percentage to backend
 async function saveDeviationPercent(rowIndex, deviationPercent) {
   try {
     const row = rows[rowIndex];
@@ -1007,7 +1007,7 @@ async function saveDeviationPercent(rowIndex, deviationPercent) {
       return;
     }
     
-    // 如果是总分行，保存到assignment表
+    // If it's total row, save to assignment table
     if (row.isTotal) {
       const response = await fetch(`/api/uploads/assignments/${assignmentId}/total-deviation-percent`, {
         method: 'PUT',
@@ -1028,7 +1028,7 @@ async function saveDeviationPercent(rowIndex, deviationPercent) {
       return;
     }
     
-    // 如果是普通criterion行，保存到baseline_score表
+    // If it's regular criterion row, save to baseline_score table
     if (!row.criterion_id) {
       return;
     }
@@ -1056,7 +1056,7 @@ async function saveDeviationPercent(rowIndex, deviationPercent) {
   }
 }
 
-/* ===== 下载功能 ===== */
+/* ===== Download Functionality ===== */
 document.getElementById('downloadRubric')?.addEventListener('click', () => {
   if (!currentRubricData) {
     alert('Rubric data not found. Please ensure the rubric has been uploaded and processed.');
@@ -1064,13 +1064,13 @@ document.getElementById('downloadRubric')?.addEventListener('click', () => {
   }
   
   try {
-    // 生成Excel文件
+    // Generate Excel file
     const excelBuffer = generateExcelFromRubric(currentRubricData);
     
-    // 生成文件名
+    // Generate filename
     const filename = `rubric_${new Date().toISOString().slice(0, 10)}.xlsx`;
     
-    // 下载Excel文件
+    // Download Excel file
     downloadExcelFile(excelBuffer, filename);
     
     console.log("✅ Rubric Excel file generated and downloaded");
@@ -1086,7 +1086,7 @@ document.getElementById('downloadAssignment')?.addEventListener('click', () => {
     return;
   }
   
-  // 创建下载链接
+  // Create download link
   const link = document.createElement('a');
   link.href = currentAssignmentInfo.download_url;
   link.download = currentAssignmentInfo.file_name;
@@ -1125,15 +1125,15 @@ document.getElementById('exportCsv')?.addEventListener('click', () => {
   link.click();
 });
 
-/* ===== 单 marker Feedback 事件绑定 ===== */
+/* ===== Single Marker Feedback Event Binding ===== */
 const fbTextarea = document.getElementById('fbTextarea');
 const fbSend = document.getElementById('fbSend');
 const fbHint = document.getElementById('fbHint');
 
-// 保存当前选中的 marker ID
+// Save currently selected marker ID
 let currentMarkerId = null;
 
-/* ===== Marker切换事件（合并版本，避免重复监听） ===== */
+/* ===== Marker Switch Event (merged version, avoid duplicate listeners) ===== */
 console.log('🔧 Setting up markerSelect event listener');
 if (!markerSelect) {
   console.error('❌ markerSelect is null when setting up event listener!');
@@ -1143,18 +1143,18 @@ if (!markerSelect) {
   const selected = e.target.value;
   currentMarkerId = selected !== 'all' ? selected : null;
   
-  // 保存当前滚动位置
+  // Save current scroll position
   const scrollPosition = window.scrollY || window.pageYOffset;
   
-  // 保存选择状态到sessionStorage，刷新后保持选择
+  // Save selection state to sessionStorage, maintain selection after refresh
   sessionStorage.setItem('selectedMarker', selected);
   
-  // 渲染表格
+  // Render tables
   console.log('🎨 Rendering tables for:', selected);
   renderAlignment(selected);
   renderDifferences(selected);
   
-  // 显示/隐藏feedback区域
+  // Show/hide feedback area
   if (currentMarkerId) {
     console.log(`✅ Marker selected: ${currentMarkerId}`);
     document.getElementById('feedback').classList.remove('hidden');
@@ -1162,7 +1162,7 @@ if (!markerSelect) {
     document.getElementById('allDiffSection').classList.add('hidden');
     document.getElementById('allFeedback').classList.add('hidden');
     
-    // 获取marker的实际姓名
+    // Get marker's actual name
     const selectedMarker = markersInfo.find(m => m.id == currentMarkerId);
     const markerName = selectedMarker ? selectedMarker.name : `Marker ${currentMarkerId}`;
     document.getElementById('fbTitle').textContent = `Feedback for ${markerName}`;
@@ -1174,35 +1174,35 @@ if (!markerSelect) {
     document.getElementById('allFeedback').classList.remove('hidden');
   }
   
-  // 恢复滚动位置，防止页面跳转
+  // Restore scroll position, prevent page jump
   requestAnimationFrame(() => {
     window.scrollTo(0, scrollPosition);
   });
 });
 } // end of else block for markerSelect
 
-// 点击 Send Feedback 按钮
+// Click Send Feedback button
 if (fbSend && fbTextarea && fbHint) {
-  fbSend.addEventListener('click', async () => {
-    if (!currentMarkerId) return alert('Please select a marker first.');
-    const content = fbTextarea.value.trim();
-    if (!content) return alert('Please write some feedback before sending.');
+fbSend.addEventListener('click', async () => {
+  if (!currentMarkerId) return alert('Please select a marker first.');
+  const content = fbTextarea.value.trim();
+  if (!content) return alert('Please write some feedback before sending.');
 
-    fbSend.disabled = true;
-    fbHint.textContent = 'Sending...';
+  fbSend.disabled = true;
+  fbHint.textContent = 'Sending...';
 
   try {
-    // 获取当前assignment ID (从URL或全局变量)
+    // Get current assignment ID (from URL or global variable)
     const assignmentId = getCurrentAssignmentId();
     if (!assignmentId) {
       throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
     }
 
-    // 获取marker的实际姓名
+    // Get marker's actual name
     const selectedMarker = markersInfo.find(m => m.id == currentMarkerId);
     const markerName = selectedMarker ? selectedMarker.name : `Marker ${currentMarkerId}`;
     
-    // 发送feedback到后端API
+    // Send feedback to backend API
     const response = await fetch('/api/feedback', {
       method: 'POST',
       headers: {
@@ -1213,7 +1213,7 @@ if (fbSend && fbTextarea && fbHint) {
         marker_id: currentMarkerId,
         content: content,
         title: `Feedback for ${markerName}`,
-        created_by: getCurrentUserId() // 假设你有这个函数获取当前用户ID
+        created_by: getCurrentUserId() // Assume you have this function to get current user ID
       })
     });
 
@@ -1226,7 +1226,7 @@ if (fbSend && fbTextarea && fbHint) {
     console.log(`✅ Feedback sent successfully:`, result);
 
     fbHint.textContent = '✅ Feedback sent successfully!';
-    fbTextarea.value = ''; // 清空输入框
+    fbTextarea.value = ''; // Clear input field
     setTimeout(() => (fbHint.textContent = ''), 3000);
   } catch (err) {
     console.error('❌ Failed to send feedback:', err);
@@ -1236,39 +1236,39 @@ if (fbSend && fbTextarea && fbHint) {
   } finally {
     fbSend.disabled = false;
   }
-  });
+});
 } else {
   console.warn('⚠️ Feedback elements (fbSend, fbTextarea, fbHint) not found');
 }
-/* ===== All markers Feedback 事件绑定 ===== */
+/* ===== All Markers Feedback Event Binding ===== */
 const allFbTextarea = document.getElementById('allFbTextarea');
 const allFbSend = document.getElementById('allFbSend');
 const allFbSelect = document.getElementById('allFbSelect');
 const allFbHint = document.getElementById('allFbHint');
 
 if (allFbSend && allFbTextarea && allFbSelect && allFbHint) {
-  allFbSend.addEventListener('click', async () => {
-    const markerId = allFbSelect.value;
-    const content = allFbTextarea.value.trim();
+allFbSend.addEventListener('click', async () => {
+  const markerId = allFbSelect.value;
+  const content = allFbTextarea.value.trim();
 
-    if (!markerId) return alert('Please select a marker to send feedback.');
-    if (!content) return alert('Please write feedback content.');
+  if (!markerId) return alert('Please select a marker to send feedback.');
+  if (!content) return alert('Please write feedback content.');
 
-    allFbSend.disabled = true;
-    allFbHint.textContent = 'Sending...';
+  allFbSend.disabled = true;
+  allFbHint.textContent = 'Sending...';
 
   try {
-    // 获取当前assignment ID
+    // Get current assignment ID
     const assignmentId = getCurrentAssignmentId();
     if (!assignmentId) {
       throw new Error('Assignment ID not found. Please ensure you are accessing this page with proper URL parameters (project and assignment).');
     }
 
-    // 获取marker的实际姓名
+    // Get marker's actual name
     const selectedMarker = markersInfo.find(m => m.id == markerId);
     const markerName = selectedMarker ? selectedMarker.name : `Marker ${markerId}`;
 
-    // 发送feedback到后端API
+    // Send feedback to backend API
     const response = await fetch('/api/feedback', {
       method: 'POST',
       headers: {
@@ -1292,7 +1292,7 @@ if (allFbSend && allFbTextarea && allFbSelect && allFbHint) {
     console.log(`✅ Feedback sent successfully:`, result);
 
     allFbHint.textContent = '✅ Feedback sent successfully!';
-    allFbTextarea.value = ''; // 清空输入框
+    allFbTextarea.value = ''; // Clear input field
     setTimeout(() => (allFbHint.textContent = ''), 3000);
   } catch (err) {
     console.error('❌ Failed to send feedback:', err);
@@ -1302,7 +1302,7 @@ if (allFbSend && allFbTextarea && allFbSelect && allFbHint) {
   } finally {
     allFbSend.disabled = false;
   }
-  });
+});
 } else {
   console.warn('⚠️ All markers feedback elements (allFbSend, allFbTextarea, allFbSelect, allFbHint) not found');
 }

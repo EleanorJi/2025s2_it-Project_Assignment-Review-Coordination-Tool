@@ -179,18 +179,18 @@ function renderAssignmentRow(item, projectId) {
   const acts = document.createElement('div');
   acts.className = 'pa-actions';
 
-  // 推断 assignment round（根据标题或其他逻辑）
-  let assignmentRound = 'assignment1'; // 默认值
-
-  // 方法1：根据标题推断
+  // Infer assignment round (based on title or other logic)
+  let assignmentRound = 'assignment1'; // Default value
+  
+  // Method 1: Infer from title
   if (item.title && item.title.toLowerCase().includes('assignment 2')) {
     assignmentRound = 'assignment2';
   } else if (item.title && item.title.toLowerCase().includes('assignment 1')) {
     assignmentRound = 'assignment1';
   }
 
-  // 方法2：如果有 assignment_id，可以根据 ID 模式推断
-  // 或者从数据中直接获取 round 字段
+  // Method 2: If assignment_id exists, can infer from ID pattern
+  // Or get round field directly from data
 
   const feedbackUrl = `/dashboard/coordinator/feedback?project=${projectId}&assignment=${assignmentRound}`;
 
@@ -244,7 +244,7 @@ function renderAssignmentRow(item, projectId) {
       }
     }
 
-    // 初始化dropdown和logout功能
+    // Initialize dropdown and logout functionality
     const accountEl = document.querySelector('.account');
     const dropdown = document.querySelector('.dropdown-menu');
     const allDropdownItems = document.querySelectorAll('.dropdown-item');
@@ -256,13 +256,13 @@ function renderAssignmentRow(item, projectId) {
         dropdown.classList.toggle('show');
       });
 
-      // 点击其他地方关闭下拉菜单
+      // Click elsewhere to close dropdown menu
       document.addEventListener('click', () => {
         dropdown.classList.remove('show');
       });
     }
 
-    // 登出功能
+    // Logout functionality
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -292,7 +292,7 @@ function renderAssignmentRow(item, projectId) {
       });
     }
 
-    // 全局logout函数
+    // Global logout function
     window.logout = async function() {
       try {
         const response = await fetch('/api/auth/logout', {

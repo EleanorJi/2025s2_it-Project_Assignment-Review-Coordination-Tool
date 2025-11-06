@@ -3,7 +3,7 @@
   const $  = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 
-  // 显示用户名
+  // Display username
   function displayUsername() {
     try {
       const rawUser = localStorage.getItem("user");
@@ -21,12 +21,12 @@
     }
   }
 
-  // 全局goToResetPassword函数
+  // Global goToResetPassword function
   window.goToResetPassword = function() {
     window.location.href = '/reset-password';
   };
 
-  // 初始化dropdown
+  // Initialize dropdown
   function initDropdown() {
     const usernameEl = document.getElementById('username');
     const dropdown = document.querySelector('.dropdown-menu');
@@ -39,13 +39,13 @@
         dropdown.classList.toggle('show');
       });
 
-      // 点击其他地方关闭下拉菜单
+      // Click elsewhere to close dropdown menu
       document.addEventListener('click', () => {
         dropdown.classList.remove('show');
       });
     }
 
-    // 登出功能
+    // Logout functionality
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -76,14 +76,14 @@
     }
   }
 
-  // 初始化
+  // Initialize
   function init() {
-    console.log('🚀 Marker Past Task 初始化...');
+    console.log('🚀 Marker Past Task initializing...');
     displayUsername();
     initDropdown();
     
-    // 这里可以添加获取past task数据的逻辑
-    // 目前显示空状态
+    // Here you can add logic to fetch past task data
+    // Currently showing empty state
     const container = $('#paContainer');
     if (container) {
       container.innerHTML = `
@@ -94,10 +94,10 @@
     }
   }
 
-  // 页面加载完成后初始化
+  // Initialize after page loads
   document.addEventListener('DOMContentLoaded', init);
 
-  // 全局logout函数
+  // Global logout function
   window.logout = async function() {
     try {
       const response = await fetch('/api/auth/logout', {
@@ -129,6 +129,7 @@
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
     }
   };
 
@@ -136,6 +137,7 @@
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
     }
   };
 
@@ -144,6 +146,16 @@
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay && e.target === overlay) {
       hideOnboarding();
+    }
+  });
+
+  // Close onboarding with ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('onboardingOverlay');
+      if (overlay && overlay.classList.contains('active')) {
+        hideOnboarding();
+      }
     }
   });
 

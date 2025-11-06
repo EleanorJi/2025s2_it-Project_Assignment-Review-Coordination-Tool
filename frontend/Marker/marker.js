@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // ✅ display username
+  //  display username
   try {
     const rawUser = localStorage.getItem("user");
     if (rawUser) {
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 初始化dropdown
+  // Initialize dropdown
   const accountEl = document.querySelector('.account');
   const dropdown = document.querySelector('.dropdown-menu');
   const allDropdownItems = document.querySelectorAll('.dropdown-item');
@@ -71,13 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.classList.toggle('show');
     });
 
-    // 点击其他地方关闭下拉菜单
+    // Click elsewhere to close dropdown menu
     document.addEventListener('click', () => {
       dropdown.classList.remove('show');
     });
   }
 
-  // 登出功能
+  // Logout functionality
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-  // 全局logout函数
+  // Global logout function
   window.logout = async function() {
     try {
       const response = await fetch('/api/auth/logout', {
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 全局goToResetPassword函数
+  // Global goToResetPassword function
   window.goToResetPassword = function() {
     window.location.href = '/reset-password';
   };
@@ -255,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
     }
   };
 
@@ -262,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
     }
   };
 
@@ -270,6 +272,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay && e.target === overlay) {
       hideOnboarding();
+    }
+  });
+
+  // Close onboarding with ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('onboardingOverlay');
+      if (overlay && overlay.classList.contains('active')) {
+        hideOnboarding();
+      }
     }
   });
    

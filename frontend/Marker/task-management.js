@@ -3,15 +3,15 @@
   const $  = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 
-  // ---------- 状态管理 ----------
+  // ---------- State Management ----------
   const state = {
     tasks: []
   };
 
-  // 展开状态管理
+  // Expand state management
   const EXPANDED_STATES_KEY = 'taskManagement_marker_expandedStates';
   
-  // 保存展开状态到localStorage
+  // Save expand state to localStorage
   function saveExpandedStates() {
     const expandedStates = {
       tasks: {},
@@ -19,7 +19,7 @@
       assignments: {}
     };
     
-    // 保存task sections的展开状态
+    // Save task sections' expand state
     $$('.tm-task-section').forEach(section => {
       const taskId = section.dataset.taskId;
       const content = section.querySelector('.tm-task-content');
@@ -28,7 +28,7 @@
       }
     });
     
-    // 保存rubric sections的展开状态
+    // Save rubric sections' expand state
     $$('.tm-rubric-section').forEach(section => {
       const taskId = section.closest('.tm-task-section')?.dataset.taskId;
       const actions = section.querySelector('.tm-rubric-actions');
@@ -37,7 +37,7 @@
       }
     });
     
-    // 保存assignment sections的展开状态
+    // Save assignment sections' expand state
     $$('.tm-assignment-item').forEach(section => {
       const taskId = section.closest('.tm-task-section')?.dataset.taskId;
       const assignmentId = section.querySelector('.tm-assignment-title')?.textContent;
@@ -53,7 +53,7 @@
     localStorage.setItem(EXPANDED_STATES_KEY, JSON.stringify(expandedStates));
   }
   
-  // 从localStorage恢复展开状态
+  // Restore expand state from localStorage
   function restoreExpandedStates() {
     try {
       const savedStates = localStorage.getItem(EXPANDED_STATES_KEY);
@@ -61,7 +61,7 @@
       
       const expandedStates = JSON.parse(savedStates);
       
-      // 恢复task sections的展开状态
+      // Restore task sections' expand state
       if (expandedStates.tasks) {
         Object.keys(expandedStates.tasks).forEach(taskId => {
           const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
@@ -76,7 +76,7 @@
         });
       }
       
-      // 恢复rubric sections的展开状态
+      // Restore rubric sections' expand state
       if (expandedStates.rubrics) {
         Object.keys(expandedStates.rubrics).forEach(taskId => {
           const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
@@ -94,7 +94,7 @@
         });
       }
       
-      // 恢复assignment sections的展开状态
+      // Restore assignment sections' expand state
       if (expandedStates.assignments) {
         Object.keys(expandedStates.assignments).forEach(taskId => {
           const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
@@ -127,10 +127,10 @@
     listProjects: '/api/uploads/projects',
   };
 
-  // 从后端获取项目数据（只显示active的assignment）
+  // Fetch project data from backend (only show active assignments)
   async function fetchProjects() {
     try {
-      console.log('🔄 开始获取项目数据...');
+      console.log('🔄 Starting to fetch project data...');
       console.log('🔗 API URL:', API.listProjects);
       const response = await fetch(API.listProjects);
       console.log('📡 Response status:', response.status, response.statusText);
@@ -138,15 +138,15 @@
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('📊 获取到数据:', data);
-      console.log(`📊 获取到 ${data.projects?.length || 0} 个项目`);
+      console.log('📊 Data received:', data);
+      console.log(`📊 Received ${data.projects?.length || 0} projects`);
 
-      // 清空当前状态
+      // Clear current state
       state.tasks = [];
 
-      // 处理项目数据
+      // Process project data
       for (const project of data.projects) {
-        console.log(`\n📋 处理项目: ${project.name} (ID: ${project.project_id})`);
+        console.log(`\n📋 Processing project: ${project.name} (ID: ${project.project_id})`);
 
         let assignment1Status = 'unpublished';
         let assignment2Status = 'unpublished';
@@ -157,13 +157,13 @@
         let latestIds = null;
 
         try {
-          // 1. 首先获取项目的最新assignment IDs
+          // 1. First get project's latest assignment IDs
           const latestIdsResponse = await fetch(`/api/uploads/project/${project.project_id}/latest-ids`);
           if (latestIdsResponse.ok) {
             latestIds = await latestIdsResponse.json();
-            console.log('📦 获取到最新IDs:', latestIds);
+            console.log('📦 Latest IDs received:', latestIds);
 
-            // 2. 获取assignment1的状态和DDL
+            // 2. Get assignment1 status and DDL
             if (latestIds.assignment1) {
               const statusResponse1 = await fetch(`/api/uploads/assignment/${latestIds.assignment1.assignment_id}/status`);
               if (statusResponse1.ok) {
@@ -171,15 +171,15 @@
                 assignment1Status = statusData1.assignment.is_published ? 'published' : 'unpublished';
                 assignment1DueDate = statusData1.assignment.due_at;
                 assignment1Id = latestIds.assignment1.assignment_id;
-                console.log(`📄 Assignment1 发布状态: ${statusData1.assignment.is_published}`);
+                console.log(`📄 Assignment1 publish status: ${statusData1.assignment.is_published}`);
               } else {
-                console.warn('⚠️ 获取assignment1状态失败');
+                console.warn('⚠️ Failed to get assignment1 status');
               }
             } else {
-              console.log('📄 Assignment1: 无数据');
+              console.log('📄 Assignment1: No data');
             }
 
-            // 3. 获取assignment2的状态和DDL
+            // 3. Get assignment2 status and DDL
             if (latestIds.assignment2) {
               const statusResponse2 = await fetch(`/api/uploads/assignment/${latestIds.assignment2.assignment_id}/status`);
               if (statusResponse2.ok) {
@@ -187,30 +187,30 @@
                 assignment2Status = statusData2.assignment.is_published ? 'published' : 'unpublished';
                 assignment2DueDate = statusData2.assignment.due_at;
                 assignment2Id = latestIds.assignment2.assignment_id;
-                console.log(`📄 Assignment2 发布状态: ${statusData2.assignment.is_published}`);
+                console.log(`📄 Assignment2 publish status: ${statusData2.assignment.is_published}`);
               } else {
-                console.warn('⚠️ 获取assignment2状态失败');
+                console.warn('⚠️ Failed to get assignment2 status');
               }
             } else {
-              console.log('📄 Assignment2: 无数据');
+              console.log('📄 Assignment2: No data');
             }
           } else {
-            console.warn('⚠️ 获取最新IDs失败');
+            console.warn('⚠️ Failed to get latest IDs');
           }
         } catch (error) {
-          console.error('❌ 获取assignment状态过程中出错:', error);
+          console.error('❌ Error getting assignment status:', error);
         }
 
-        // 确定task状态
-        let taskStatus = project.status || 'draft'; // 假设后端返回了status字段
-        console.log(`🏷️ 项目状态: ${taskStatus}`);
-        console.log(`📊 Assignment1状态: ${assignment1Status}, Assignment2状态: ${assignment2Status}`);
+        // Determine task status
+        let taskStatus = project.status || 'draft'; // Assume backend returns status field
+        console.log(`🏷️ Project status: ${taskStatus}`);
+        console.log(`📊 Assignment1 status: ${assignment1Status}, Assignment2 status: ${assignment2Status}`);
 
-        // 只显示有active assignment的项目
-        console.log(`🔍 检查项目 ${project.name}: taskStatus=${taskStatus}, assignment1Status=${assignment1Status}, assignment2Status=${assignment2Status}`);
+        // Only show projects with active assignments
+        console.log(`🔍 Checking project ${project.name}: taskStatus=${taskStatus}, assignment1Status=${assignment1Status}, assignment2Status=${assignment2Status}`);
         if (taskStatus === 'active' || taskStatus === 'completed') {
-          console.log(`✅ 添加active项目: ${project.name}`);
-          console.log(`📋 项目详情:`, {
+          console.log(`✅ Adding active project: ${project.name}`);
+          console.log(`📋 Project details:`, {
             title: project.name,
             project_id: project.project_id,
             assignment1: { status: assignment1Status, id: assignment1Id, due: assignment1DueDate },
@@ -245,10 +245,10 @@
         }
       }
 
-      console.log(`✅ 最终处理完成，共 ${state.tasks.length} 个active项目`);
+      console.log(`✅ Final processing complete, ${state.tasks.length} active projects`);
       renderTasks();
     } catch (error) {
-      console.error('❌ 获取项目数据失败:', error);
+      console.error('❌ Failed to fetch project data:', error);
       toast('Failed to load projects. Please try again later.');
     }
   }
@@ -277,7 +277,7 @@
       taskSections.appendChild(taskSection);
     });
     
-    // 渲染完成后恢复展开状态
+    // Restore expand state after rendering
     setTimeout(() => {
       restoreExpandedStates();
     }, 100);
@@ -332,10 +332,10 @@
     const rubricSection = createRubricSection(task);
     content.appendChild(rubricSection);
 
-    // Assignment sections - 修复这里
+    // Assignment sections - Fix here
     task.assignments.forEach(assignment => {
       const assignmentSection = createAssignmentSection(task, assignment);
-      // 添加 null 检查
+      // Add null check
       if (assignmentSection) {
         content.appendChild(assignmentSection);
       }
@@ -362,7 +362,7 @@
     chevron.className = 'tm-rubric-chevron';
     chevron.innerHTML = '▾';
     
-    // 让整个header可点击
+    // Make entire header clickable
     header.addEventListener('click', () => toggleRubricSection(section));
 
     header.appendChild(title);
@@ -371,20 +371,20 @@
     const actions = document.createElement('div');
     actions.className = 'tm-rubric-actions';
 
-    // 只显示View Rubric按钮（如果有rubric文件）
+    // Only show View Rubric button (if rubric file exists)
     if (task.rubric_id) {
       const viewBtn = createButton('View Rubric', () => {
         location.href = `/dashboard/marker/rubric?project=${task.project_id}`;
       });
       viewBtn.className = 'btn';
       actions.appendChild(viewBtn);
-      console.log('🔘 Rubric显示: View按钮');
+      console.log('🔘 Rubric display: View button');
     } else {
       const noRubricText = document.createElement('span');
       noRubricText.className = 'tm-muted';
       noRubricText.textContent = 'No rubric available';
       actions.appendChild(noRubricText);
-      console.log('🔘 Rubric显示: 无rubric文件');
+      console.log('🔘 Rubric display: No rubric file');
     }
 
     section.appendChild(header);
@@ -397,7 +397,7 @@
     const section = document.createElement('div');
     section.className = 'tm-assignment-item';
 
-    // 只显示published的assignment
+    // Only show published assignments
     if (assignment.status !== 'published') {
       return null;
     }
@@ -424,7 +424,7 @@
     chevron.className = 'tm-assignment-chevron';
     chevron.innerHTML = '▾';
 
-    // 让整个header可点击
+    // Make entire header clickable
     header.addEventListener('click', () => toggleAssignmentSection(section));
 
     header.appendChild(titleContainer);
@@ -433,7 +433,7 @@
     const actions = document.createElement('div');
     actions.className = 'tm-assignment-actions';
 
-    // 添加DDL显示
+    // Add DDL display
     const dueDateText = assignment.due_date ? 
       `Due: ${formatDate(assignment.due_date)}` : 
       'No due date set';
@@ -444,7 +444,7 @@
     dueDateDiv.style.fontSize = '12px';
     dueDateDiv.textContent = dueDateText;
 
-    // 创建按钮容器（先显示加载状态）
+    // Create button container (show loading state first)
     const buttonContainer = document.createElement('div');
     buttonContainer.innerHTML = '<span class="tm-muted">Checking status...</span>';
     actions.appendChild(buttonContainer);
@@ -453,29 +453,29 @@
     section.appendChild(header);
     section.appendChild(actions);
 
-    // 异步检查marking状态
+    // Asynchronously check marking status
     checkMarkingStatus(assignment.assignment_id, buttonContainer, assignment, task.project_id);
 
     return section;
   }
-  // 检查marker是否已经完成marking
+  // Check if marker has completed marking
   async function checkMarkingStatus(assignmentId, buttonContainer, assignment, projectId) {
     try {
-      // 获取当前用户ID
+      // Get current user ID
       const rawUser = localStorage.getItem("user");
       if (!rawUser) {
         throw new Error('User not found in localStorage');
       }
 
       const user = JSON.parse(rawUser);
-      console.log('👤 当前用户:', user);
+      console.log('👤 Current user:', user);
       const markerId = user.id;
 
       if (!markerId) {
         throw new Error('User ID not found');
       }
 
-      console.log(`🔍 检查marking状态: assignment_id=${assignmentId}, marker_id=${markerId}`);
+      console.log(`🔍 Checking marking status: assignment_id=${assignmentId}, marker_id=${markerId}`);
 
       const response = await fetch(`/api/uploads/scoring/marker/${assignmentId}/${markerId}`);
 
@@ -484,24 +484,24 @@
       }
 
       const data = await response.json();
-      console.log(`📊 Marking状态数据:`, data);
+      console.log(`📊 Marking status data:`, data);
 
-      // 检查是否有提交的记录且finalized=true
+      // Check if there are submitted records with finalized=true
       const hasMarked = data.marker_scores && data.marker_scores.length > 0 &&
                        data.marker_scores.some(score => score.finalized === true);
 
-      console.log(`✅ Marking状态: ${hasMarked ? '已提交' : '未提交'}`);
+      console.log(`✅ Marking status: ${hasMarked ? 'Submitted' : 'Not submitted'}`);
 
-      // 更新按钮
+      // Update button
       updateAssignmentButton(buttonContainer, hasMarked, assignment, projectId);
 
     } catch (error) {
-      console.error('❌ 检查marking状态失败:', error);
+      console.error('❌ Failed to check marking status:', error);
 
-      // 出错时显示默认的Mark Assignment按钮
+      // On error, show default Mark Assignment button
       updateAssignmentButton(buttonContainer, false, assignment, projectId);
 
-      // 可选：显示错误提示
+      // Optional: Show error message
       const errorText = buttonContainer.querySelector('.tm-muted');
       if (errorText) {
         errorText.textContent = 'Failed to check status';
@@ -509,12 +509,12 @@
       }
     }
   }
-  // 更新assignment按钮状态
+  // Update assignment button status
   function updateAssignmentButton(buttonContainer, hasMarked, assignment, projectId) {
-    buttonContainer.innerHTML = ''; // 清空加载状态
+    buttonContainer.innerHTML = ''; // Clear loading state
 
     if (hasMarked) {
-      // 如果已经mark过且finalized=true，显示Check Feedback按钮
+      // If already marked and finalized=true, show Check Feedback button
       const feedbackBtn = createButton('Check Feedback', () => {
         location.href = `/dashboard/marker/taskManagement`;
         console.log('assignment.id:', assignment.id, 'projectId:', projectId,'assignment_id:', assignment.assignment_id);
@@ -522,7 +522,7 @@
       feedbackBtn.className = 'btn primary';
       buttonContainer.appendChild(feedbackBtn);
     } else {
-      // 如果还没有mark过或未finalized，显示Mark Assignment按钮
+      // If not yet marked or not finalized, show Mark Assignment button
       const markBtn = createButton('Mark Assignment', () => {
         location.href = `/dashboard/marker/mark?project=${projectId}&assignment=${assignment.id}`;
         console.log('assignment.id:', assignment.id, 'projectId:', projectId,'assignment_id:', assignment.assignment_id);
@@ -540,14 +540,14 @@
     return button;
   }
 
-  // ---------- 交互功能 ----------
+  // ---------- Interaction Functions ----------
   
-  // 切换task section的展开/收起
+  // Toggle task section expand/collapse
   function toggleTaskSection(section) {
     const content = section.querySelector('.tm-task-content');
     const chevron = section.querySelector('.tm-task-chevron');
     
-    // 关闭其他所有task sections
+    // Close all other task sections
     $$('.tm-task-section').forEach(otherSection => {
       if (otherSection !== section) {
         const otherContent = otherSection.querySelector('.tm-task-content');
@@ -557,11 +557,11 @@
       }
     });
     
-    // 切换当前section
+    // Toggle current section
     content.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
     
-    // 关闭所有assignment和rubric的展开状态
+    // Close all assignment and rubric expand states
     if (content.classList.contains('expanded')) {
       $$('.tm-assignment-actions, .tm-rubric-actions').forEach(actions => {
         actions.classList.remove('expanded');
@@ -571,37 +571,37 @@
       });
     }
     
-    // 保存展开状态
+    // Save expand state
     saveExpandedStates();
   }
   
-  // 切换rubric section的展开/收起
+  // Toggle rubric section expand/collapse
   function toggleRubricSection(section) {
     const actions = section.querySelector('.tm-rubric-actions');
     const chevron = section.querySelector('.tm-rubric-chevron');
     
-    // 只切换当前section - 不自动关闭其他sections
+    // Only toggle current section - don't auto-close other sections
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
     
-    // 保存展开状态
+    // Save expand state
     saveExpandedStates();
   }
   
-  // 切换assignment section的展开/收起
+  // Toggle assignment section expand/collapse
   function toggleAssignmentSection(section) {
     const actions = section.querySelector('.tm-assignment-actions');
     const chevron = section.querySelector('.tm-assignment-chevron');
     
-    // 只切换当前section - 不自动关闭其他sections
+    // Only toggle current section - don't auto-close other sections
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
     
-    // 保存展开状态
+    // Save expand state
     saveExpandedStates();
   }
 
-  // 格式化日期
+  // Format date
   function formatDate(dateString) {
     if (!dateString) return 'No date';
     const date = new Date(dateString);
@@ -621,8 +621,8 @@
     setTimeout(()=>{ el.style.opacity=0; el.style.transform='translateY(6px)'; setTimeout(()=> el.remove(), 200); }, ms);
   }
 
-  // 初始化
-  // 显示用户名
+  // Initialize
+  // Display username
   try {
   const rawUser = localStorage.getItem("user");
   if (rawUser) {
@@ -635,7 +635,7 @@
   console.error("Failed to load username:", err);
   }
 
-  // 初始化dropdown
+  // Initialize dropdown
   const accountEl = document.querySelector('.account');
   const dropdown = document.querySelector('.dropdown-menu');
   const allDropdownItems = document.querySelectorAll('.dropdown-item');
@@ -647,13 +647,13 @@
       dropdown.classList.toggle('show');
     });
 
-    // 点击其他地方关闭下拉菜单
+    // Click elsewhere to close dropdown menu
     document.addEventListener('click', () => {
       dropdown.classList.remove('show');
     });
   }
 
-  // 登出功能
+  // Logout functionality
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -685,7 +685,7 @@
 
   fetchProjects();
 
-  // 全局logout函数
+  // Global logout function
   window.logout = async function() {
     try {
       const response = await fetch('/api/auth/logout', {
@@ -712,7 +712,7 @@
     }
   };
 
-  // 全局goToResetPassword函数
+  // Global goToResetPassword function
   window.goToResetPassword = function() {
     window.location.href = '/reset-password';
   };
@@ -722,6 +722,7 @@
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
     }
   };
 
@@ -729,6 +730,7 @@
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
     }
   };
 
@@ -737,6 +739,16 @@
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay && e.target === overlay) {
       hideOnboarding();
+    }
+  });
+
+  // Close onboarding with ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('onboardingOverlay');
+      if (overlay && overlay.classList.contains('active')) {
+        hideOnboarding();
+      }
     }
   });
 

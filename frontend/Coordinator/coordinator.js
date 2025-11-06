@@ -115,7 +115,7 @@ function initCommonNav() {
     return fd;
   }
 
-  // 初始化dropdown和logout功能
+  // Initialize dropdown and logout functionality
   function initDropdownAndLogout() {
     const accountEl = document.querySelector('.account');
     const dropdown = document.querySelector('.dropdown-menu');
@@ -128,13 +128,13 @@ function initCommonNav() {
         dropdown.classList.toggle('show');
       });
 
-      // 点击其他地方关闭下拉菜单
+      // Click elsewhere to close dropdown menu
       document.addEventListener('click', () => {
         dropdown.classList.remove('show');
       });
     }
 
-    // 登出功能
+    // Logout functionality
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -164,7 +164,7 @@ function initCommonNav() {
       });
     }
 
-    // 全局logout函数
+    // Global logout function
     window.logout = async function() {
       try {
         const response = await fetch('/api/auth/logout', {
@@ -191,13 +191,13 @@ function initCommonNav() {
       }
     };
 
-    // 全局goToResetPassword函数
+    // Global goToResetPassword function
     window.goToResetPassword = function() {
       window.location.href = '/reset-password';
     };
   }
 
-  // 在页面加载时初始化dropdown和logout功能
+  // Initialize dropdown and logout functionality on page load
   document.addEventListener('DOMContentLoaded', () => {
     initDropdownAndLogout();
     // Load dashboard data if on dashboard page
@@ -331,6 +331,7 @@ function initCommonNav() {
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
     }
   };
 
@@ -338,6 +339,7 @@ function initCommonNav() {
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay) {
       overlay.classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
     }
   };
 
@@ -346,6 +348,16 @@ function initCommonNav() {
     const overlay = document.getElementById('onboardingOverlay');
     if (overlay && e.target === overlay) {
       hideOnboarding();
+    }
+  });
+
+  // Close onboarding with ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('onboardingOverlay');
+      if (overlay && overlay.classList.contains('active')) {
+        hideOnboarding();
+      }
     }
   });
 

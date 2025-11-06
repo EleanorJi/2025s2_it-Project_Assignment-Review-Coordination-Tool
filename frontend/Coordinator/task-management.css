@@ -309,7 +309,7 @@ body {
 }
   .tm-task-header:hover::before { opacity:1 }
 
-  /* 左侧标题区域占满中间空间 */
+  /* Left side title area takes up middle space */
 .tm-task-header > :first-child {
     flex:1 1 auto;
     min-width:0;

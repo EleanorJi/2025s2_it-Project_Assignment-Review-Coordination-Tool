@@ -71,7 +71,7 @@
   }
   
   h1{font-size:22px;margin:0 0 14px 0;font-weight:800;font-style:italic}
-  .tm-panel h1,.pa-panel h1{font-size:28px;font-style:normal} /* 任务/历史页面更大标题 */
+  .tm-panel h1,.pa-panel h1{font-size:28px;font-style:normal} /* Larger title for task/history pages */
   
   /* ===================== Buttons ===================== */
   .btn{
