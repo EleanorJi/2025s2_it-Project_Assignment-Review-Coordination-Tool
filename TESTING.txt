@@ -1,119 +1,119 @@
 ====================================
-    测试系统配置完成 ✅
+    Testing System Configuration Complete ✅
 ====================================
 
-📊 测试统计
------------
-✅ 后端测试: 30 个测试用例通过
-✅ 前端测试: 67 个测试用例通过
-✅ 总计: 97 个测试用例全部通过
+📊 Test Statistics
+------------------
+✅ Backend tests: 30 test cases passed
+✅ Frontend tests: 67 test cases passed
+✅ Total: 97 test cases all passed
 
-🧪 测试覆盖范围
---------------
-后端测试:
-  ✓ 用户认证控制器 (authController.test.js)
-    - 登录功能 (邮箱/用户名)
-    - 登出功能
-    - 忘记密码
-    - 重置密码
-    - 获取当前用户信息
+🧪 Test Coverage
+----------------
+Backend tests:
+  ✓ Authentication Controller (authController.test.js)
+    - Login functionality (email/username)
+    - Logout functionality
+    - Forgot password
+    - Reset password
+    - Get current user information
   
-  ✓ 认证中间件 (auth.test.js)
-    - Cookie验证
-    - 用户会话检查
-    - 错误处理
+  ✓ Authentication Middleware (auth.test.js)
+    - Cookie validation
+    - User session checking
+    - Error handling
   
-  ✓ 角色权限中间件 (roleAuth.test.js)
-    - Coordinator权限验证
-    - 未授权访问拦截
+  ✓ Role Authorization Middleware (roleAuth.test.js)
+    - Coordinator permission validation
+    - Unauthorized access interception
   
-  ✓ 工具函数 (helpers.test.js)
-    - 邮箱用户名提取
+  ✓ Utility Functions (helpers.test.js)
+    - Email username extraction
 
-前端测试:
-  ✓ 登录功能 (login.test.js)
-    - 邮箱格式验证
-    - 角色选择
-    - 表单验证
-    - API请求
-    - 用户会话管理
-    - 重定向逻辑
-    - 错误处理
+Frontend tests:
+  ✓ Login Functionality (login.test.js)
+    - Email format validation
+    - Role selection
+    - Form validation
+    - API requests
+    - User session management
+    - Redirect logic
+    - Error handling
   
-  ✓ 注册功能 (signup.test.js)
-    - 表单验证
-    - 邮箱验证
-    - 密码验证
-    - API请求
-    - UI反馈
+  ✓ Registration Functionality (signup.test.js)
+    - Form validation
+    - Email validation
+    - Password validation
+    - API requests
+    - UI feedback
   
-  ✓ Marker仪表板 (marker.test.js)
-    - 日期格式化
-    - 状态文本处理
-    - 用户名显示
-    - 标签切换
-    - 数据加载
-    - 登出功能
-    - 设置控件
+  ✓ Marker Dashboard (marker.test.js)
+    - Date formatting
+    - Status text processing
+    - Username display
+    - Tab switching
+    - Data loading
+    - Logout functionality
+    - Settings controls
 
 🚀 GitHub Actions CI/CD
------------------------
-配置文件位置: .github/workflows/
+------------------------
+Configuration file location: .github/workflows/
 
-1. ci.yml - 主要CI流程
-   - 在多个Node.js版本上运行测试 (18.x, 20.x)
-   - 后端测试
-   - 前端测试
-   - 代码质量检查
-   - 覆盖率报告
+1. ci.yml - Main CI workflow
+   - Run tests on multiple Node.js versions (18.x, 20.x)
+   - Backend tests
+   - Frontend tests
+   - Code quality checks
+   - Coverage reports
 
-2. test-status.yml - 测试状态徽章
-   - 自动更新测试状态
+2. test-status.yml - Test status badge
+   - Automatically update test status
 
-📦 如何运行测试
----------------
-# 运行所有测试
+📦 How to Run Tests
+-------------------
+# Run all tests
 npm test
 
-# 只运行后端测试
+# Run backend tests only
 npm run test:backend
 
-# 只运行前端测试
+# Run frontend tests only
 npm run test:frontend
 
-# 使用脚本运行
+# Run using script
 ./run-tests.sh
 
-# 在各自目录中运行
+# Run in respective directories
 cd backend && npm test
 cd frontend && npm test
 
-🎯 在GitHub上查看
+🎯 View on GitHub
+-----------------
+1. Push code to GitHub repository
+2. GitHub Actions will run automatically
+3. View test results in "Actions" tab
+4. All tests will show green ✅
+
+💡 Testing Tools
 ----------------
-1. 推送代码到GitHub仓库
-2. GitHub Actions会自动运行
-3. 在 "Actions" 标签页查看测试结果
-4. 所有测试都会显示绿色✅
+- Jest: JavaScript testing framework
+- jsdom: Browser environment simulation
+- supertest: HTTP request testing (backend)
 
-💡 测试工具
-----------
-- Jest: JavaScript测试框架
-- jsdom: 浏览器环境模拟
-- supertest: HTTP请求测试 (后端)
+🔧 Configuration Files
+---------------------
+Backend:
+  - backend/package.json (test scripts)
+  - backend/jest.config.js (Jest configuration)
 
-🔧 配置文件
-----------
-后端:
-  - backend/package.json (测试脚本)
-  - backend/jest.config.js (Jest配置)
-
-前端:
-  - frontend/package.json (测试脚本)
-  - frontend/jest.config.js (Jest配置)
-  - frontend/test-setup.js (测试环境设置)
-  - frontend/.babelrc (Babel配置)
+Frontend:
+  - frontend/package.json (test scripts)
+  - frontend/jest.config.js (Jest configuration)
+  - frontend/test-setup.js (test environment setup)
+  - frontend/.babelrc (Babel configuration)
 
 ====================================
-    祝测试愉快！🎉
+    Happy Testing! 🎉
 ====================================
 

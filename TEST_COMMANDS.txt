@@ -1,41 +1,41 @@
 ====================================
-    测试命令速查表 📝
+    Test Commands Quick Reference 📝
 ====================================
 
-快速运行测试
------------
-# 运行所有测试（最简单）
+Quick Run Tests
+---------------
+# Run all tests (simplest)
 npm test
 
-# 使用脚本运行（带彩色输出）
+# Run using script (with colored output)
 ./run-tests.sh
 
 
-分别运行测试
------------
-# 只运行后端测试
+Run Tests Separately
+-------------------
+# Run backend tests only
 npm run test:backend
-# 或者
+# Or
 cd backend && npm test
 
-# 只运行前端测试
+# Run frontend tests only
 npm run test:frontend
-# 或者
+# Or
 cd frontend && npm test
 
 
-监听模式（开发时使用）
--------------------
-# 后端监听模式
+Watch Mode (for development)
+----------------------------
+# Backend watch mode
 cd backend && npm run test:watch
 
-# 前端监听模式
+# Frontend watch mode
 cd frontend && npm run test:watch
 
 
-查看覆盖率报告
------------
-# 运行测试后，打开覆盖率报告
+View Coverage Reports
+---------------------
+# After running tests, open coverage report
 cd backend && npm test
 open coverage/lcov-report/index.html
 
@@ -43,127 +43,127 @@ cd frontend && npm test
 open coverage/lcov-report/index.html
 
 
-CI模式（GitHub Actions使用）
+CI Mode (for GitHub Actions)
 ---------------------------
-# 后端CI测试
+# Backend CI tests
 cd backend && npm run test:ci
 
-# 前端CI测试
+# Frontend CI tests
 cd frontend && npm run test:ci
 
 
-单独运行特定测试文件
------------------
-# 后端特定测试
+Run Specific Test Files
+----------------------
+# Backend specific tests
 cd backend && npx jest src/controllers/authController.test.js
 
-# 前端特定测试
+# Frontend specific tests
 cd frontend && npx jest login.test.js
 
 
-调试模式
--------
-# 使用Node调试器
+Debug Mode
+----------
+# Use Node debugger
 cd backend && node --inspect-brk node_modules/.bin/jest --runInBand
 
 
-常用测试选项
-----------
---watch           # 监听文件变化
---coverage        # 生成覆盖率报告
---verbose         # 显示详细输出
---silent          # 静默模式
---bail            # 遇到第一个失败就停止
---runInBand       # 串行运行（调试用）
---testNamePattern # 只运行匹配的测试
+Common Test Options
+------------------
+--watch           # Watch for file changes
+--coverage        # Generate coverage report
+--verbose         # Show detailed output
+--silent          # Silent mode
+--bail            # Stop on first failure
+--runInBand       # Run serially (for debugging)
+--testNamePattern # Run only matching tests
 
 
-安装依赖
--------
-# 首次运行前安装依赖
+Install Dependencies
+--------------------
+# Install dependencies before first run
 cd backend && npm install
 cd frontend && npm install
 
 
-清理和重新安装
-------------
-# 清理node_modules并重新安装
+Clean and Reinstall
+-------------------
+# Clean node_modules and reinstall
 cd backend && rm -rf node_modules && npm install
 cd frontend && rm -rf node_modules && npm install
 
 
-检查测试文件
-----------
-# 列出所有测试文件
+Check Test Files
+----------------
+# List all test files
 find . -name "*.test.js" -o -name "*.spec.js" | grep -v node_modules
 
-# 统计测试文件数量
+# Count test files
 find . -name "*.test.js" -not -path "*/node_modules/*" | wc -l
 
 
-验证配置
--------
-# 验证Jest配置
+Verify Configuration
+--------------------
+# Verify Jest configuration
 cd backend && npx jest --showConfig
 cd frontend && npx jest --showConfig
 
 
-常见问题解决
-----------
-问题：模块未找到错误
-解决：npm install
+Troubleshooting
+---------------
+Issue: Module not found error
+Solution: npm install
 
-问题：测试超时
-解决：在jest.config.js中增加testTimeout
+Issue: Test timeout
+Solution: Increase testTimeout in jest.config.js
 
-问题：覆盖率不达标
-解决：添加更多测试或降低coverageThreshold
+Issue: Coverage threshold not met
+Solution: Add more tests or lower coverageThreshold
 
-问题：测试卡住不动
-解决：使用 --runInBand 选项
+Issue: Tests stuck/hanging
+Solution: Use --runInBand option
 
 
-快速命令（复制粘贴用）
--------------------
-# 完整测试流程
+Quick Commands (copy-paste ready)
+---------------------------------
+# Complete test workflow
 cd /Users/yilia_1/Desktop/New/IT-Project-80 && npm test
 
-# 后端测试 + 覆盖率
+# Backend tests + coverage
 cd /Users/yilia_1/Desktop/New/IT-Project-80/backend && npm test
 
-# 前端测试 + 覆盖率
+# Frontend tests + coverage
 cd /Users/yilia_1/Desktop/New/IT-Project-80/frontend && npm test
 
-# 所有测试并打开覆盖率
+# All tests and open coverage
 npm test && open backend/coverage/lcov-report/index.html && open frontend/coverage/lcov-report/index.html
 
 
-GitHub Actions相关
------------------
-# 本地模拟CI运行
+GitHub Actions Related
+---------------------
+# Simulate CI run locally
 cd backend && npm run test:ci
 cd frontend && npm run test:ci
 
-# 查看GitHub Actions日志
-访问: https://github.com/你的用户名/你的仓库名/actions
+# View GitHub Actions logs
+Visit: https://github.com/your-username/your-repo-name/actions
 
 
-测试文件位置
-----------
-后端测试:
+Test File Locations
+-------------------
+Backend tests:
   backend/src/controllers/authController.test.js
   backend/src/middleware/auth.test.js
   backend/src/middleware/roleAuth.test.js
   backend/src/utils/helpers.test.js
 
-前端测试:
+Frontend tests:
   frontend/login.test.js
   frontend/signup.test.js
   frontend/Marker/marker.test.js
 
 
-配置文件位置
-----------
+Configuration File Locations
+----------------------------
   backend/jest.config.js
   backend/package.json
   frontend/jest.config.js
@@ -175,6 +175,6 @@ cd frontend && npm run test:ci
 
 
 ====================================
-      保存此文件以便快速参考！
+      Save this file for quick reference!
 ====================================
 

@@ -1,57 +1,57 @@
 ====================================
-   GitHub CI 测试配置指南 🚀
+   GitHub CI Testing Configuration Guide 🚀
 ====================================
 
-🎯 如何在GitHub上看到绿色测试勾勾
-----------------------------------
+🎯 How to See Green Test Checkmarks on GitHub
+---------------------------------------------
 
-第一步：推送代码到GitHub
------------------------
-1. 在GitHub上创建一个新仓库（如果还没有）
+Step 1: Push Code to GitHub
+---------------------------
+1. Create a new repository on GitHub (if you don't have one)
 
-2. 在项目根目录执行：
+2. In the project root directory, execute:
    git init
    git add .
    git commit -m "Add Jest testing with GitHub Actions CI"
-   git remote add origin https://github.com/你的用户名/你的仓库名.git
+   git remote add origin https://github.com/your-username/your-repo-name.git
    git push -u origin main
 
-第二步：查看GitHub Actions运行
------------------------------
-1. 推送后，打开你的GitHub仓库页面
-2. 点击顶部的 "Actions" 标签
-3. 你会看到：
-   ✅ CI Tests workflow 正在运行或已完成
+Step 2: View GitHub Actions Run
+--------------------------------
+1. After pushing, open your GitHub repository page
+2. Click the "Actions" tab at the top
+3. You will see:
+   ✅ CI Tests workflow running or completed
    ✅ Backend Tests (Node 18.x, 20.x)
    ✅ Frontend Tests (Node 18.x, 20.x)
    ✅ Code Quality Check
    ✅ Test Summary
 
-第三步：查看测试详情
--------------------
-点击任何一个workflow运行：
-- 绿色勾勾 ✅ = 所有测试通过
-- 红色叉叉 ❌ = 有测试失败
-- 黄色点 🟡 = 测试正在运行
+Step 3: View Test Details
+-------------------------
+Click on any workflow run:
+- Green checkmark ✅ = All tests passed
+- Red cross ❌ = Some tests failed
+- Yellow dot 🟡 = Tests are running
 
-展开每个job可以看到详细的测试输出：
-- 30个后端测试全部通过
-- 67个前端测试全部通过
-- 总共97个测试用例
+Expand each job to see detailed test output:
+- 30 backend tests all passed
+- 67 frontend tests all passed
+- Total of 97 test cases
 
-第四步：添加状态徽章到README
----------------------------
-在你的README.md中添加以下代码：
+Step 4: Add Status Badge to README
+----------------------------------
+Add the following code to your README.md:
 
-![CI Tests](https://github.com/你的用户名/你的仓库名/workflows/CI%20Tests/badge.svg)
+![CI Tests](https://github.com/your-username/your-repo-name/workflows/CI%20Tests/badge.svg)
 
-这会显示一个漂亮的徽章：
-✅ passing (绿色) = 所有测试通过
-❌ failing (红色) = 有测试失败
+This will display a nice badge:
+✅ passing (green) = All tests passed
+❌ failing (red) = Some tests failed
 
-📊 测试结果示例
---------------
-当CI运行完成后，你会看到：
+📊 Test Results Example
+-----------------------
+When CI run completes, you will see:
 
 ✓ Backend Tests (Node 18.x)
   ✓ Auth Controller (18 tests)
@@ -65,53 +65,53 @@
   ✓ Marker Dashboard (14 tests)
 
 ✓ Backend Tests (Node 20.x)
-  [同样的测试在Node 20上运行]
+  [Same tests running on Node 20]
 
 ✓ Frontend Tests (Node 20.x)
-  [同样的测试在Node 20上运行]
+  [Same tests running on Node 20]
 
 ✓ Code Quality Check
 ✓ Test Summary
 
-🔧 如果测试失败怎么办
---------------------
-1. 点击失败的job查看详细日志
-2. 找到失败的测试用例
-3. 在本地运行测试调试：
+🔧 What to Do If Tests Fail
+---------------------------
+1. Click on the failed job to view detailed logs
+2. Find the failing test case
+3. Run tests locally to debug:
    cd backend && npm test
-   或
+   or
    cd frontend && npm test
-4. 修复后重新提交：
+4. After fixing, commit again:
    git add .
    git commit -m "Fix failing tests"
    git push
 
-🎨 自定义配置
------------
-你可以编辑 .github/workflows/ci.yml 来：
-- 更改触发条件（不同的分支）
-- 添加更多Node.js版本
-- 添加代码检查工具（ESLint, Prettier）
-- 配置自动部署
+🎨 Custom Configuration
+---------------------
+You can edit .github/workflows/ci.yml to:
+- Change trigger conditions (different branches)
+- Add more Node.js versions
+- Add code checking tools (ESLint, Prettier)
+- Configure automatic deployment
 
-💡 专业提示
-----------
-1. 每次提交前在本地运行测试
-2. 使用 git hooks 自动运行测试
-3. 保持测试简洁和快速
-4. 定期更新测试用例
-5. 维护高测试覆盖率
+💡 Professional Tips
+-------------------
+1. Run tests locally before each commit
+2. Use git hooks to automatically run tests
+3. Keep tests simple and fast
+4. Regularly update test cases
+5. Maintain high test coverage
 
-🌟 当前项目测试统计
-------------------
-✅ 97个测试用例全部通过
-✅ 多个Node.js版本支持 (18.x, 20.x)
-✅ 前端和后端完整测试
-✅ 自动CI/CD流程
-✅ 代码质量检查
+🌟 Current Project Test Statistics
+----------------------------------
+✅ 97 test cases all passed
+✅ Multiple Node.js version support (18.x, 20.x)
+✅ Complete frontend and backend testing
+✅ Automatic CI/CD workflow
+✅ Code quality checks
 
 ====================================
-   现在你可以骄傲地展示
-   你的绿色测试勾勾了！ ✅
+   Now you can proudly display
+   your green test checkmarks! ✅
 ====================================
 
