@@ -12,7 +12,7 @@ exports.getCoordinatorDashboard = (req, res) => {
 };
 
 exports.getCoordinatorInvitePage = (req, res) => {
-  // Check role permission
+  // Check role permissions
   if (req.user.role !== 'COORDINATOR') {
     return res.redirect('/login?error=access_denied');
   }
@@ -22,7 +22,7 @@ exports.getCoordinatorInvitePage = (req, res) => {
 };
 
 exports.getCoordinatorFeedbackPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
@@ -31,7 +31,7 @@ exports.getCoordinatorFeedbackPage = (req, res) => {
 }
 
 exports.getCoordinatorTaskManagementPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
@@ -40,7 +40,7 @@ exports.getCoordinatorTaskManagementPage = (req, res) => {
     res.sendFile(path.join(__dirname, '../../frontend/Coordinator/task-management.html'));
 }
 exports.getCoordinatorViewRubricPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
@@ -49,7 +49,7 @@ exports.getCoordinatorViewRubricPage = (req, res) => {
 }
 
 exports.getCoordinatorMarkPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
@@ -58,7 +58,7 @@ exports.getCoordinatorMarkPage = (req, res) => {
 }
 
 exports.getCoordinatorAnalysisPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
@@ -67,7 +67,7 @@ exports.getCoordinatorAnalysisPage = (req, res) => {
 }
 
 exports.getCoordinatorPastPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
@@ -77,7 +77,7 @@ exports.getCoordinatorPastPage = (req, res) => {
 }
 
 exports.getCoordinatorOnboardingPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'COORDINATOR') {
         return res.redirect('/login?error=access_denied');
     }
@@ -100,7 +100,7 @@ exports.getMarkerTaskManagementPage = (req, res) => {
 };
 
 exports.getMarkerMarkPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'MARKER') {
         return res.redirect('/login?error=access_denied');
     }
@@ -109,7 +109,7 @@ exports.getMarkerMarkPage = (req, res) => {
 }
 
 exports.getMarkerViewRubricPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'MARKER') {
         return res.redirect('/login?error=access_denied');
     }
@@ -118,7 +118,7 @@ exports.getMarkerViewRubricPage = (req, res) => {
 }
 
 exports.getMarkerFeedbackPage = (req, res) => {
-    // Check role permission
+    // Check role permissions
     if (req.user.role !== 'MARKER') {
         return res.redirect('/login?error=access_denied');
     }

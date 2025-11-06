@@ -153,7 +153,7 @@ exports.forgotPassword = async (req, res) => {
 
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // Expires in 1 hour
+    const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // Expires after 1 hour
 
     // Save reset token to database
     await db.query(
@@ -220,7 +220,7 @@ exports.resetPassword = async (req, res) => {
 
     // Encrypt new password
     const hashedPassword = await hashPassword(newPassword);
-
+    
     // Update password and clear reset token
     await db.query(
       'UPDATE app_user SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL WHERE user_id = $2',

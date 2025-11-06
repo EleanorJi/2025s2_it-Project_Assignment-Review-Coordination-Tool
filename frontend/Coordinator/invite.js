@@ -581,13 +581,13 @@
         dropdown.classList.toggle('show');
       });
 
-      // 点击其他地方关闭下拉菜单
+      // Click elsewhere to close dropdown menu
       document.addEventListener('click', () => {
         dropdown.classList.remove('show');
       });
     }
 
-    // 登出功能
+    // Logout functionality
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -617,7 +617,7 @@
       });
     }
 
-    // 全局logout函数
+    // Global logout function
     window.logout = async function() {
       try {
         const response = await fetch('/api/auth/logout', {
@@ -644,7 +644,7 @@
       }
     };
 
-    // 全局goToResetPassword函数
+    // Global goToResetPassword function
     window.goToResetPassword = function() {
       window.location.href = '/reset-password';
     };

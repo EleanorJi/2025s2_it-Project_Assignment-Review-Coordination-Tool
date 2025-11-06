@@ -1,9 +1,9 @@
-// view-feedback.js — 显示Marker的分数对比和反馈
+// view-feedback.js — Display Marker's score comparison and feedback
 
-/* ===== 全局变量 ===== */
-let currentProjectId = null; // 保存当前项目ID
-let currentAssignmentInfo = null; // 保存当前assignment信息
-let currentRubricData = null; // 保存当前rubric的详细数据
+/* ===== Global Variables ===== */
+let currentProjectId = null; // Store current project ID
+let currentAssignmentInfo = null; // Store current assignment information
+let currentRubricData = null; // Store detailed rubric data
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('backBtn')?.addEventListener('click', () => history.back());
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize the interface
   async function init() {
-    // ✅ 显示用户名
+    // ✅ Display username
     try {
       const rawUser = localStorage.getItem("user");
       // console.log("User Info:", rawUser);
@@ -29,22 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Failed to load username:", err);
     }
 
-    // 获取并显示反馈数据
+    // Get and display feedback data
     const feedbackData = await fetchFeedbackData();
-//    const feedbackData = demoFeedback(); // 使用demo数据测试
+//    const feedbackData = demoFeedback(); // Use demo data for testing
     console.log('Feedback Data:', feedbackData);
 
     loadFeedback(feedbackData);
   }
 
-// 主函数：获取反馈数据
+// Main function: Get feedback data
 async function fetchFeedbackData() {
     try {
-        // 获取URL参数和用户信息
+        // Get URL parameters and user information
         const queryParams = getQueryParams();
         const currentUser = getCurrentUser();
 
-        // 检查必要的参数是否存在
+        // Check if required parameters exist
         if (!queryParams.assignmentId) {
             throw new Error('Assignment ID not found in URL parameters');
         }
@@ -58,7 +58,7 @@ async function fetchFeedbackData() {
 
         console.log('Fetching feedback for:', { assignmentId, markerId });
 
-        // 并行获取所有需要的数据
+        // Fetch all required data in parallel
         const [assignmentData, baselineData, markerData, feedbackData] = await Promise.all([
             fetchAssignmentData(assignmentId),
             fetchBaselineData(assignmentId),
@@ -66,16 +66,16 @@ async function fetchFeedbackData() {
             fetchFeedbackContent(assignmentId, markerId)
         ]);
 
-        // 获取项目信息
+        // Get project information
         const projectData = await fetchProjectData(assignmentData.project_id);
         console.log('projectData:', projectData);
         const projectInfo = projectData.project || {};
-        // 获取rubric信息
+        // Get rubric information
         const rubricData = await fetchRubricDetails(projectData.rubric.rubric_id);
         console.log('rubricData:', rubricData);
 
 
-        // 转换数据格式为前端需要的格式
+        // Transform data format to what the frontend needs
         const transformedData = transformData(
             assignmentData,
             projectInfo,
@@ -90,25 +90,25 @@ async function fetchFeedbackData() {
 
     } catch (error) {
         console.error('Error loading feedback:', error);
-        // 接口出错时使用demo数据兜底
+        // Use demo data as fallback when API fails
         return demoFeedback();
     }
 }
 
-// 获取rubric详情
+// Get rubric details
 async function fetchRubricDetails(rubricId) {
     const res = await fetch(`/api/uploads/rubric/${rubricId}/details`);
     if (!res.ok) throw new Error('Failed to fetch rubric details');
     const data = await res.json();
     
-    // 保存完整的rubric数据
+    // Save complete rubric data
     currentRubricData = data;
     console.log("✅ Full rubric data loaded:", currentRubricData);
     
     return data.criteria || [];
 }
 
-// 获取assignment信息
+// Get assignment information
 async function fetchAssignmentData(assignmentId) {
     const res = await fetch(`/api/uploads/assignment/${assignmentId}/status`);
     if (!res.ok) throw new Error('Failed to fetch assignment data');
@@ -116,13 +116,13 @@ async function fetchAssignmentData(assignmentId) {
     return data.assignment;
 }
 
-// 获取项目信息
+// Get project information
 async function fetchProjectData(projectId) {
     const res = await fetch(`/api/uploads/project/${projectId}/status`);
     if (!res.ok) throw new Error('Failed to fetch project data');
     const data = await res.json();
     
-    // 保存项目ID和assignment信息
+    // Save project ID and assignment information
     currentProjectId = projectId;
     if (data?.assignments && data.assignments.length > 0) {
         const assignmentId = getQueryParams().assignmentId;
@@ -138,16 +138,16 @@ async function fetchProjectData(projectId) {
     return data;
 }
 
-// 获取baseline分数
+// Get baseline scores
 async function fetchBaselineData(assignmentId) {
     const res = await fetch(`/api/uploads/scoring/baseline/${assignmentId}`);
     if (!res.ok) throw new Error('Failed to fetch baseline data');
     const data = await res.json();
-    // 只返回 finalized 为 true 的 baseline 分数
+    // Only return baseline scores where finalized is true
     return (data.baseline_scores || []).filter(score => score.finalized === true);
 }
 
-// 获取marker分数
+// Get marker scores
 async function fetchMarkerData(assignmentId, markerId) {
     const res = await fetch(`/api/uploads/scoring/marker/${assignmentId}/${markerId}`);
     if (!res.ok) throw new Error('Failed to fetch marker data');
@@ -156,12 +156,12 @@ async function fetchMarkerData(assignmentId, markerId) {
 }
 
 
-// 获取feedback内容
+// Get feedback content
 async function fetchFeedbackContent(assignmentId, markerId) {
     try {
         const res = await fetch(`/api/feedback/${assignmentId}/${markerId}`);
         if (!res.ok) {
-            // 如果接口返回404或其他错误，返回空数组
+            // If API returns 404 or other error, return empty array
             if (res.status === 404) {
                 return [];
             }
@@ -175,12 +175,12 @@ async function fetchFeedbackContent(assignmentId, markerId) {
     }
 }
 
-// 数据转换函数
+// Data transformation function
 function transformData(assignmentData, projectData, baselineData, markerData, feedbackData, rubricData) {
   const projectName = projectData?.name || 'Unknown Project';
   const assignmentDisplayName = `${projectName} - Moderation ${assignmentData.round || 0}`;
 
-  // 以 rubricData 为基准构建每条 criterion（更稳健）
+  // Build each criterion based on rubricData (more robust)
   const criteria = (rubricData || []).map((r, index) => {
     const baseline = (baselineData || []).find(b => b.criterion_id === r.criterion_id);
     const marker = (markerData || []).find(m => m.criterion_id === r.criterion_id);
@@ -190,9 +190,9 @@ function transformData(assignmentData, projectData, baselineData, markerData, fe
       title: baseline?.criterion_title || r.title || `Criterion ${index + 1}`,
       subtitle: r.description || '',
       max: r.max_score || baseline?.criterion_max_score || 0,
-      // 用 null 表示缺失（便于后续判断），存在则为 number
+      // Use null to indicate missing (for subsequent judgment), otherwise it's a number
       markerScore: typeof marker?.score === 'number' ? marker.score : null,
-      // 只有当 baseline 存在且 finalized 时才显示 coordinator 分数
+      // Only show coordinator score when baseline exists and is finalized
       coordinatorScore: (baseline && baseline.finalized && typeof baseline.score === 'number') ? baseline.score : null,
       coordinatorFeedback: baseline?.comment || '',
       markerComments: marker?.comment || ''
@@ -210,7 +210,7 @@ function transformData(assignmentData, projectData, baselineData, markerData, fe
 
 
 
-// 从URL中获取查询参数 (assignment_id, project)
+// Get query parameters from URL (assignment_id, project)
 function getQueryParams() {
   const params = new URLSearchParams(window.location.search);
   return {
@@ -231,7 +231,7 @@ async function loadFeedback(data){
   const scoreDifferenceEl = document.getElementById('score-difference');
   const coordinatorFeedbackEl = document.getElementById('coordinator-feedback');
 
-  // 顶部 meta
+  // Top meta information
   metaEl.innerHTML = `
     <div style="font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 2px;">
       ${data.assignment}
@@ -241,19 +241,19 @@ async function loadFeedback(data){
     </div>
   `;
 
-  // --- 计算总分（只把真实存在的 number 加入总和） ---
+  // --- Calculate total score (only add actual numbers to the sum) ---
   const markerTotal = data.criteria.reduce((sum, c) => sum + (typeof c.markerScore === 'number' ? c.markerScore : 0), 0);
   const coordinatorTotal = data.criteria.reduce((sum, c) => sum + (typeof c.coordinatorScore === 'number' ? c.coordinatorScore : 0), 0);
   const totalMax = data.criteria.reduce((sum, c) => sum + (c.max || 0), 0);
 
-  // 是否至少有一个 finalized 的 baseline 存在
+  // Check if at least one finalized baseline exists
   const hasAnyBaseline = data.criteria.some(c => c.coordinatorScore !== null);
 
-  // 更新顶部总分显示
+  // Update top total score display
   markerScoreEl.textContent = `${markerTotal.toFixed(1)}/${totalMax.toFixed(1)}`;
   coordinatorScoreEl.textContent = hasAnyBaseline ? `${coordinatorTotal.toFixed(1)}/${totalMax.toFixed(1)}` : "-";
 
-  // 更新总体分差显示（只有在存在 baseline 时才计算差值）
+  // Update overall score difference display (only calculate difference when baseline exists)
   if (hasAnyBaseline) {
     const difference = markerTotal - coordinatorTotal;
     const absDifference = Math.abs(difference);
@@ -261,7 +261,7 @@ async function loadFeedback(data){
     
     scoreDifferenceEl.textContent = difference > 0 ? `+${difference.toFixed(1)}` : `${difference.toFixed(1)}`;
     
-    // 根据偏差百分比设置颜色：>5%红色, >2.5%黄色, <=2.5%绿色
+    // Set color based on deviation percentage: >5% red, >2.5% yellow, <=2.5% green
     if (deviationPercent > 5) {
       scoreDifferenceEl.className = 'difference-value danger';
     } else if (deviationPercent > 2.5) {
@@ -274,12 +274,12 @@ async function loadFeedback(data){
     scoreDifferenceEl.className = "difference-value neutral";
   }
 
-  // --- 渲染表格行 ---
+  // --- Render table rows ---
   tbody.innerHTML = '';
   data.criteria.forEach((c, idx) => {
     const tr = document.createElement('tr');
 
-    // 左侧 criteria 描述
+    // Left side criteria description
     const td0 = td();
     td0.innerHTML = `
       <div class="criterion-title">${idx+1}. ${esc(c.title)}</div>
@@ -288,21 +288,21 @@ async function loadFeedback(data){
     `;
     tr.appendChild(td0);
 
-    // Marker 分数显示（如果缺失显示 "-/max"）
+    // Marker score display (show "-/max" if missing)
     const td1 = td();
     td1.className = 'score-cell score-marker';
     const markerDisplay = (typeof c.markerScore === 'number') ? `${c.markerScore.toFixed(1)}/${(c.max || 0).toFixed(1)}` : `-/${(c.max || 0).toFixed(1)}`;
     td1.textContent = markerDisplay;
     tr.appendChild(td1);
 
-    // Coordinator (baseline) 分数显示（缺失则 "-/max"）
+    // Coordinator (baseline) score display (show "-/max" if missing)
     const td2 = td();
     td2.className = 'score-cell score-coordinator';
     const coordinatorDisplay = (typeof c.coordinatorScore === 'number') ? `${c.coordinatorScore.toFixed(1)}/${(c.max || 0).toFixed(1)}` : `-/${(c.max || 0).toFixed(1)}`;
     td2.textContent = coordinatorDisplay;
     tr.appendChild(td2);
 
-    // Difference 列：只有当 coordinator 存在时才计算差值，否则显示 "-"
+    // Difference column: only calculate difference when coordinator exists, otherwise show "-"
     const td3 = td();
     td3.className = 'difference-cell';
     if (typeof c.coordinatorScore !== 'number') {
@@ -312,23 +312,23 @@ async function loadFeedback(data){
       const diff = markerValForDiff - c.coordinatorScore;
       const diffText = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
       
-      // 计算该criterion的偏差百分比
+      // Calculate deviation percentage for this criterion
       const absDiff = Math.abs(diff);
       const criterionDeviationPercent = c.max > 0 ? (absDiff / c.max) * 100 : 0;
       
-      // 单个criterion：>5%红色，否则根据差异大小设置颜色
+      // Single criterion: >5% red, otherwise set color based on difference size
       let colorClass = '';
       if (criterionDeviationPercent > 5) {
         colorClass = 'danger';
       } else if (criterionDeviationPercent > 0) {
-        // 有差异但不超过5%，根据差异大小设置为黄色或绿色
+        // Has difference but not exceeding 5%, set to yellow or green based on difference size
         if (criterionDeviationPercent > 2.5) {
           colorClass = 'warning';
         } else {
           colorClass = 'good';
         }
       } else {
-        // 没有差异
+        // No difference
         colorClass = 'good';
       }
       
@@ -336,7 +336,7 @@ async function loadFeedback(data){
     }
     tr.appendChild(td3);
 
-    // Feedback 列（保持原样）
+    // Feedback column (keep as is)
     const td4 = td();
     td4.className = 'feedback-text-cell';
     td4.innerHTML = `
@@ -354,7 +354,7 @@ async function loadFeedback(data){
     tbody.appendChild(tr);
   });
 
-  // 更新文本反馈区（保持原逻辑）
+  // Update text feedback area (keep original logic)
   coordinatorFeedbackEl.innerHTML = '';
   if (data.allFeedback && data.allFeedback.length > 0) {
       data.allFeedback.forEach((fb, idx) => {
@@ -375,7 +375,7 @@ async function loadFeedback(data){
 /* ===== Helpers ===== */
 function td(){ const e = document.createElement('td'); return e; }
 function esc(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-// 日期格式化辅助函数
+// Date formatting helper function
 function formatDate(dateString) {
     if (!dateString) return 'Unknown date';
 
@@ -394,19 +394,19 @@ function formatDate(dateString) {
 
 
 
-  // 获取当前用户信息
+  // Get current user information
   function getCurrentUser() {
     try {
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
         const user = JSON.parse(rawUser);
 
-        // 先log检查一下用户数据的结构
+        // First log to check user data structure
         console.log("User Info:", user);
         console.log("Available fields:", Object.keys(user));
 
-        // 根据log结果调整字段名
-        // 常见的字段名可能是：id, userId, user_id, role, userRole, etc.
+        // Adjust field names based on log results
+        // Common field names might be: id, userId, user_id, role, userRole, etc.
         return {
           userId: user.id,
           role: user.role
@@ -419,7 +419,7 @@ function formatDate(dateString) {
     }
   }
 
-/* ===== Demo data (接口未通时使用) ===== */
+/* ===== Demo data (used when API is not available) ===== */
 function demoFeedback(){
   return {
     year: '2025',
@@ -470,9 +470,9 @@ function demoFeedback(){
   };
 }
 
-// 初始化dropdown和logout功能
+// Initialize dropdown and logout functionality
 document.addEventListener('DOMContentLoaded', () => {
-  // 初始化dropdown
+  // Initialize dropdown
   const accountEl = document.querySelector('.account');
   const dropdown = document.querySelector('.dropdown-menu');
   const allDropdownItems = document.querySelectorAll('.dropdown-item');
@@ -484,13 +484,13 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.classList.toggle('show');
     });
 
-    // 点击其他地方关闭下拉菜单
+    // Click elsewhere to close dropdown menu
     document.addEventListener('click', () => {
       dropdown.classList.remove('show');
     });
   }
 
-  // 登出功能
+  // Logout functionality
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 全局logout函数
+  // Global logout function
   window.logout = async function() {
     try {
       const response = await fetch('/api/auth/logout', {
@@ -548,18 +548,18 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 });
 
-/* ===== Excel生成和下载功能 ===== */
+/* ===== Excel generation and download functionality ===== */
 function generateExcelFromRubric(rubricData) {
-  // 创建新的工作簿
+  // Create new workbook
   const wb = XLSX.utils.book_new();
   
-  // 准备数据
+  // Prepare data
   const worksheetData = [];
   
-  // 添加标题行 - Max Score列移到最后
+  // Add header row - Max Score column moved to the end
   const headers = ['Criterion', 'Description'];
   
-  // 获取所有grade levels
+  // Get all grade levels
   const allGradeLevels = [];
   rubricData.criteria.forEach(criterion => {
     criterion.grade_levels.forEach(level => {
@@ -574,67 +574,67 @@ function generateExcelFromRubric(rubricData) {
     });
   });
   
-  // 按seq_no排序
+  // Sort by seq_no
   allGradeLevels.sort((a, b) => a.seq_no - b.seq_no);
   
-  // 添加grade level列标题
+  // Add grade level column headers
   allGradeLevels.forEach(level => {
     headers.push(`${level.level_name} (${level.min_score}-${level.max_score})`);
   });
   
-  // 添加Criteria Score列标题（在最后）
+  // Add Criteria Score column header (at the end)
   headers.push('Criteria Score');
   
   worksheetData.push(headers);
   
-  // 添加每个criterion的数据
+  // Add data for each criterion
   rubricData.criteria.forEach(criterion => {
     const row = [
       criterion.title,
       criterion.description || ''
     ];
     
-    // 为每个grade level添加描述
+    // Add description for each grade level
     allGradeLevels.forEach(level => {
       const gradeLevel = criterion.grade_levels.find(gl => gl.level_name === level.level_name);
       row.push(gradeLevel ? gradeLevel.description : '');
     });
     
-    // 添加Criteria Score（在最后，添加"/"前缀）
+    // Add Criteria Score (at the end, with "/" prefix)
     row.push(`/${criterion.max_score}`);
     
     worksheetData.push(row);
   });
   
-  // 创建工作表
+  // Create worksheet
   const ws = XLSX.utils.aoa_to_sheet(worksheetData);
   
-  // 设置列宽
+  // Set column widths
   const colWidths = [
     { wch: 20 }, // Criterion
     { wch: 30 }, // Description
   ];
   
-  // 为grade level列设置宽度
+  // Set width for grade level columns
   allGradeLevels.forEach(() => {
     colWidths.push({ wch: 25 });
   });
   
-  // 为Criteria Score列设置宽度
+  // Set width for Criteria Score column
   colWidths.push({ wch: 15 }); // Criteria Score
   
   ws['!cols'] = colWidths;
   
-  // 添加工作表到工作簿
+  // Add worksheet to workbook
   XLSX.utils.book_append_sheet(wb, ws, 'Rubric');
   
-  // 生成Excel文件
+  // Generate Excel file
   const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   
   return excelBuffer;
 }
 
-/* ===== 下载Excel文件 ===== */
+/* ===== Download Excel file ===== */
 function downloadExcelFile(excelBuffer, filename) {
   const blob = new Blob([excelBuffer], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
@@ -646,9 +646,9 @@ function downloadExcelFile(excelBuffer, filename) {
   link.click();
 }
 
-/* ===== 下载功能事件处理器 ===== */
+/* ===== Download functionality event handlers ===== */
 document.addEventListener('DOMContentLoaded', () => {
-  // Download Rubric按钮
+  // Download Rubric button
   document.getElementById('downloadRubric')?.addEventListener('click', () => {
     if (!currentRubricData) {
       alert('Rubric data not found. Please ensure the rubric has been uploaded and processed.');
@@ -656,13 +656,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     try {
-      // 生成Excel文件
+      // Generate Excel file
       const excelBuffer = generateExcelFromRubric(currentRubricData);
       
-      // 生成文件名
+      // Generate filename
       const filename = `rubric_${new Date().toISOString().slice(0, 10)}.xlsx`;
       
-      // 下载Excel文件
+      // Download Excel file
       downloadExcelFile(excelBuffer, filename);
       
       console.log("✅ Rubric Excel file generated and downloaded");
@@ -672,14 +672,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Download Assignment按钮
+  // Download Assignment button
   document.getElementById('downloadAssignment')?.addEventListener('click', () => {
     if (!currentAssignmentInfo) {
       alert('Assignment file not found. Please ensure the assignment has been uploaded.');
       return;
     }
     
-    // 创建下载链接
+    // Create download link
     const link = document.createElement('a');
     link.href = currentAssignmentInfo.download_url;
     link.download = currentAssignmentInfo.file_name;
@@ -687,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// 全局goToResetPassword函数
+// Global goToResetPassword function
 window.goToResetPassword = function() {
   window.location.href = '/reset-password';
 };

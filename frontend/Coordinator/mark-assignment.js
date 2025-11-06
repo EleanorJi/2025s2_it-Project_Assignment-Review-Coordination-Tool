@@ -80,7 +80,7 @@
     await loadSavedScoresAndFeedback();
 
     if (window.savedScoresData?.finalized) {
-      console.log('✅ 检测到 finalized 状态，锁定所有输入');
+      console.log('✅ Detected finalized state, locking all inputs');
       lockAllInputs();
     }
 
@@ -340,7 +340,7 @@
           editBtn.addEventListener('click', () => {
             // If original due date already passed, block editing
             if (originalDue && new Date() > originalDue) {
-              showNotification('原始截止时间已过，无法更改', 'error');
+              showNotification('Original deadline has passed, cannot change', 'error');
               return;
             }
             openEditDueDialog(assignment);
@@ -972,16 +972,16 @@
               const canvas = document.createElement('canvas');
               canvas.className = 'pdf-page-canvas';
 
-              // 设置canvas的实际尺寸（基于缩放后的viewport）
+              // Set canvas actual size (based on scaled viewport)
               canvas.height = viewport.height;
               canvas.width = viewport.width;
 
-              // 计算显示尺寸，保持A4比例
+              // Calculate display size, maintain A4 ratio
               const maxWidth = 800;
               const displayWidth = Math.min(viewport.width, maxWidth);
               const displayHeight = (viewport.height * displayWidth) / viewport.width;
 
-              // 设置CSS样式，确保按A4比例显示并应用缩放
+              // Set CSS styles to ensure A4 ratio display and apply scaling
               canvas.style.cssText = `
                   display: block;
                   width: ${displayWidth}px;
@@ -1322,7 +1322,7 @@
 
   // Grade selection
   function setupGradeSelection() {
-    // 如果是 finalized 状态，不设置等级选择事件
+    // If finalized state, don't set grade selection event
     if (window.savedScoresData?.finalized) {
       return;
     }
@@ -1434,7 +1434,7 @@
 
   // Automatically select corresponding grade when manually inputting score
   function setupScoreInputs() {
-     // 如果是 finalized 状态，不设置分数输入事件
+     // If finalized state, don't set score input event
      if (window.savedScoresData?.finalized) {
        return;
      }
@@ -1517,7 +1517,7 @@
 
   // Feedback functionality
   function setupFeedback() {
-    // 如果是 finalized 状态，不设置反馈事件
+    // If finalized state, don't set feedback event
     if (window.savedScoresData?.finalized) {
         return;
     }
@@ -1595,11 +1595,11 @@
           await submitMarks();
           showNotification('Marks submitted successfully', 'success');
           
-          // 如果是Marker，提交成功后跳转到task-management页面
+          // If Marker, redirect to task-management page after successful submission
           const currentUser = getCurrentUser();
           if (currentUser.role === 'MARKER') {
             setTimeout(() => {
-              // 从URL获取project参数
+              // Get project parameter from URL
               const urlParams = new URLSearchParams(window.location.search);
               const projectId = urlParams.get('project');
               if (projectId) {
@@ -1607,12 +1607,12 @@
               } else {
                 window.location.href = '/dashboard/marker/taskManagement';
               }
-            }, 1000); // 延迟1秒让用户看到成功消息
+            }, 1000); // Delay 1 second to let user see success message
           } else {
-            // Coordinator保留原有逻辑
-            // 提交后锁定所有输入框
+            // Coordinator keeps original logic
+            // Lock all input fields after submission
             lockAllInputs();
-            // 提交后禁用按钮
+            // Disable buttons after submission
             disableActionButtons();
           }
         } catch (error) {
@@ -1642,9 +1642,9 @@
     }
   }
 
-  // 锁定所有输入框（save后调用）
+  // Lock all input fields (called after save)
   function lockAllInputs() {
-    // 锁定所有分数输入框
+    // Lock all score input fields
     const scoreInputs = $$('.score-input');
     scoreInputs.forEach(input => {
       input.disabled = true;
@@ -1652,7 +1652,7 @@
       input.style.color = '#999';
     });
 
-    // 锁定所有反馈文本框
+    // Lock all feedback text fields
     const feedbackTextareas = $$('.criterion-feedback textarea');
     feedbackTextareas.forEach(textarea => {
       textarea.disabled = true;
@@ -1660,7 +1660,7 @@
       textarea.style.color = '#999';
     });
 
-    // 锁定所有等级选择按钮
+    // Lock all grade selection buttons
     const gradeButtons = $$('.grade-btn');
     gradeButtons.forEach(button => {
       button.disabled = true;
@@ -1669,7 +1669,7 @@
       button.style.cursor = 'not-allowed';
     });
 
-    // 添加锁定状态的视觉指示
+    // Add visual indicator for locked state
     const markingCriteria = $('.marking-criteria');
     if (markingCriteria) {
       markingCriteria.classList.add('locked');
@@ -1966,7 +1966,7 @@
       document.body.removeChild(modal);
     });
 
-    // 添加Cancel按钮hover效果
+    // Add Cancel button hover effect
     cancelBtn.addEventListener('mouseenter', () => {
       cancelBtn.style.background = '#F5F7FB';
       cancelBtn.style.borderColor = '#0F172A';
@@ -1976,7 +1976,7 @@
       cancelBtn.style.borderColor = '#E6EAF2';
     });
 
-    // 创建OK按钮
+    // Create OK button
     const okBtn = document.createElement('button');
     okBtn.textContent = 'OK';
     okBtn.style.cssText = `
@@ -1995,7 +1995,7 @@
         window.history.back();
     });
 
-    // 添加OK按钮hover效果
+    // Add OK button hover effect
     okBtn.addEventListener('mouseenter', () => {
       okBtn.style.background = '#1a202c';
     });
@@ -2036,7 +2036,7 @@
     init();
     setupBackButton();
 
-    // 初始化dropdown和logout功能
+    // Initialize dropdown and logout functionality
     const accountEl = document.querySelector('.account');
     const dropdown = document.querySelector('.dropdown-menu');
     const allDropdownItems = document.querySelectorAll('.dropdown-item');
@@ -2048,13 +2048,13 @@
         dropdown.classList.toggle('show');
       });
 
-      // 点击其他地方关闭下拉菜单
+      // Click elsewhere to close dropdown menu
       document.addEventListener('click', () => {
         dropdown.classList.remove('show');
       });
     }
 
-    // 登出功能
+    // Logout functionality
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -2084,7 +2084,7 @@
       });
     }
 
-    // 全局logout函数
+    // Global logout function
     window.logout = async function() {
       try {
         const response = await fetch('/api/auth/logout', {

@@ -26,7 +26,7 @@
             position: relative;
         }
         .header { 
-            background-color: #dc2626; /* Outlook降级方案 */
+            background-color: #dc2626; /* Outlook fallback */
             background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
             color: white; 
             padding: 24px; 
@@ -53,7 +53,7 @@
         }
         .button {
             display: inline-block;
-            background-color: #0F172A; /* Outlook降级方案 */
+            background-color: #0F172A; /* Outlook fallback */
             background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%);
             color: white !important;
             padding: 12px 24px;
@@ -66,7 +66,7 @@
             transition: all 0.2s ease;
         }
         .button:hover {
-            background-color: #1e293b; /* Outlook降级方案 */
+            background-color: #1e293b; /* Outlook fallback */
             background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             transform: translateY(-2px);
             box-shadow: 0 4px 16px rgba(15,23,42,0.3);
@@ -96,7 +96,7 @@
             margin: 8px 0;
         }
 
-        /* 响应式设计 - 手机适配 */
+        /* Responsive design - mobile adaptation */
         @media only screen and (max-width: 600px) {
             .container {
                 margin: 20px auto;
@@ -140,7 +140,7 @@
             }
         }
         
-        /* 超小屏幕适配 */
+        /* Extra small screen adaptation */
         @media only screen and (max-width: 360px) {
             .container {
                 padding: 0 12px;

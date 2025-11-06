@@ -7,7 +7,7 @@ console.log('WARNING: This will encrypt all existing passwords in the database.'
 console.log('Make sure you have a backup before proceeding.');
 console.log('');
 
-// Prompt user for confirmation
+// Add confirmation prompt
 const readline = require('readline');
 const rl = readline.createInterface({
   input: process.stdin,

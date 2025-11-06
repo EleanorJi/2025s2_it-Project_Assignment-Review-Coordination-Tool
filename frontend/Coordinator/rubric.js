@@ -599,8 +599,8 @@ async function saveChanges() {
       if (content !== originalDesc && content !== '(No description)') {
         const newDesc = content === '(No description)' ? '' : content;
         
-        // ⭐ 增强检测: 支持多种分数格式
-        // 匹配格式：(min - max), min-max, (min to max), min to max 分/points
+        // ⭐ Enhanced detection: Support multiple score formats
+        // Match formats: (min - max), min-max, (min to max), min to max points
         const scoreRangeMatch = newDesc.match(/\(?\s*(\d+(?:\.\d+)?)\s*(?:-|to|~)\s*(\d+(?:\.\d+)?)\s*(?:分|points?|marks?)?\s*\)?/i);
         
         if (scoreRangeMatch) {
@@ -631,7 +631,7 @@ async function saveChanges() {
             });
           }
         } else {
-          // 没有检测到分数范围，只更新description
+          // No score range detected, only update description
           changes.push({
             type: 'grade-level-description',
             gradeLevelId: gradeLevelId,
@@ -740,7 +740,7 @@ async function saveChanges() {
         successCount++;
       }
       else if (change.type === 'grade-level-scores-from-description') {
-        // ⭐ 从description检测到分数范围，同时更新scores和description
+        // ⭐ Score range detected from description, update both scores and description
         const response = await fetch(`/api/uploads/rubric/grade-level/${change.gradeLevelId}/description`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -749,7 +749,7 @@ async function saveChanges() {
         
         const result = await response.json();
         
-        // 后端会自动解析并更新分数
+        // Backend will automatically parse and update scores
         if (result.score_update) {
           console.log(`✅ Updated grade level description AND auto-updated scores from description: ${change.gradeLevelId}`);
           console.log(`   Scores: ${result.score_update.updated.min_score} - ${result.score_update.updated.max_score}`);

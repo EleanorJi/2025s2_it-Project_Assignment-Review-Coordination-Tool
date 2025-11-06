@@ -8,10 +8,10 @@
     tasks: []
   };
 
-  // 展开状态管理
+  // Expand state management
   const EXPANDED_STATES_KEY = 'taskManagement_expandedStates';
   
-  // 保存展开状态到localStorage
+  // Save expand state to localStorage
   function saveExpandedStates() {
     const expandedStates = {
       tasks: {},
@@ -19,7 +19,7 @@
       assignments: {}
     };
     
-    // 保存task sections的展开状态
+    // Save task sections' expand state
     $$('.tm-task-section').forEach(section => {
       const taskId = section.dataset.taskId;
       const content = section.querySelector('.tm-task-content');
@@ -28,7 +28,7 @@
       }
     });
     
-    // 保存rubric sections的展开状态
+    // Save rubric sections' expand state
     $$('.tm-rubric-section').forEach(section => {
       const taskId = section.closest('.tm-task-section')?.dataset.taskId;
       const actions = section.querySelector('.tm-rubric-actions');
@@ -37,7 +37,7 @@
       }
     });
     
-    // 保存assignment sections的展开状态
+    // Save assignment sections' expand state
     $$('.tm-assignment-item').forEach(section => {
       const taskId = section.closest('.tm-task-section')?.dataset.taskId;
       const assignmentId = section.querySelector('.tm-assignment-title')?.textContent;
@@ -53,7 +53,7 @@
     localStorage.setItem(EXPANDED_STATES_KEY, JSON.stringify(expandedStates));
   }
   
-  // 从localStorage恢复展开状态
+  // Restore expand state from localStorage
   function restoreExpandedStates() {
     try {
       const savedStates = localStorage.getItem(EXPANDED_STATES_KEY);
@@ -61,7 +61,7 @@
       
       const expandedStates = JSON.parse(savedStates);
       
-      // 恢复task sections的展开状态
+      // Restore task sections' expand state
       if (expandedStates.tasks) {
         Object.keys(expandedStates.tasks).forEach(taskId => {
           const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
@@ -76,7 +76,7 @@
         });
       }
       
-      // 恢复rubric sections的展开状态
+      // Restore rubric sections' expand state
       if (expandedStates.rubrics) {
         Object.keys(expandedStates.rubrics).forEach(taskId => {
           const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
@@ -94,7 +94,7 @@
         });
       }
       
-      // 恢复assignment sections的展开状态
+      // Restore assignment sections' expand state
       if (expandedStates.assignments) {
         Object.keys(expandedStates.assignments).forEach(taskId => {
           const section = $(`.tm-task-section[data-task-id="${taskId}"]`);
@@ -203,16 +203,16 @@
                 console.warn('⚠️ Failed to get assignment1 status');
               }
 
-              // 检查assignment1的评分是否已提交
+              // Check if assignment1 scoring has been submitted
               try {
                 const finalizedResponse1 = await fetch(`/api/uploads/scoring/baseline/${latestIds.assignment1.assignment_id}`);
                 if (finalizedResponse1.ok) {
                   const finalizedData1 = await finalizedResponse1.json();
                   assignment1Finalized = finalizedData1.baseline_scores?.[0]?.finalized || false;
-                  console.log(`📄 Assignment1 评分状态: ${assignment1Finalized ? '已提交' : '未提交'}`);
+                  console.log(`📄 Assignment1 scoring status: ${assignment1Finalized ? 'Submitted' : 'Not submitted'}`);
                 }
               } catch (error) {
-                console.log('📄 Assignment1 评分检查: 无数据或未评分');
+                console.log('📄 Assignment1 scoring check: No data or not scored');
               }
             } else {
               console.log('📄 Assignment1: No data');
@@ -227,19 +227,19 @@
                 assignment2Status = statusData2.assignment.is_published ? 'published' : 'unpublished';
                 console.log(`📄 Assignment2 publish status: ${statusData2.assignment.is_published}`);
               } else {
-                console.warn('⚠️ 获取assignment2状态失败');
+                console.warn('⚠️ Failed to get assignment2 status');
               }
 
-              // 检查assignment2的评分是否已提交
+              // Check if assignment2 scoring has been submitted
               try {
                 const finalizedResponse2 = await fetch(`/api/uploads/scoring/baseline/${latestIds.assignment2.assignment_id}`);
                 if (finalizedResponse2.ok) {
                   const finalizedData2 = await finalizedResponse2.json();
                   assignment2Finalized = finalizedData2.baseline_scores?.[0]?.finalized || false;
-                  console.log(`📄 Assignment2 评分状态: ${assignment2Finalized ? '已提交' : '未提交'}`);
+                  console.log(`📄 Assignment2 scoring status: ${assignment2Finalized ? 'Submitted' : 'Not submitted'}`);
                 }
               } catch (error) {
-                console.log('📄 Assignment2 评分检查: 无数据或未评分');
+                console.log('📄 Assignment2 scoring check: No data or not scored');
               }
             } else {
               console.log('📄 Assignment2: No data');
@@ -318,7 +318,7 @@
       taskSections.appendChild(taskSection);
     });
     
-    // 渲染完成后恢复展开状态
+    // Restore expand state after rendering
     setTimeout(() => {
       restoreExpandedStates();
       
@@ -883,7 +883,7 @@
       });
     }
     
-    // 保存展开状态
+    // Save expand state
     saveExpandedStates();
   }
 
@@ -896,7 +896,7 @@
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
     
-    // 保存展开状态
+    // Save expand state
     saveExpandedStates();
   }
 
@@ -909,7 +909,7 @@
     actions.classList.toggle('expanded');
     chevron.classList.toggle('expanded');
     
-    // 保存展开状态
+    // Save expand state
     saveExpandedStates();
   }
 
@@ -1354,9 +1354,9 @@
     setTimeout(()=>{ el.style.opacity=0; el.style.transform='translateY(6px)'; setTimeout(()=> el.remove(), 200); }, ms);
   }
 
-  // 初始化
+  // Initialize
   document.addEventListener('DOMContentLoaded', function() {
-    // 显示用户名
+    // Display username
     try {
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
@@ -1369,7 +1369,7 @@
       console.error("Failed to load username:", err);
     }
 
-    // 初始化dropdown和logout功能
+    // Initialize dropdown and logout functionality
     const accountEl = document.querySelector('.account');
     const dropdown = document.querySelector('.dropdown-menu');
     const allDropdownItems = document.querySelectorAll('.dropdown-item');
@@ -1381,13 +1381,13 @@
         dropdown.classList.toggle('show');
       });
 
-      // 点击其他地方关闭下拉菜单
+      // Click elsewhere to close dropdown menu
       document.addEventListener('click', () => {
         dropdown.classList.remove('show');
       });
     }
 
-    // 登出功能
+    // Logout functionality
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -1417,11 +1417,11 @@
       });
     }
 
-    // 加载项目数据
+    // Load project data
     fetchProjects();
   });
 
-  // 全局logout函数
+  // Global logout function
   window.logout = async function() {
     try {
       const response = await fetch('/api/auth/logout', {
@@ -1448,7 +1448,7 @@
     }
   };
 
-  // 将 Add New Assignment 按钮改为打开项目创建弹窗
+  // Change Add New Assignment button to open project creation modal
   const btnAdd = $('#btnAdd');
   if (btnAdd) {
       console.log('Add New Task button found, binding event listener');

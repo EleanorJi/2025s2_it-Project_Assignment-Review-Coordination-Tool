@@ -8,7 +8,7 @@ const dashboardRoutes = require('./dashboard');
 router.use('/dashboard', dashboardRoutes);
 
 router.get('/login', (req, res) => {
-  // Return HTML page to browser for rendering (keep route hidden)
+  // Return HTML page for browser rendering (keep route hidden)
   res.sendFile(path.join(__dirname, '../../frontend/login.html'));
 });
 
@@ -21,7 +21,7 @@ router.get('/signup', async (req, res) => {
   }
 
   try {
-    // Verify if token is valid (consistent with logic in invitationController)
+    // Validate if token is valid (consistent with logic in invitationController)
     const result = await db.query(
       'SELECT * FROM invitations WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()',
       [token]
@@ -46,7 +46,7 @@ router.get('/reset-password', async (req, res) => {
   // If token is provided, validate it (for forgot password flow)
   if (token) {
     try {
-      // Verify if token is valid
+      // Validate if token is valid
       const userResult = await db.query(
         'SELECT user_id as id, reset_token_expiry FROM app_user WHERE reset_token = $1 AND reset_token_expiry > NOW()',
         [token]

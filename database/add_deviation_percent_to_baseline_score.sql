@@ -6,3 +6,4 @@ ADD COLUMN IF NOT EXISTS deviation_percent NUMERIC(5, 2) DEFAULT 5.0;
 
 COMMENT ON COLUMN baseline_score.deviation_percent IS 'Deviation percentage for tolerance range calculation (default 5.0)';
 
+

@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 // Password encryption
 const hashPassword = async (password) => {
   try {
-    const saltRounds = 12; // Increasing the number of salt rounds enhances security.
+    const saltRounds = 12; // Increase salt rounds for better security
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     return hashedPassword;
   } catch (error) {
@@ -12,7 +12,7 @@ const hashPassword = async (password) => {
   }
 };
 
-// Password comparison
+// Verify password
 const comparePassword = async (password, hashedPassword) => {
   try {
     const isMatch = await bcrypt.compare(password, hashedPassword);

@@ -111,7 +111,7 @@
 
       // Login page URL & auto-jump seconds: adjustable as needed
       const next = '/login';                       // Login page (change to '/index.html' if not root path)
-      const s = 0;                            // 0=不自动跳；3=3秒后自动跳
+      const s = 0;                            // 0=no auto redirect; 3=auto redirect after 3 seconds
 
       const emailParam = encodeURIComponent(emailEl?.value || '');
       const scopeParam = encodeURIComponent(inviteScope || '');

@@ -262,10 +262,10 @@ router.post('/commit', async (req, res) => {
     const permanentPath = path.join(permDir, newFileName);
     const storagePath = `${year}/${month}/${newFileName}`;
 
-    // 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
+    // Use copyFile + unlink instead of rename to solve cross filesystem issues
     await fsp.copyFile(tempPath, permanentPath);
     await fsp.unlink(tempPath);
-    console.log(`📂 文件移动: ${tempPath} → ${permanentPath}`);
+    console.log(`📂 File moved: ${tempPath} → ${permanentPath}`);
 
     // Create upload record
     const uploadResult = await client.query(
@@ -3648,7 +3648,7 @@ router.put('/rubric/criterion/:criterion_id/description', async (req, res) => {
     
     const currentCriterion = criterionCheck.rows[0];
     
-    // Try to parse max score from description (e.g., "总分: 20分", "Total: 20 points")
+    // Try to parse max score from description (e.g., "Total: 20 points")
     const parsedMaxScore = parseMaxScoreFromDescription(description);
     let updateFields = ['description = $1'];
     let updateValues = [description || null];
@@ -3854,14 +3854,14 @@ router.put('/rubric/grade-level/:grade_level_id/name', async (req, res) => {
 
 /**
  * Parse score range from description text
- * Supports formats like: "优秀 (8-10分)", "Good (5-7 points)", "Level 1 (0-2)"
+ * Supports formats like: "Good (5-7 points)", "Level 1 (0-2)"
  */
 function parseScoreRangeFromDescription(description) {
   if (!description) return null;
   
-  // Match patterns like: (8-10), (5-7分), (0-2 points), (10-15分)
+  // Match patterns like: (8-10), (0-2 points)
   const scorePatterns = [
-    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*分?\)/i,  // Chinese format: (8-10分)
+    /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*分?\)/i,  // Format: (8-10)
     /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*points?\)/i,  // English format: (5-7 points)
     /\((\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\)/i  // Simple format: (0-2)
   ];
@@ -3883,12 +3883,12 @@ function parseScoreRangeFromDescription(description) {
 
 /**
  * Parse max score from criterion description text
- * Supports formats like: "总分: 20分", "Total: 20 points", "Max: 15"
+ * Supports formats like: "Total: 20 points", "Max: 15"
  */
 function parseMaxScoreFromDescription(description) {
   if (!description) return null;
   
-  // Match patterns like: 总分: 20分, Total: 20 points, Max: 15, 最高分: 25分
+  // Match patterns like: Total: 20 points, Max: 15
   const maxScorePatterns = [
     /total[：:]\s*(\d+(?:\.\d+)?)\s*points?/i,  // English format: Total: 20 points
     /max[：:]\s*(\d+(?:\.\d+)?)/i,  // English format: Max: 15

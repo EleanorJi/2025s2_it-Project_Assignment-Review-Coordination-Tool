@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
     }
 
     try {
-        // Verify assignment exists
+        // Validate if assignment exists
         const assignmentCheck = await db.query(
             'SELECT assignment_id FROM assignment WHERE assignment_id = $1',
             [assignment_id]
@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // Verify marker exists
+        // Validate if marker exists
         const markerCheck = await db.query(
             'SELECT user_id FROM app_user WHERE user_id = $1',
             [marker_id]
@@ -91,20 +91,20 @@ router.post('/', async (req, res) => {
         // Send email notification to marker
         try {
             console.log(`🔍 Debug email sending - marker_id: ${marker_id}, created_by: ${effectiveCreatedBy}, assignment_id: ${assignment_id}`);
-
+            
             // Get marker and coordinator information for email
             const markerInfo = await db.query(
                 'SELECT name, email FROM app_user WHERE user_id = $1',
                 [marker_id]
             );
             console.log(`🔍 Marker info query result:`, markerInfo.rows);
-
+            
             const coordinatorInfo = await db.query(
                 'SELECT name, email FROM app_user WHERE user_id = $1',
                 [effectiveCreatedBy]
             );
             console.log(`🔍 Coordinator info query result:`, coordinatorInfo.rows);
-
+            
             const assignmentInfo = await db.query(`
                 SELECT a.assignment_id, a.name as assignment_name, a.project_id, p.name as project_name
                 FROM assignment a
@@ -128,7 +128,7 @@ router.post('/', async (req, res) => {
                     assignment.assignment_id,
                     coordinator.email // Pass coordinator email for from/replyTo
                 );
-
+                
                 console.log(`📧 Feedback notification email sent to: ${marker.email}`);
             } else {
                 console.warn('⚠️ Could not send feedback notification email: missing user or assignment information');

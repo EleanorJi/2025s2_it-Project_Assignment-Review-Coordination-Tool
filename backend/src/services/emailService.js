@@ -122,12 +122,12 @@ class EmailService {
         assignmentName,
         projectName,
         WEBSITE_URL: websiteUrl,
-        userRole: 'marker', // Feedback notification is always sent to marker
+        userRole: 'marker', // Feedback notifications are always sent to marker
         feedbackDate: new Date().toLocaleDateString(),
         currentYear: new Date().getFullYear()
       });
 
-      // Default to using the platform's verified sender email, but display name uses coordinator name; also set reply address to coordinator email for direct replies
+      // Default to platform verified sender email, but use coordinator name for display name; also set reply address to coordinator email for direct reply
       const fromAddress = process.env.EMAIL_USER;
       const allowDynamicFrom = process.env.ALLOW_DYNAMIC_FROM === 'true';
 
@@ -286,7 +286,7 @@ class EmailService {
         projectName,
         dueAt,
         WEBSITE_URL: websiteUrl,
-        userRole: 'marker', // New assignment notification is always sent to marker
+        userRole: 'marker', // New assignment notifications are always sent to marker
         currentYear: new Date().getFullYear()
       });
 
