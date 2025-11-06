@@ -55,7 +55,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 验证密码
+    // Verify password
     const isPasswordValid = await comparePassword(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -129,7 +129,7 @@ exports.forgotPassword = async (req, res) => {
   }
 
   try {
-    // 检查用户是否存在
+    // Check if user exists
     const userResult = await db.query(
       'SELECT user_id as id, email, name, is_active as status FROM app_user WHERE email = $1',
       [email]
@@ -151,17 +151,17 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    // 生成重置令牌
+    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1小时后过期
+    const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // Expires in 1 hour
 
-    // 保存重置令牌到数据库
+    // Save reset token to database
     await db.query(
       'UPDATE app_user SET reset_token = $1, reset_token_expiry = $2 WHERE user_id = $3',
       [resetToken, resetTokenExpiry, user.id]
     );
 
-    // 发送重置密码邮件
+    // Send password reset email
     await EmailService.sendPasswordResetEmail(user.email, resetToken, user.name);
 
     res.json({
@@ -196,7 +196,7 @@ exports.resetPassword = async (req, res) => {
   }
 
   try {
-    // 查找有效的重置令牌
+    // Find valid reset token
     const userResult = await db.query(
       'SELECT user_id as id, reset_token_expiry, is_active as status FROM app_user WHERE reset_token = $1 AND reset_token_expiry > NOW()',
       [token]
@@ -218,10 +218,10 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // 加密新密码
+    // Encrypt new password
     const hashedPassword = await hashPassword(newPassword);
-    
-    // 更新密码并清除重置令牌
+
+    // Update password and clear reset token
     await db.query(
       'UPDATE app_user SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL WHERE user_id = $2',
       [hashedPassword, user.id]

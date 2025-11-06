@@ -351,11 +351,11 @@ router.post('/batch-commit', async (req, res) => {
         );
         console.log(`✅ Database record inserted successfully: upload_id=${rows[0].upload_id}`);
 
-        // 移动文件 - 使用copyFile + unlink 代替 rename 来解决跨文件系统问题
-        console.log('📂 移动文件...');
+        // Move file - use copyFile + unlink instead of rename to solve cross filesystem issues
+        console.log('📂 Moving file...');
         await fsp.copyFile(tempAbs, permAbs);
         await fsp.unlink(tempAbs);
-        console.log(`✅ 文件移动成功: ${tempAbs} -> ${permAbs}`);
+        console.log(`✅ File moved successfully: ${tempAbs} -> ${permAbs}`);
 
         uploadResults.push({
           file_type: file.name,
@@ -380,7 +380,7 @@ router.post('/batch-commit', async (req, res) => {
         const rubricPath = path.join(PERM_ROOT, rubricFile.upload_record.storage_path);
         console.log(`📍 Rubric file path: ${rubricPath}`);
         console.log(`📄 Rubric file MIME type: ${rubricFile.upload_record.mime_type}`);
-        
+
         // Check if file exists
         const fileExists = await fsp.stat(rubricPath).catch(() => null);
         if (!fileExists) {
@@ -388,18 +388,18 @@ router.post('/batch-commit', async (req, res) => {
           return;
         }
         console.log(`✅ Rubric file exists, size: ${fileExists.size} bytes`);
-        
+
         const { rows, columns } = await parseRubricFile(rubricPath, rubricFile.upload_record.mime_type);
         console.log(`🎯 Parsing result: ${rows} rows x ${columns} columns`);
-        
+
         // Update row and column fields in rubric table
         await db.query(
           'UPDATE rubric SET "row" = $1, "column" = $2 WHERE rubric_id = $3',
           [rows, columns, rubricId]
         );
-        
+
         console.log(`✅ Rubric table info updated: ${rows} rows x ${columns} columns`);
-        
+
         // Include table info in return result
         uploadResults.forEach(file => {
           if (file.file_type === 'rubric') {
@@ -435,7 +435,7 @@ router.post('/batch-commit', async (req, res) => {
       detail: error.detail,
       hint: error.hint
     });
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Batch commit failed',
       details: error.message,
       code: error.code
@@ -450,7 +450,7 @@ router.get('/debug/temp-files', async (req, res) => {
   try {
     const files = await fsp.readdir(TEMP_DIR);
     const fileDetails = [];
-    
+
     for (const file of files) {
       const filePath = path.join(TEMP_DIR, file);
       const stat = await fsp.stat(filePath);
@@ -461,7 +461,7 @@ router.get('/debug/temp-files', async (req, res) => {
         modified: stat.mtime
       });
     }
-    
+
     res.json({
       temp_directory: TEMP_DIR,
       files: fileDetails
@@ -478,10 +478,10 @@ router.get('/active-submission/:offering_id', async (req, res) => {
     if (!offering_id) {
       return res.status(400).json({ error: 'offering_id is required' });
     }
-    
+
     // Get active submission and its related information
     const { rows } = await db.query(`
-      SELECT 
+      SELECT
         s.submission_id,
         s.course_offering_id,
         s.active,
@@ -499,13 +499,13 @@ router.get('/active-submission/:offering_id', async (req, res) => {
       WHERE s.course_offering_id = $1 AND s.active = true
       LIMIT 1
     `, [offering_id]);
-    
+
     if (!rows.length) {
-      return res.status(404).json({ 
-        error: 'No active submission found for this course offering' 
+      return res.status(404).json({
+        error: 'No active submission found for this course offering'
       });
     }
-    
+
     const submission = rows[0];
     res.json({
       submission_id: submission.submission_id,
@@ -522,7 +522,7 @@ router.get('/active-submission/:offering_id', async (req, res) => {
         due_date: submission.assignment2_due_date
       }
     });
-    
+
   } catch (error) {
     console.error('Get active submission error:', error);
     res.status(500).json({ error: 'Failed to get active submission' });
@@ -536,27 +536,27 @@ router.post('/publish', async (req, res) => {
     if (!assignment_id) {
       return res.status(400).json({ error: 'assignment_id is required' });
     }
-    
+
     // Check if assignment has due_date
     const { rows } = await db.query(
       'SELECT assignment_id, due_at, name FROM assignment WHERE assignment_id = $1',
       [assignment_id]
     );
-    
+
     if (!rows.length) {
       return res.status(404).json({ error: 'Assignment not found' });
     }
-    
+
     const assignment = rows[0];
     if (!assignment.due_at) {
-      return res.status(400).json({ 
-        error: 'Cannot publish: Assignment must have a due date before publishing' 
+      return res.status(400).json({
+        error: 'Cannot publish: Assignment must have a due date before publishing'
       });
     }
-    
+
     // More publish logic can be added here, such as updating status
     // await db.query('UPDATE assignment SET status = $1 WHERE assignment_id = $2', ['PUBLISHED', assignment_id]);
-    
+
     res.json({
       message: 'Assignment published successfully',
       assignment: {
@@ -565,7 +565,7 @@ router.post('/publish', async (req, res) => {
         due_date: assignment.due_at
       }
     });
-    
+
   } catch (error) {
     console.error('Publish error:', error);
     res.status(500).json({ error: 'Failed to publish assignment' });

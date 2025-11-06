@@ -6,7 +6,7 @@ const authenticate = require('../middleware/auth');
 router.post('/login', authController.login);
 router.post('/logout', authController.logout);
 router.get('/me', authenticate, authController.getCurrentUser);
-// 新增忘记密码相关接口
+// Registration route
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.post('/change-password', authenticate, authController.changePassword);

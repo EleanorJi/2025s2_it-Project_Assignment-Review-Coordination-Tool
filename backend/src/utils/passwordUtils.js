@@ -1,9 +1,9 @@
 const bcrypt = require('bcrypt');
 
-// 密码加密
+// Password encryption
 const hashPassword = async (password) => {
   try {
-    const saltRounds = 12; // 增加salt rounds提高安全性
+    const saltRounds = 12; // Increasing the number of salt rounds enhances security.
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     return hashedPassword;
   } catch (error) {
@@ -12,7 +12,7 @@ const hashPassword = async (password) => {
   }
 };
 
-// 验证密码
+// Password comparison
 const comparePassword = async (password, hashedPassword) => {
   try {
     const isMatch = await bcrypt.compare(password, hashedPassword);

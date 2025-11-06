@@ -77,7 +77,7 @@ class EmailService {
         const websiteUrl = process.env.WEBSITE_URL || 'http://localhost:3000';
         const resetUrl = `${websiteUrl}/reset-password?token=${token}`;
 
-        // 渲染重置密码邮件模板
+        // Render password reset email template
         const html = await TemplateUtils.renderTemplate('./emailTemplates/reset-password-email.html', {
           userName,
           resetUrl,
@@ -122,12 +122,12 @@ class EmailService {
         assignmentName,
         projectName,
         WEBSITE_URL: websiteUrl,
-        userRole: 'marker', // 反馈通知总是发给marker
+        userRole: 'marker', // Feedback notification is always sent to marker
         feedbackDate: new Date().toLocaleDateString(),
         currentYear: new Date().getFullYear()
       });
 
-      // 默认用平台已验证的发件邮箱，但显示名用协调员姓名；同时把回复地址指向协调员邮箱，便于直接回信
+      // Default to using the platform's verified sender email, but display name uses coordinator name; also set reply address to coordinator email for direct replies
       const fromAddress = process.env.EMAIL_USER;
       const allowDynamicFrom = process.env.ALLOW_DYNAMIC_FROM === 'true';
 
@@ -286,7 +286,7 @@ class EmailService {
         projectName,
         dueAt,
         WEBSITE_URL: websiteUrl,
-        userRole: 'marker', // 新作业通知总是发给marker
+        userRole: 'marker', // New assignment notification is always sent to marker
         currentYear: new Date().getFullYear()
       });
 

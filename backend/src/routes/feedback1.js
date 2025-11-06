@@ -5,7 +5,7 @@ const EmailService = require('../services/emailService');
 
 const router = express.Router();
 
-// 获取对应反馈列表 /api/feedback/:assignmentId/:markerId
+// Get feedback list for specific assignment and marker /api/feedback/:assignmentId/:markerId
 router.get('/:assignmentId/:markerId', async (req, res) => {
 
     const { assignmentId, markerId } = req.params;
@@ -19,7 +19,7 @@ router.get('/:assignmentId/:markerId', async (req, res) => {
         [assignmentId, markerId]
         );
 
-        // 返回空数组而不是404，让前端处理空状态
+        // Return empty array instead of 404, let frontend handle empty state
         res.json({
         success: true,
         data: feedbackResult.rows || []
@@ -33,7 +33,7 @@ router.get('/:assignmentId/:markerId', async (req, res) => {
     }
 });
 
-// 创建反馈 /api/feedback
+// Create feedback /api/feedback
 router.post('/', async (req, res) => {
     const { assignment_id, marker_id, content, title, created_by } = req.body;
 
@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
     const cookieUserId = req.cookies && req.cookies.userId ? parseInt(req.cookies.userId) : null;
     const effectiveCreatedBy = created_by || (req.user && req.user.id) || cookieUserId || null;
 
-    // 验证必需字段
+    // Validate required fields
     if (!assignment_id || !marker_id || !content) {
         return res.status(400).json({
             success: false,
@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
     }
 
     try {
-        // 验证assignment是否存在
+        // Verify assignment exists
         const assignmentCheck = await db.query(
             'SELECT assignment_id FROM assignment WHERE assignment_id = $1',
             [assignment_id]
@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // 验证marker是否存在
+        // Verify marker exists
         const markerCheck = await db.query(
             'SELECT user_id FROM app_user WHERE user_id = $1',
             [marker_id]
@@ -76,7 +76,7 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // 创建反馈
+        // Create feedback
         const feedbackResult = await db.query(
             `INSERT INTO feedback (assignment_id, marker_id, content, title, created_by)
              VALUES ($1, $2, $3, $4, $5)
@@ -91,20 +91,20 @@ router.post('/', async (req, res) => {
         // Send email notification to marker
         try {
             console.log(`🔍 Debug email sending - marker_id: ${marker_id}, created_by: ${effectiveCreatedBy}, assignment_id: ${assignment_id}`);
-            
+
             // Get marker and coordinator information for email
             const markerInfo = await db.query(
                 'SELECT name, email FROM app_user WHERE user_id = $1',
                 [marker_id]
             );
             console.log(`🔍 Marker info query result:`, markerInfo.rows);
-            
+
             const coordinatorInfo = await db.query(
                 'SELECT name, email FROM app_user WHERE user_id = $1',
                 [effectiveCreatedBy]
             );
             console.log(`🔍 Coordinator info query result:`, coordinatorInfo.rows);
-            
+
             const assignmentInfo = await db.query(`
                 SELECT a.assignment_id, a.name as assignment_name, a.project_id, p.name as project_name
                 FROM assignment a
@@ -126,9 +126,9 @@ router.post('/', async (req, res) => {
                     assignment.project_name,
                     assignment.project_id,
                     assignment.assignment_id,
-                    coordinator.email // 传入协调员邮箱用于from/replyTo
+                    coordinator.email // Pass coordinator email for from/replyTo
                 );
-                
+
                 console.log(`📧 Feedback notification email sent to: ${marker.email}`);
             } else {
                 console.warn('⚠️ Could not send feedback notification email: missing user or assignment information');
@@ -161,7 +161,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// 获取所有反馈（按assignment分组） /api/feedback/assignment/:assignmentId
+// Get all feedback (grouped by assignment) /api/feedback/assignment/:assignmentId
 router.get('/assignment/:assignmentId', async (req, res) => {
     const { assignmentId } = req.params;
 
