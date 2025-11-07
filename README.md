@@ -21,55 +21,55 @@ Project: Assignment Moderation Tool
 ```
 IT-Project-80/
 ├── README.md
-├── docker-compose.yml          # Docker 一键启动
-├── docker.env                  # Docker 环境变量
-├── docker.env.example          # Docker 环境变量模板
-├── DOCKER_README.md            # Docker 使用说明
-├── package.json                # 根级工具/脚本
-├── run-tests.sh                # 本地/CI 测试脚本
-├── test_debug.html             # 前端调试页
-├── test_image_readme/          # README 截图资源
+├── docker-compose.yml          # Docker orchestration
+├── docker.env                  # Docker environment variables
+├── docker.env.example          # Docker env template
+├── DOCKER_README.md            # Docker setup guide
+├── package.json                # Root-level tools/scripts
+├── run-tests.sh                # Local/CI test script
+├── test_debug.html             # Frontend debug page
+├── test_image_readme/          # README image assets
 │   └── img_*.png
-├── uploads/                    # 示例上传目录（运行时生成）
+├── uploads/                    # Example upload directory (runtime-generated)
 │   └── 2025/
 │       └── 10/
-├── backend/                    # Node.js 后端服务
+├── backend/                    # Node.js backend service
 │   ├── Dockerfile
 │   ├── jest.config.js
-│   ├── node_modules/
+│   ├── node_modules/           # Installed dependencies (generated)
 │   ├── package.json
 │   ├── package-lock.json
 │   ├── run-migration.js
-│   ├── temp_uploads/
-│   ├── uploads/
+│   ├── temp_uploads/           # Temporary upload staging
+│   ├── uploads/                # Persistent uploads
 │   │   └── 2025/
 │   │       └── 09/
-│   └── src/
+│   └── src/                    # Application source code
 │       ├── app.js
 │       ├── generateHashes.js
-│       ├── config/
+│       ├── config/             # Configuration
 │       │   ├── constants.js
 │       │   ├── database.js
 │       │   └── email.js
-│       ├── controllers/
+│       ├── controllers/        # Controllers
 │       │   ├── authController.js
 │       │   ├── authController.test.js
 │       │   ├── dashboardController.js
 │       │   ├── invitationController.js
 │       │   ├── profileController.js
 │       │   └── uploads.js
-│       ├── jobs/
+│       ├── jobs/               # Background jobs/cron
 │       │   └── deadlineNotifier.js
-│       ├── middleware/
+│       ├── middleware/         # Request middleware
 │       │   ├── auth.js
 │       │   ├── auth.test.js
 │       │   ├── errorHandler.js
 │       │   ├── projectValidation.js
 │       │   ├── roleAuth.js
 │       │   └── roleAuth.test.js
-│       ├── migrations/
+│       ├── migrations/         # Database migrations
 │       │   └── encrypt_existing_passwords.js
-│       ├── routes/
+│       ├── routes/             # REST API routes
 │       │   ├── auth.js
 │       │   ├── dashboard.js
 │       │   ├── feedback1.js
@@ -77,9 +77,9 @@ IT-Project-80/
 │       │   ├── invitations.js
 │       │   ├── page.js
 │       │   └── uploads_v2.js
-│       ├── services/
+│       ├── services/           # Business services
 │       │   └── emailService.js
-│       ├── templates/
+│       ├── templates/          # Email templates
 │       │   └── emailTemplates/
 │       │       ├── assignment-published-notification-email.html
 │       │       ├── deadline-passed-email.html
@@ -89,20 +89,20 @@ IT-Project-80/
 │       │       ├── marking-completed-email.html
 │       │       ├── new-assignment-notification-email.html
 │       │       └── reset-password-email.html
-│       └── utils/
+│       └── utils/              # Utility helpers
 │           ├── enhanced_rubric_parser.js
 │           ├── fileParser.js
 │           ├── helpers.js
 │           ├── helpers.test.js
 │           ├── passwordUtils.js
 │           └── templateUtils.js
-├── frontend/                   # 静态前端（HTML/CSS/JS）
+├── frontend/                   # Static frontend (HTML/CSS/JS)
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   ├── package.json
 │   ├── package-lock.json
 │   ├── test-setup.js
-│   ├── __mocks__/
+│   ├── __mocks__/              # Jest style mocks
 │   │   └── styleMock.js
 │   ├── login.html
 │   ├── login.js
@@ -115,7 +115,7 @@ IT-Project-80/
 │   ├── reset-password.html
 │   ├── styles.css
 │   ├── styles copy.css
-│   ├── Coordinator/
+│   ├── Coordinator/            # Coordinator UI pages
 │   │   ├── change-password.css
 │   │   ├── coordinator-dashboard.css
 │   │   ├── coordinator-dashboard.html
@@ -140,7 +140,7 @@ IT-Project-80/
 │   │   ├── task-management.css
 │   │   ├── task-management.html
 │   │   └── task-management.js
-│   └── Marker/
+│   └── Marker/                 # Marker UI pages
 │       ├── marker-dashboard.css
 │       ├── marker-dashboard.html
 │       ├── marker.js
@@ -155,20 +155,20 @@ IT-Project-80/
 │       ├── view-feedback.css
 │       ├── view-feedback.html
 │       └── view-feedback.js
-├── database/                   # 数据库脚本
+├── database/                   # Database scripts
 │   ├── IT SQL.sql
 │   ├── listTables.sql
 │   ├── add_marker_user.sql
 │   ├── add_deviation_percent_to_baseline_score.sql
 │   ├── add_total_deviation_percent_to_assignment.sql
 │   ├── test_data.sql
-│   └── seeds/
+│   └── seeds/                  # Seed data
 │       └── initial_data.sql
-└── test/                       # 测试资源
-    ├── doc/
+└── test/                       # Test assets
+    ├── doc/                    # Sample documents for demo/tests
     │   ├── assigment test.pdf
     │   └── rubric test.xlsx
-    └── image_readme/
+    └── image_readme/           # README screenshots
         ├── image1.png
         ├── image2.png
         ├── image3.png
