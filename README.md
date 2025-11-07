@@ -169,24 +169,7 @@ IT-Project-80/
     │   ├── assigment test.pdf
     │   └── rubric test.xlsx
     └── image_readme/           # README screenshots
-        ├── image1.png
-        ├── image2.png
-        ├── image3.png
-        ├── image4.png
-        ├── image5.png
-        ├── image6.png
-        ├── image7.png
-        ├── image8.png
-        ├── image9.png
-        ├── image10.png
-        ├── image11.png
-        ├── image12.png
-        ├── image13.png
-        ├── image14.png
-        ├── image15.png
-        ├── image16.png
-        ├── image17.png
-        └── image18.png
+        └──images
 ```
 
 ## Getting Started & Demo
@@ -216,8 +199,8 @@ For local development and testing, please follow our Docker implementation guide
 
 Open the application at `http://localhost` and log in with the test admin account:
 
-- **Username**: `admin@grading.com`
-- **Password**: `admin123`
+- **Username**: `carrie.ewin@gmail.com`
+- **Password**: `12345678`
 
 ![Login Page](test/image_readme/image2.png)
 
@@ -235,6 +218,8 @@ Navigate to **"Markers Management"** to manage marker accounts:
 
 - **Invite new markers**: Enter an email address to send invitations
 - **Manage existing markers**: Use "Resend" and "Revoke" buttons to manage invitations
+- **Manage account permission**：Use "Close" and "Open" to manage marker account
+- **Add a note for the marker**: click the "Display Name / Nickname" to give marker notes (only coordinator can see)
 - **Test functionality**: You can use your own email address for testing
 
 ![Markers Management](test/image_readme/image4.png)
@@ -247,7 +232,7 @@ When a marker invitation is sent, the recipient receives an email invitation:
 
 Click the link in the email to complete marker registration:
 
-![Marker Registration](test/image_readme/image6.png)
+![marker signup](test/image_readme/image6.png)
 
 #### 5. Marker Dashboard
 
@@ -281,12 +266,14 @@ Return to the Coordinator Dashboard and click **"Task Management"**:
 3. Upload the rubric file
 
 ![Rubric Upload](test/image_readme/image11.png)
+![Rubric Upload](test/image_readme/image19.png)
 
 **View the uploaded rubric:**
 
-Click **"View Rubric"** to see the rubric content:
+Click **"View Rubric"** to see the rubric content and can edit rubric as needed:
 
 ![Rubric Content](test/image_readme/image12.png)
+![Rubric Edit](test/image_readme/image20.png)  
 
 #### 8. Assignment Upload
 
@@ -294,18 +281,20 @@ Click **"View Rubric"** to see the rubric content:
 
 1. Click **"Upload Assignment"**
 2. Select the test file: `test/doc/assignment test.pdf`
-3. Upload the assignment
+3. Preview and upload the assignment
 
 ![Assignment Upload](test/image_readme/image13.png)
+![Assignment Upload](test/image_readme/image21.png)
 
 #### 9. Task Activation
 
 After uploading both rubric and assignment:
 
 1. Click **"Publish Assignment"**
-2. The task is now activated and ready for marking
+2. Preview the information about the assignments
+3. The task is now activated and ready for marking
 
-![Task Activation](test/image_readme/image14.png)
+![assignment upload preview](test/image_readme/image14.png)
 
 #### 10. Marking Interface
 
@@ -313,35 +302,127 @@ Access the marking functionality:
 
 1. Click **"Mark Assignment"**
 2. Enter scores for different criteria
-3. Confirm the scores and click **"Submit"**
+3. Can save the scores as needed
+4. Confirm the scores and click **"Submit"**
 
 ![Marking Interface](test/image_readme/image15.png)
-
-The marking is successfully submitted.
-
-![Submission Success](test/image_readme/image16.png)
+![save and submit scores](test/image_readme/image16.png)
 
 #### 11. Feedback System
 
-The feedback interface is available but currently in display mode:
+Coordinator view:
+1. Open the Feedback page.
 
-![Feedback Interface](test/image_readme/image17.png)
+![open feedback](test/image_readme/image22.png)
 
-*Note: Feedback functionality is under development.*
+2. View each marker’s scores and comments.
+3. Check deviation indicators based on preset or adjustable thresholds.(can adjust deviation percentages per criterion or total score when required.)
+4. Review comments and scoring rationale where needed.
+
+![view feedback](test/image_readme/image23.png)
+
+5. Provide Feedback to Markers
+Provide feedback to the marker in the comment box, select marker to give feedback.
+
+![write feedback](test/image_readme/image24.png)
+
+6. View marker individual performance
+select a marker
+
+![detail for each marker](test/image_readme/image25.png)
+
+Markers revise scores or provide justification.
+Hover grade level to view detailed description among each markers.
+
+![view grade level](test/image_readme/image26.png)
+
+Marker view：
+1. Communication & Feedback
+Coordinator can leave notes for each marker
+Markers can Check feedback in Task management page
+
+![marker find feedback](test/image_readme/image28.png)
+
+- Note: To avoid losing progress, we recommend saving or submitting marks before navigating away from the page. If you notice the interface not updating immediately, a quick hard refresh ('Command + Shift + R' on Mac / 'Ctrl + Shift + R' on Windows) will reload the latest state.
+
+3. Ensure communication remains professional and aligned with university assessment policies
+
+![marker view feedback](test/image_readme/image29.png)
 
 #### 12. Historical Tasks
 
-Return to the dashboard to view historical task examples:
+Once moderation is complete, you can chose to change  status into Complete or Archive to past task.
 
-![Historical Tasks](test/image_readme/image18.png)
+![archive Tasks](test/image_readme/image18.png)
+![Past Tasks page](test/image_readme/image27.png)  
 
 This demonstrates how coordinators can track previous assignments and tasks.
+
+#### 13. email notification system
+
+Our system will send reminder emails to users in various situations, and they are as follows:
+1. Invitation to markers
+
+![Invitation Email](test/image_readme/image30.png)  
+
+2. Invitation Revocation
+
+![Invitation Revocation email](test/image_readme/image31.png)
+
+3. Password Reset
+![Password Reset email](test/image_readme/image32.png)
+
+4. New Assignment (Marker)
+
+![New Assignment (Marker) email](test/image_readme/image33.png)
+
+5. Assignment Published (Coordinator)
+
+![Assignment Published (Coordinator) email](test/image_readme/image34.png)  
+
+6. Due Soon (within 2 days to deadlines)
+
+![Due Soon (T-minus ~2 days) email](test/image_readme/image35.png)
+
+7. Deadline Passed
+
+![Deadline Passed email](test/image_readme/image36.png)
+
+8. Marking Completed  
+
+![Marking Completed email](test/image_readme/image37.png)
+
+9. Feedback Notification
+
+![Feedback Notification email](test/image_readme/image38.png)
+
+
+#### 14. forgot and/or reset password
+
+1. Forgot and reset password
+
+In login page, when forgot password, entering account email and will send a email with reset link.
+
+![forgot Password](test/image_readme/image39.png)
+
+Click link to reset password. 
+
+![reset Password](test/image_readme/image40.png)
+
+2. Reset password 
+On each page, at the top-right corner, there is a pop-up window.
+
+![top-right Conner](test/image_readme/image41.png)
+
+Clicking on it will allow you to reset the password. In the password reset interface, the original password is required for verification. You can also choose to forget the password.
+
+![reset Password directly](test/image_readme/image42.png)
 
 ### Alternative Access - Live Deployment
 
 If you encounter issues with local Docker setup, you can access our deployed version:
 
-🌐 **Live Demo**: [https://it-project-80-production-06bc.up.railway.app/](https://it-project-80-production-06bc.up.railway.app/)
+🌐 **Live Demo**: [https://assignment-moderator.up.railway.app/](https://assignment-moderator.up.railway.app/)
 
 *Use the same testing procedures and credentials as described above.*
 
@@ -355,17 +436,18 @@ If you encounter issues with local Docker setup, you can access our deployed ver
 - User authentication system (Admin/Coordinator/Marker roles)
 - Email invitation system for markers
 - Task creation and management
-- Rubric upload and parsing (.xlsx format)
+- Rubric upload and parsing (.docx, .csv formats)
 - Assignment upload (.pdf format)
-- Basic marking interface
+- Basic marking interface with criterion-level scoring and comments
+- Coordinator dashboard with overview and progress tracking
+- Marker dashboard with pending and completed tasks
+- Task management page for marking and submitting scores
+- Feedback page for coordinators to review marker submissions and deviations
+- Marker management (invite, remind, revoke access)
+- Rubric preview and assignment publishing
+- Archive functionality for completed tasks
 - Docker containerization
 - Database integration (PostgreSQL)
-
-🚧 **In Development:**
-- Dashboard overview functionality
-- Complete marker interface integration
-- Feedback system implementation
-- Advanced reporting features
 
 ### Test Files Location
 
