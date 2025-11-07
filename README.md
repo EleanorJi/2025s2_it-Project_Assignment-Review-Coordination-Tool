@@ -21,119 +21,172 @@ Project: Assignment Moderation Tool
 ```
 IT-Project-80/
 ├── README.md
-├── .gitignore
-├── docker-compose.yml          # Docker development environment
-├── docker.env                 # Docker environment variables
-├── docker.env.example         # Docker environment template
-├── DOCKER_README.md           # Docker setup documentation
-├── LOGIN_TEST.md              # Login testing documentation
-├── 
-├── backend/                   # Node.js API Service
+├── docker-compose.yml          # Docker 一键启动
+├── docker.env                  # Docker 环境变量
+├── docker.env.example          # Docker 环境变量模板
+├── DOCKER_README.md            # Docker 使用说明
+├── package.json                # 根级工具/脚本
+├── run-tests.sh                # 本地/CI 测试脚本
+├── test_debug.html             # 前端调试页
+├── test_image_readme/          # README 截图资源
+│   └── img_*.png
+├── uploads/                    # 示例上传目录（运行时生成）
+│   └── 2025/
+│       └── 10/
+├── backend/                    # Node.js 后端服务
 │   ├── Dockerfile
+│   ├── jest.config.js
+│   ├── node_modules/
 │   ├── package.json
 │   ├── package-lock.json
-│   ├── src/
-│   │   ├── app.js            # Main application file
-│   │   ├── config/           # Configuration files
-│   │   │   ├── constants.js
-│   │   │   ├── database.js
-│   │   │   └── email.js
-│   │   ├── middleware/       # Middleware
-│   │   │   ├── auth.js
-│   │   │   ├── errorHandler.js
-│   │   │   ├── projectValidation.js
-│   │   │   └── roleAuth.js
-│   │   ├── routes/           # API routes
-│   │   │   ├── index.js
-│   │   │   ├── auth.js
-│   │   │   ├── dashboard.js
-│   │   │   ├── invitations.js
-│   │   │   ├── page.js
-│   │   │   └── uploads_v2.js
-│   │   ├── controllers/      # Controllers
-│   │   │   ├── authController.js
-│   │   │   ├── dashboardController.js
-│   │   │   ├── invitationController.js
-│   │   │   └── uploads.js
-│   │   ├── models/           # Data models (empty)
-│   │   ├── services/         # Business logic
-│   │   │   └── emailService.js
-│   │   ├── templates/        # Email templates
-│   │   │   └── emailTemplates/
-│   │   │       ├── invitation-email.html
-│   │   │       └── revocation-email.html
-│   │   └── utils/            # Utility functions
-│   │       ├── enhanced_rubric_parser.js
-│   │       ├── fileParser.js
-│   │       ├── helpers.js
-│   │       └── templateUtils.js
-│   └── tests/               # Test files
-│       ├── unit/
-│       └── integration/
-├── 
-├── frontend/                # HTML/CSS/JS Frontend Application
+│   ├── run-migration.js
+│   ├── temp_uploads/
+│   ├── uploads/
+│   │   └── 2025/
+│   │       └── 09/
+│   └── src/
+│       ├── app.js
+│       ├── generateHashes.js
+│       ├── config/
+│       │   ├── constants.js
+│       │   ├── database.js
+│       │   └── email.js
+│       ├── controllers/
+│       │   ├── authController.js
+│       │   ├── authController.test.js
+│       │   ├── dashboardController.js
+│       │   ├── invitationController.js
+│       │   ├── profileController.js
+│       │   └── uploads.js
+│       ├── jobs/
+│       │   └── deadlineNotifier.js
+│       ├── middleware/
+│       │   ├── auth.js
+│       │   ├── auth.test.js
+│       │   ├── errorHandler.js
+│       │   ├── projectValidation.js
+│       │   ├── roleAuth.js
+│       │   └── roleAuth.test.js
+│       ├── migrations/
+│       │   └── encrypt_existing_passwords.js
+│       ├── routes/
+│       │   ├── auth.js
+│       │   ├── dashboard.js
+│       │   ├── feedback1.js
+│       │   ├── index.js
+│       │   ├── invitations.js
+│       │   ├── page.js
+│       │   └── uploads_v2.js
+│       ├── services/
+│       │   └── emailService.js
+│       ├── templates/
+│       │   └── emailTemplates/
+│       │       ├── assignment-published-notification-email.html
+│       │       ├── deadline-passed-email.html
+│       │       ├── due-soon-email.html
+│       │       ├── feedback-notification-email.html
+│       │       ├── invitation-email.html
+│       │       ├── marking-completed-email.html
+│       │       ├── new-assignment-notification-email.html
+│       │       └── reset-password-email.html
+│       └── utils/
+│           ├── enhanced_rubric_parser.js
+│           ├── fileParser.js
+│           ├── helpers.js
+│           ├── helpers.test.js
+│           ├── passwordUtils.js
+│           └── templateUtils.js
+├── frontend/                   # 静态前端（HTML/CSS/JS）
 │   ├── Dockerfile
-│   ├── nginx.conf           # Nginx configuration
-│   ├── login.html           # Login page
+│   ├── nginx.conf
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── test-setup.js
+│   ├── __mocks__/
+│   │   └── styleMock.js
+│   ├── login.html
 │   ├── login.js
-│   ├── signup.html          # Signup page
+│   ├── login.test.js
+│   ├── signup.html
 │   ├── signup.js
-│   ├── confirm.html         # Confirmation page
-│   ├── styles.css           # Global styles
+│   ├── signup.test.js
+│   ├── confirm.html
+│   ├── forgot-password.html
+│   ├── reset-password.html
+│   ├── styles.css
 │   ├── styles copy.css
-│   ├── public/              # Static assets
-│   ├── dist/                # Build output
-│   ├── src/                 # Source code structure
-│   │   ├── assets/
-│   │   ├── components/
-│   │   │   ├── common/
-│   │   │   ├── forms/
-│   │   │   └── layout/
-│   │   ├── router/
-│   │   ├── services/
-│   │   ├── stores/
-│   │   ├── utils/
-│   │   └── views/
-│   │       └── Assignment/
-│   ├── Coordinator/         # Coordinator dashboard pages
-│   │   ├── coordinator-dashboard.html
+│   ├── Coordinator/
+│   │   ├── change-password.css
 │   │   ├── coordinator-dashboard.css
+│   │   ├── coordinator-dashboard.html
 │   │   ├── coordinator.js
-│   │   ├── feedback.html
 │   │   ├── feedback.css
+│   │   ├── feedback.html
 │   │   ├── feedback.js
-│   │   ├── invite.html
 │   │   ├── invite.css
+│   │   ├── invite.html
 │   │   ├── invite.js
-│   │   ├── mark-assignment.html
 │   │   ├── mark-assignment.css
+│   │   ├── mark-assignment.html
 │   │   ├── mark-assignment.js
-│   │   ├── past-assignment.html
+│   │   ├── onboarding-modal.css
 │   │   ├── past-assignment.css
+│   │   ├── past-assignment.html
 │   │   ├── past-assignment.js
-│   │   ├── rubric.html
+│   │   ├── profile.css
 │   │   ├── rubric.css
+│   │   ├── rubric.html
 │   │   ├── rubric.js
-│   │   ├── task-management.html
 │   │   ├── task-management.css
+│   │   ├── task-management.html
 │   │   └── task-management.js
-│   └── Marker/              # Marker dashboard pages
-│       ├── marker-dashboard.html
+│   └── Marker/
 │       ├── marker-dashboard.css
-│       └── marker.js
-│
-├── database/               # Database related
-│   ├── IT SQL.sql         # Main database schema
-│   ├── migrations/        # Database migrations (empty)
-│   ├── scripts/           # Database scripts (empty)
-│   └── seeds/             # Initial data
+│       ├── marker-dashboard.html
+│       ├── marker.js
+│       ├── marker.test.js
+│       ├── onboarding-modal.css
+│       ├── past-task.css
+│       ├── past-task.html
+│       ├── past-task.js
+│       ├── task-management.css
+│       ├── task-management.html
+│       ├── task-management.js
+│       ├── view-feedback.css
+│       ├── view-feedback.html
+│       └── view-feedback.js
+├── database/                   # 数据库脚本
+│   ├── IT SQL.sql
+│   ├── listTables.sql
+│   ├── add_marker_user.sql
+│   ├── add_deviation_percent_to_baseline_score.sql
+│   ├── add_total_deviation_percent_to_assignment.sql
+│   ├── test_data.sql
+│   └── seeds/
 │       └── initial_data.sql
-│
-├── test/                  # Test files and resources
-│   ├── doc/              # Test documents
-│   │   ├── assigment test.pdf    # Sample assignment file
-│   │   └── rubric test.xlsx      # Sample rubric file
-│   └── image_readme/     # README demonstration images
+└── test/                       # 测试资源
+    ├── doc/
+    │   ├── assigment test.pdf
+    │   └── rubric test.xlsx
+    └── image_readme/
+        ├── image1.png
+        ├── image2.png
+        ├── image3.png
+        ├── image4.png
+        ├── image5.png
+        ├── image6.png
+        ├── image7.png
+        ├── image8.png
+        ├── image9.png
+        ├── image10.png
+        ├── image11.png
+        ├── image12.png
+        ├── image13.png
+        ├── image14.png
+        ├── image15.png
+        ├── image16.png
+        ├── image17.png
+        └── image18.png
 ```
 
 ## Getting Started & Demo
