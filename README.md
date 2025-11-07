@@ -370,6 +370,7 @@ Our system will send reminder emails to users in various situations, and they ar
 ![Invitation Revocation email](test/image_readme/image31.png)
 
 3. Password Reset
+
 ![Password Reset email](test/image_readme/image32.png)
 
 4. New Assignment (Marker)
