@@ -1,0 +1,7 @@
+"user_id","name","email","password_hash","role","is_active","last_login","reset_token","reset_token_expiry"
+"3","MarkerA","marker.a@grading.com","12345678","MARKER",True,"2025-10-20 21:37:53.517316+11",NULL,NULL
+"4","MarkerB","marker.b@grading.com","12345678","MARKER",True,"2025-10-20 21:39:31.314656+11",NULL,NULL
+"5","MarkerC","marker.c@grading.com","12345678","MARKER",True,"2025-10-20 21:40:16.637458+11",NULL,NULL
+"6","MarkerD","marker.d@grading.com","12345678","MARKER",True,"2025-10-20 21:41:05.343084+11",NULL,NULL
+"1","admin","hanyuj2@student.unimelb.edu.au","12345678","COORDINATOR",True,"2025-10-20 21:34:55.464775+11",NULL,NULL
+"7","yilia","1612324676@qq.com","12345678","MARKER",True,"2025-10-22 17:00:20.99383+11",NULL,NULL

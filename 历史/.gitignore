@@ -1,0 +1,20 @@
+# 依赖目录
+backend/node_modules/
+
+backend/package-lock.json
+
+backend/package.json
+
+历史/
+
+# 环境变量文件
+.env
+
+# 日志文件
+*.log
+
+# 操作系统生成的文件
+.DS_Store
+
+# IDE 文件（如果团队不用同样的 IDE）
+.idea/

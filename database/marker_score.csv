@@ -1,0 +1,25 @@
+"marker_score_id","assignment_id","criterion_id","marker_id","score","comment","submitted_at","finalized"
+"1","1","1","3","15.00","MarkerA sample feedback. MarkerA sample feedback.","2025-10-20 21:39:05.574188",True
+"2","1","2","3","10.00","MarkerA sample feedback. MarkerA sample feedback.","2025-10-20 21:39:05.574188",True
+"3","1","3","3","15.00","MarkerA sample feedback. MarkerA sample feedback.","2025-10-20 21:39:05.574188",True
+"4","1","4","3","25.00","MarkerA sample feedback. MarkerA sample feedback.","2025-10-20 21:39:05.574188",True
+"5","1","5","3","20.00","MarkerA sample feedback. MarkerA sample feedback.","2025-10-20 21:39:05.574188",True
+"7","1","1","4","15.00","MarkerB sample feedback. MarkerB sample feedback.","2025-10-20 21:40:03.362301",True
+"8","1","2","4","10.00","MarkerB sample feedback. MarkerB sample feedback.","2025-10-20 21:40:03.362301",True
+"10","1","4","4","25.00","MarkerB sample feedback. MarkerB sample feedback.","2025-10-20 21:40:03.362301",True
+"11","1","5","4","20.00","MarkerB sample feedback. MarkerB sample feedback.","2025-10-20 21:40:03.362301",True
+"12","1","6","4","15.00","MarkerB sample feedback. MarkerB sample feedback.","2025-10-20 21:40:03.362301",True
+"14","1","2","5","10.00","MarkerC sample feedback. MarkerC sample feedback.","2025-10-20 21:40:45.336259",True
+"16","1","4","5","25.00","MarkerC sample feedback. MarkerC sample feedback.","2025-10-20 21:40:45.336259",True
+"17","1","5","5","20.00","MarkerC sample feedback. MarkerC sample feedback.","2025-10-20 21:40:45.336259",True
+"18","1","6","5","15.00","MarkerC sample feedback. MarkerC sample feedback.","2025-10-20 21:40:45.336259",True
+"19","1","1","6","15.00","MarkerD sample feedback. MarkerD sample feedback.","2025-10-20 21:41:35.553546",True
+"20","1","2","6","10.00","MarkerD sample feedback. MarkerD sample feedback.","2025-10-20 21:41:35.553546",True
+"21","1","3","6","15.00","MarkerD sample feedback. MarkerD sample feedback.","2025-10-20 21:41:35.553546",True
+"23","1","5","6","20.00","MarkerD sample feedback. MarkerD sample feedback.","2025-10-20 21:41:35.553546",True
+"24","1","6","6","15.00","MarkerD sample feedback. MarkerD sample feedback.","2025-10-20 21:41:35.553546",True
+"6","1","6","3","10.00","MarkerA sample feedback. MarkerA sample feedback.","2025-10-20 21:39:05.574188",True
+"9","1","3","4","12.00","MarkerB sample feedback. MarkerB sample feedback.","2025-10-20 21:40:03.362301",True
+"22","1","4","6","23.00","MarkerD sample feedback. MarkerD sample feedback.","2025-10-20 21:41:35.553546",True
+"15","1","3","5","14.50","MarkerC sample feedback. MarkerC sample feedback.","2025-10-20 21:40:45.336259",True
+"13","1","1","5","13.00","MarkerC sample feedback. MarkerC sample feedback.","2025-10-20 21:40:45.336259",True

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Rubric</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Lato -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/Coordinator/rubric.css" />
+  <script src="/Coordinator/rubric.js" defer></script>
+</head>
+<body>
+ <!-- Top bar -->
+ <header class="topbar">
+   <div class="brand">
+     <div class="brand-title">HPS302 Assignment Moderation Tool</div>
+   </div>
+   <div class="account dropdown">
+     <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
+     <div class="dropdown-menu">
+       <a href="#" class="dropdown-item" onclick="goToResetPassword()">Reset Password</a>
+       <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+     </div>
+   </div>
+</header>
+
+
+  <div class="app">
+    <main class="main-content">
+      <!-- Title and Back button row -->
+      <div class="title-row">
+        <h1>Rubric</h1>
+        <div class="btn-group">
+          <button class="edit-btn" id="editBtn">Edit</button>
+          <button class="save-btn" id="saveBtn" style="display:none;">Save</button>
+          <button class="cancel-btn" id="cancelBtn" style="display:none;">Cancel</button>
+          <button class="back-btn" id="backBtn">Back</button>
+        </div>
+      </div>
+
+      <!-- Assignment details -->
+      <div class="assignment-details">
+        <div class="assignment-info">
+          <div id="rubric-meta" class="assignment-meta">Loading…</div>
+        </div>
+      </div>
+
+    <section class="panel" aria-labelledby="rubric-title">
+      <div class="control-buttons" id="controlButtons" style="display:none;">
+        <button class="add-row-btn" id="addRowBtn">+ Add Criterion (Row)</button>
+        <button class="add-col-btn" id="addColBtn">+ Add Grade Level (Column)</button>
+        <button class="delete-row-btn" id="deleteRowBtn">- Delete Criterion (Row)</button>
+        <button class="delete-col-btn" id="deleteColBtn">- Delete Grade Level (Column)</button>
+      </div>
+      <div class="table-scroll">
+        <table class="rubric-table" id="rubric-table" aria-describedby="rubric-meta">
+          <thead>
+            <tr>
+              <th scope="col">Criteria:</th>
+              <th scope="col">
+                <div class="grade-header">High Distinction</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Distinction</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Credit</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Pass</div>
+              </th>
+              <th scope="col">
+                <div class="grade-header">Fail</div>
+              </th>
+              <th scope="col">Criteria Score</th>
+            </tr>
+          </thead>
+          <tbody id="rubric-body">
+            <!-- JS renders rows here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+    </main>
+  </div>
+
+  <!-- Add Criterion Modal -->
+  <div class="modal-overlay" id="addCriterionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Add New Criterion</h2>
+        <button class="modal-close" id="closeCriterionModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="criterionTitle">Title *</label>
+          <input type="text" class="form-input" id="criterionTitle" placeholder="Enter criterion title" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="criterionDescription">Description</label>
+          <input type="text" class="form-input" id="criterionDescription" placeholder="Optional description">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="criterionMaxScore">Max Score *</label>
+          <input type="number" class="form-input" id="criterionMaxScore" placeholder="0" min="0" step="0.5" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="cancelCriterionModal">Cancel</button>
+        <button class="modal-btn modal-btn-primary" id="confirmAddCriterion">Add Criterion</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Grade Level Modal -->
+  <div class="modal-overlay" id="addGradeLevelModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Add New Grade Level</h2>
+        <button class="modal-close" id="closeGradeLevelModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="gradeLevelName">Level Name *</label>
+          <input type="text" class="form-input" id="gradeLevelName" placeholder="e.g., High Distinction" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="gradeLevelMinScore">Min Score *</label>
+            <input type="number" class="form-input" id="gradeLevelMinScore" placeholder="0" min="0" step="0.5" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="gradeLevelMaxScore">Max Score *</label>
+            <input type="number" class="form-input" id="gradeLevelMaxScore" placeholder="0" min="0" step="0.5" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="cancelGradeLevelModal">Cancel</button>
+        <button class="modal-btn modal-btn-primary" id="confirmAddGradeLevel">Add Grade Level</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Criterion Modal -->
+  <div class="modal-overlay" id="deleteCriterionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Delete Criterion</h2>
+        <button class="modal-close" id="closeDeleteCriterionModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Select the criterion to delete:</p>
+        <div class="form-group">
+          <select class="form-input" id="criterionToDelete">
+            <option value="">-- Select a criterion --</option>
+          </select>
+        </div>
+        <p style="color: var(--muted); font-size: 13px;">⚠️ This will permanently delete the criterion and all its grade level data.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="cancelDeleteCriterion">Cancel</button>
+        <button class="modal-btn modal-btn-primary" id="confirmDeleteCriterion">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Grade Level Modal -->
+  <div class="modal-overlay" id="deleteGradeLevelModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Delete Grade Level</h2>
+        <button class="modal-close" id="closeDeleteGradeLevelModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Select the grade level to delete:</p>
+        <div class="form-group">
+          <select class="form-input" id="gradeLevelToDelete">
+            <option value="">-- Select a grade level --</option>
+          </select>
+        </div>
+        <p style="color: var(--muted); font-size: 13px;">⚠️ This will permanently delete all entries for this grade level across all criteria.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="cancelDeleteGradeLevel">Cancel</button>
+        <button class="modal-btn modal-btn-primary" id="confirmDeleteGradeLevel">Delete</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,159 @@
+:root{
+  --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#667085;
+  --primary:#0F172A; --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+
+/* Top bar */
+.topbar{
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;background:#fff;border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
+.brand-title{font-weight:800}
+.account{font-weight:600}
+.caret{color:#98A2B3;margin-left:6px}
+
+
+/* Layout */
+.app{
+  display:grid;
+  grid-template-columns:280px 1fr;
+  gap:16px;
+  padding:16px;
+}
+.sidebar{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:12px;
+  height:calc(100vh - 96px); /* sidebar 高度 */
+}
+.nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.nav-item{
+  width:100%;
+  text-align:left;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  font-weight:600;
+  cursor:pointer;
+}
+.nav-item.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Main Panel */
+.main{padding-right:16px}
+.panel{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:18px 18px 22px;
+  display:flex;
+  flex-direction:column;
+  height:calc(100vh - 96px); /* ✅ 和 sidebar 对齐 */
+  box-sizing:border-box;
+}
+
+/* Typography & cards */
+h1{font-size:24px;margin:0 0 10px 0;font-weight:800}
+.group-title{font-weight:800;margin:0 0 10px 6px}
+.muted{color:var(--muted)}
+
+/* Two-column layout */
+.cols{
+  flex:1; /* ✅ 填满 panel */
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+  align-items:stretch;
+}
+.big-box{
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#fff;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  height:100%; /* ✅ 两个大框等高 */
+  box-sizing:border-box;
+}
+.inner-card{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:16px;
+  background:#fff;
+  margin-top:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* Task title styling */
+.task-title{
+  font-size:20px;
+  font-weight:900;
+  color:var(--text);
+  margin-bottom:12px;
+  line-height:1.2;
+  letter-spacing:-0.02em;
+  text-shadow:0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Buttons */
+.btn{
+  height:36px;
+  padding:0 16px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:#f8f9fa;
+  color:var(--muted);
+  font-weight:600;
+  font-size:14px;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+.btn:hover{
+  background:#e9ecef;
+  color:var(--text);
+  border-color:#dee2e6;
+}
+.btn.primary{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+}
+.btn.primary:hover{
+  background:#1a202c;
+  border-color:#1a202c;
+}
+.btn.sm{
+  height:32px;
+  padding:0 14px;
+  font-size:13px;
+}
+.row-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:14px;
+  flex-wrap:wrap;
+}
+
+/* Responsive */
+@media (max-width: 1100px){
+  .app{grid-template-columns:1fr}
+  .sidebar{height:auto}
+  .cols{grid-template-columns:1fr}
+  .panel{height:auto}
+  .big-box{min-height:380px}
+}

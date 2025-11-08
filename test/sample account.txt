@@ -1,0 +1,7 @@
+Coordinator account:
+email: 1612324676@qq.com
+password: 12345678
+
+marker account:
+email: hanyuj2@student.unimelb.edu.au
+password: 12345678

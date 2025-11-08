@@ -1,0 +1,157 @@
+npm run dev
+我先在代码里定位与“temp_uploads 上传、写入数据库、改分、生成报告”相关的接口与关键函数，找出调用顺序和示例命令。随后会给出可直接执行的 curl/PowerShell 示例。
+
+[5 tools called]
+
+我已在 `src/routes/uploads_v2.js` 定位到草稿上传、发布入库、改分与报告接口。下面给出可直接执行的 PowerShell 与 curl 命令示例（默认后端跑在 http://localhost:3000）。
+
+### 0) 基础说明
+- 上传草稿：`POST /api/uploads/drafts`，字段：`slot`（assignment1/assignment2/rubric），`file`（表单文件）。
+  - assignment 只能 PDF；rubric 禁止 PDF（用 DOCX/XLSX/CSV）。
+- 从 temp 入库：`POST /api/uploads/commit`
+  - 必填：`temp_name`、`project_id`、`file_type`（assignment/rubric）
+  - assignment 还需 `round`，可选 `due_date`。
+- 改分：
+  - 设定基准分（Coordinator）：`POST /api/uploads/scoring/baseline`
+  - 设定批改分（Marker）：`POST /api/uploads/scoring/marker`
+  - 修改等级区间（分数段）：`PUT /api/uploads/grade-level/:grade_level_id`
+- 报告（Moderation）：`GET /api/uploads/assignments/:assignment_id/moderation-report`
+
+### 1) 上传到 temp_uploads（草稿）
+PowerShell
+```powershell
+# 上传 assignment（PDF）
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/drafts" -Method Post `
+  -Form @{ slot = 'assignment1'; file = Get-Item 'C:\path\Assignment1.pdf' }
+
+# 上传 rubric（非PDF，如xlsx）
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/drafts" -Method Post `
+  -Form @{ slot = 'rubric'; file = Get-Item 'C:\path\rubric.xlsx' }
+
+# 可查看临时目录文件名（拿到 temp_name）
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/debug/temp-files" -Method Get
+```
+
+curl
+```bash
+# 上传 assignment（PDF）
+curl -X POST "http://localhost:3000/api/uploads/drafts" ^
+  -F "slot=assignment1" ^
+  -F "file=@C:\path\Assignment1.pdf;type=application/pdf"
+
+# 上传 rubric（非PDF）
+curl -X POST "http://localhost:3000/api/uploads/drafts" ^
+  -F "slot=rubric" ^
+  -F "file=@C:\path\rubric.xlsx;type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+# 查看 temp 文件
+curl "http://localhost:3000/api/uploads/debug/temp-files"
+```
+
+### 2) 从 temp_uploads 发布入库（写数据库）
+PowerShell
+```powershell
+# 发布 assignment（需要 round，可选 due_date）
+$body = @{
+  temp_name  = "替换为上一步返回或调试接口里的文件名.ext"
+  project_id = 1
+  file_type  = "assignment"
+  round      = 1
+  due_date   = "2025-09-30T23:59:00Z"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/commit" -Method Post -ContentType "application/json" -Body $body
+
+# 发布 rubric（不需要 round）
+$body = @{
+  temp_name  = "替换为上一步返回或调试接口里的文件名.ext"
+  project_id = 1
+  file_type  = "rubric"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/commit" -Method Post -ContentType "application/json" -Body $body
+```
+
+curl
+```bash
+# 发布 assignment
+curl -X POST "http://localhost:3000/api/uploads/commit" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"temp_name\":\"替换文件名.ext\",\"project_id\":1,\"file_type\":\"assignment\",\"round\":1,\"due_date\":\"2025-09-30T23:59:00Z\"}"
+
+# 发布 rubric
+curl -X POST "http://localhost:3000/api/uploads/commit" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"temp_name\":\"替换文件名.ext\",\"project_id\":1,\"file_type\":\"rubric\"}"
+```
+
+### 3) 改分
+- 基准分（Coordinator）
+```powershell
+$body = @{
+  assignment_id = 123
+  criterion_id  = 456
+  score         = 8.5
+  comment       = "基准说明"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/scoring/baseline" -Method Post -ContentType "application/json" -Body $body
+```
+```bash
+curl -X POST "http://localhost:3000/api/uploads/scoring/baseline" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"assignment_id\":123,\"criterion_id\":456,\"score\":8.5,\"comment\":\"基准说明\"}"
+```
+
+- 批改分（Marker）
+```powershell
+$body = @{
+  assignment_id = 123
+  criterion_id  = 456
+  marker_id     = 789
+  score         = 8.0
+  comment       = "批改备注"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/scoring/marker" -Method Post -ContentType "application/json" -Body $body
+```
+```bash
+curl -X POST "http://localhost:3000/api/uploads/scoring/marker" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"assignment_id\":123,\"criterion_id\":456,\"marker_id\":789,\"score\":8.0,\"comment\":\"批改备注\"}"
+```
+
+- 修改等级区间（分数段）
+```powershell
+$body = @{
+  min_score   = 8
+  max_score   = 10
+  level_name  = "Excellent"
+  description = "区间说明"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/grade-level/987" -Method Put -ContentType "application/json" -Body $body
+```
+```bash
+curl -X PUT "http://localhost:3000/api/uploads/grade-level/987" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"min_score\":8,\"max_score\":10,\"level_name\":\"Excellent\",\"description\":\"区间说明\"}"
+```
+
+### 4) 生成报告（Moderation Report）
+PowerShell
+```powershell
+# 直接查看
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/assignments/123/moderation-report" -Method Get
+
+# 保存到文件
+Invoke-RestMethod -Uri "http://localhost:3000/api/uploads/assignments/123/moderation-report" -Method Get |
+  ConvertTo-Json -Depth 10 | Out-File ".\moderation_report.json" -Encoding utf8
+```
+
+curl
+```bash
+curl "http://localhost:3000/api/uploads/assignments/123/moderation-report" > moderation_report.json
+```
+
+- 小提示
+  - `project_id`、`assignment_id`、`criterion_id`、`marker_id`、`grade_level_id` 请替换为你数据库中真实存在的 ID。
+  - 若发布 assignment 与 rubric 均齐全，项目会自动从 draft 变为 published。
+  - 若不确定 `temp_name`，先调用调试接口列出临时文件后再 commit。
+
+- 我已根据后端已实现的接口整理了整条链路的调用命令：从临时上传、发布入库，到改分和生成报告。

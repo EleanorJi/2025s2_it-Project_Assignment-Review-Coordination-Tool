@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Coordinator Dashboard – Deakin Moderation</title>
+  <link rel="stylesheet" href="./coordinator-dashboard.css" />
+
+  <script>
+    (function guard () {
+      try {
+        const raw = localStorage.getItem('user');
+        const user = raw ? JSON.parse(raw) : null;
+        const p = location.pathname.toLowerCase();
+
+        const onCoordinator = p.includes('/coordinator');
+        const onMarker      = p.includes('/marker');
+
+        if (onCoordinator) {
+          if (!user) return location.replace('/login.html');
+          if (user.role !== 'COORDINATOR') {
+            // 如果已登录但不是协调员，送去 Marker 的首页
+            return location.replace('/Marker/marker-dashboard.html');
+          }
+        }
+
+        if (onMarker) {
+          if (!user) return location.replace('/login.html');
+          if (user.role !== 'MARKER') {
+            // 已登录但不是 marker，送回协调员首页
+            return location.replace('/Coordinator/coordinator-dashboard.html');
+          }
+        }
+      } 
+      })();
+  </script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <!-- 如果 logo 和本页同目录，改成 ./deakin-logo.png -->
+      <img src="../deakin-logo.png" alt="Deakin University logo" />
+      <div class="brand-title">Deakin Moderation</div>
+      <div class="brand-sub">Psychology · Calibration Portal</div>
+    </div>
+    <div class="account">
+      <span data-user-name>User</span><span class="caret">▾</span>
+    </div>
+  </header>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <a class="nav-item active" href="coordinator-dashboard.html">Overview</a>
+        <a class="nav-item" href="invite.html">Markers Management</a>
+        <a class="nav-item" href="upload-assignment.html">Create New Task</a>
+        <a class="nav-item" href="task-management.html">Task Management</a>
+        <a class="nav-item" href="#">Past Assignment</a>
+      </nav>
+    </aside>
+
+
+    <!-- Main -->
+    <main class="main">
+      <section class="panel" aria-labelledby="title-overview">
+        <h1 id="title-overview">Overview</h1>
+
+        <!-- KPI -->
+        <div class="kpi-row">
+          <div class="kpi card" data-kpi="assignments">
+            <div class="muted">Active assignments</div>
+            <div class="kpi-num">2</div>
+            <div class="hint">Round 1 &amp; Round 2</div>
+            <div class="status-indicator active"></div>
+          </div>
+          <div class="kpi card" data-kpi="markers">
+            <div class="muted">Markers</div>
+            <div class="kpi-num">10</div>
+            <div class="hint">Accepted 7 · Pending 2 · Expired 1</div>
+            <div class="status-indicator active"></div>
+          </div>
+          <div class="kpi card" data-kpi="completion">
+            <div class="muted">Completion (Round 1)</div>
+            <div class="progress"><span style="width:70%"></span></div>
+            <div class="hint">7/10 markers submitted</div>
+            <div class="status-indicator active"></div>
+          </div>
+        </div>
+
+        <!-- Assignments -->
+        <div class="group">
+          <div class="group-title">Assignments</div>
+          <div class="cards-2">
+            <div class="assign card" data-assignment="a1">
+              <div class="assign-title">Assignment 1</div>
+              <div class="assign-sub muted">Moderation 1 • Due Mar 10</div>
+              <div class="assign-sub muted">Pending 2 / 10</div>
+              <div class="status-indicator active"></div>
+              <button class="btn primary">Manage</button>
+            </div>
+            <div class="assign card" data-assignment="a2">
+              <div class="assign-title">Assignment 2</div>
+              <div class="assign-sub muted">Moderation 1 • Due Mar 20</div>
+              <div class="assign-sub muted">Locked</div>
+              <div class="status-indicator locked"></div>
+              <button class="btn primary">Manage</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feedback & Monitoring -->
+        <div class="group">
+          <div class="group-title">Feedback &amp; Monitoring</div>
+          <div class="cards-2">
+            <div class="card">
+              <div class="sub-title">Outliers (&gt;5%)</div>
+              <ul class="list">
+                <li><span class="dot warn"></span> Marker B • A1 • +7%</li>
+                <li><span class="dot bad"></span> Marker D • A2 • −6%</li>
+              </ul>
+              <a class="link" href="#">View details</a>
+            </div>
+            <div class="card">
+              <div class="sub-title">Pending markers</div>
+              <div class="muted" style="margin-top:4px">3 markers pending</div>
+              <div class="right">
+                <button class="btn primary">Send reminder</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Past assignments -->
+        <div class="group">
+          <div class="card">
+            <div class="sub-title">Past assignments</div>
+            <div class="muted">2024 — Assignment 1, Assignment 2 (archived)</div>
+            <a href="#" class="link">Open archive</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../user-manager.js" defer></script>
+  <script src="./interaction-utils.js" defer></script>
+  <script src="./overview-interactive.js" defer></script>
+  <script src="./coordinator.js" defer></script>
+</body>
+</html>

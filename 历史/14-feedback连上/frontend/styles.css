@@ -1,0 +1,155 @@
+:root{
+  --bg:#F5F7FB;
+  --panel:#FFFFFF;
+  --panel-border:#E6EAF2;
+  --muted:#6B7280;
+  --text:#0F172A;
+  --brand:#0F172A;
+  --btn:#0F172A;
+  --shadow:0 8px 32px rgba(15,23,42,0.08);
+  --input-focus:#3b82f6;
+  --success:#16a34a;
+  --error:#dc2626;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:14px/1.5 Inter, Roboto, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.container{
+  max-width:1100px;
+  margin:80px auto;
+  padding:0 24px;
+}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:24px;
+  box-shadow:var(--shadow);
+  padding:40px 56px 56px 56px;
+  position:relative;
+  transition:box-shadow 0.3s ease;
+}
+.panel:hover{
+  box-shadow:0 12px 48px rgba(15,23,42,0.12);
+}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.logo{
+  width:28px;height:28px;border:1px solid #0F172A;border-radius:50%;
+  display:grid;place-items:center;font-size:10px;font-weight:700;
+}
+.header h1{font-size:16px;margin:0}
+.footer-left{position:absolute;left:24px;bottom:18px;color:var(--muted);font-size:13px;}
+.footer-right{position:absolute;right:24px;bottom:18px;color:var(--muted);font-size:13px;}
+
+/* form layout */
+.form{max-width:720px;margin:14px auto 0 auto;}
+.form h2{font-size:44px;font-style:italic;font-weight:700;margin:12px 0 22px 0;}
+.row{margin-bottom:18px;}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+.input, .toggle{
+  height:52px;border-radius:12px;border:2px solid #E5E7EB;background:#fff;
+  padding:0 16px;font-size:15px;width:100%;
+  transition:all 0.2s ease;
+  font-weight:500;
+}
+.input:focus{
+  outline:none;
+  border-color:var(--input-focus);
+  box-shadow:0 0 0 4px rgba(59,130,246,0.1);
+}
+  .input:hover{
+    border-color:#cbd5e1;
+  }
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.toggle{display:flex;align-items:center;justify-content:space-between;}
+.toggle .text{color:#111827}
+.toggle .dot{width:20px;height:20px;border-radius:50%; border:3px solid #E5E7EB;}
+.toggle.active{outline:3px solid #E6EDFF;border-color:#D6E2FF}
+.toggle.active .dot{border-color:#0F172A}
+.help{color:var(--muted);font-size:12px;margin-top:8px}
+.inline{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+.inline-left{
+  display:flex;align-items:center;gap:8px;
+  font-weight:500;
+}
+.inline-left input[type="checkbox"]{
+  width:16px;height:16px;
+  accent-color:var(--btn);
+}
+.link{
+  color:var(--brand);text-decoration:none;background:none;border:none;
+  cursor:pointer;font:inherit;font-weight:600;
+  transition:all 0.2s ease;
+  padding:4px 0;
+  border-radius:4px;
+}
+.link:hover{
+  color:#1e293b;
+  text-decoration:underline;
+  background:rgba(15,23,42,0.05);
+  padding:4px 8px;
+}
+.btn{
+  margin-top:22px;width:100%;height:54px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--btn) 0%,#1e293b 100%);
+  color:#fff;font-size:16px;font-weight:600;cursor:pointer;
+  transition:all 0.2s ease;
+  box-shadow:0 2px 8px rgba(15,23,42,0.2);
+}
+.btn:hover{
+  background:linear-gradient(135deg,#1e293b 0%,#334155 100%);
+  transform:translateY(-2px);
+  box-shadow:0 4px 16px rgba(15,23,42,0.3);
+}
+.btn:active{
+  transform:translateY(0);
+  box-shadow:0 2px 8px rgba(15,23,42,0.2);
+}
+.btn[disabled]{opacity:.6;cursor:not-allowed}
+.msg{
+  margin-top:16px;font-size:14px;
+  font-weight:500;
+  padding:0;
+  border-radius:0;
+  transition:all 0.3s ease;
+  text-align:left;
+  min-height:auto;
+  display:block;
+  box-shadow:none;
+  animation:messageSlideIn 0.3s ease;
+  visibility:hidden;
+  opacity:0;
+  transform:translateY(-10px);
+  line-height:1.5;
+}
+.msg:not(:empty){
+  visibility:visible;
+  opacity:1;
+  transform:translateY(0);
+}
+@keyframes messageSlideIn{
+  from{opacity:0;transform:translateY(-10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.msg.ok{
+  color:var(--success);
+  background:none;
+  border:none;
+}
+.msg.err{
+  color:var(--error);
+  background:none;
+  border:none;
+}
+@media (max-width:900px){
+  .panel{padding:28px}
+  .form h2{font-size:36px}
+}
+.logo-img{
+  width:28px;height:28px;border-radius:50%;
+  border:1px solid #0F172A; background:#fff; object-fit:contain;
+}

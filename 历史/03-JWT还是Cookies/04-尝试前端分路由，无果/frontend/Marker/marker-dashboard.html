@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Marker Dashboard – Deakin Moderation</title>
+  <link rel="stylesheet" href="/Marker/marker-dashboard.css" />
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="/deakin-logo.png" alt="Deakin University logo" />
+      <div class="brand-text">
+        <div class="brand-title">Deakin Moderation</div>
+      </div>
+    </div>
+    <div class="account">
+      <span>Marker Name</span><span class="caret">▾</span>
+    </div>
+  </header>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <button class="nav-item active" data-view="overview">Overview</button>
+        <button class="nav-item" data-view="mark">Mark Assignment</button>
+        <button class="nav-item" data-view="report">Feedback / Report</button>
+        <button class="nav-item" data-view="past">Past Assignment</button>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <section class="panel" aria-labelledby="title-overview">
+        <h1 id="title-overview">Overview</h1>
+
+        <!-- KPI -->
+        <div class="kpi-row">
+          <div class="kpi card">
+            <div class="muted">Pending tasks</div>
+            <div class="kpi-num">2</div>
+          </div>
+          <div class="kpi card">
+            <div class="muted">Completed</div>
+            <div class="kpi-num">1</div>
+          </div>
+          <div class="kpi card">
+            <div class="muted">Latest feedback</div>
+            <div class="kpi-num">2 notes</div>
+          </div>
+        </div>
+
+        <!-- Tasks & Profile grid -->
+        <div class="grid-2-1">
+          <!-- Tasks -->
+          <div class="panel inner">
+            <div class="group-title">Tasks</div>
+
+            <div class="tabs">
+              <button class="tab active" data-tab="pending">Pending</button>
+              <button class="tab" data-tab="completed">Completed</button>
+            </div>
+
+            <!-- Pending list -->
+            <div id="list-pending">
+              <div class="task card row">
+                <div class="task-meta">
+                  <div class="task-title">Assignment 1</div>
+                  <div class="muted">Moderation 1 • Due Mar 10</div>
+                </div>
+                <div class="row-actions">
+                  <button class="btn primary sm">Mark</button>
+                  <a class="link" href="#">Rubric</a>
+                </div>
+              </div>
+
+              <div class="task card row">
+                <div class="task-meta">
+                  <div class="task-title">Assignment 2</div>
+                  <div class="muted">Locked</div>
+                </div>
+                <div class="row-actions">
+                  <a class="link" href="#">Rubric</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Completed list -->
+            <div id="list-completed" class="hidden">
+              <div class="task card row">
+                <div class="task-meta">
+                  <div class="task-title">Assignment 0</div>
+                  <div class="muted">Submitted Mar 01 • Round 1</div>
+                </div>
+                <div class="row-actions">
+                  <a class="link" href="#">View</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile & Settings -->
+          <div class="panel inner">
+            <div class="group-title">Profile &amp; Settings</div>
+            <div class="profile">
+              <div class="profile-name">Marker A</div>
+              <div class="muted">a@deakin.edu.au</div>
+            </div>
+
+            <div class="control-row">
+              <span>Email notifications</span>
+              <button class="control" data-setting="email">
+                <span class="control-label">On</span><span class="chev">→</span>
+              </button>
+            </div>
+
+            <div class="control-row">
+              <span>Remember me (7 days)</span>
+              <button class="control" data-setting="remember">
+                <span class="control-label">On</span><span class="chev">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feedback panel -->
+        <div class="panel inner">
+          <div class="group-title">Feedback</div>
+          <div class="note card">
+            <div class="note-title">Assignment 1</div>
+            <div class="muted">
+              Coordinator: Scores differ on criterion 3 (+7%). Please review.
+            </div>
+            <a class="link right-link" href="#">View details</a>
+          </div>
+        </div>
+
+        <!-- Past assignments -->
+        <div class="panel inner">
+          <div class="group-title">Past assignments</div>
+          <div class="muted">
+            2024 — Assignment 1, Assignment 2 (archived)
+            <a href="#" class="link">Open archive</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./marker.js"></script>
+</body>
+</html>

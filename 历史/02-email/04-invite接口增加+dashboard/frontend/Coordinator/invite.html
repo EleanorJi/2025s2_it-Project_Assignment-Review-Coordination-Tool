@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deakin Moderation – Invite Markers</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="invite.css">
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="./deakin-logo.png" alt="Deakin University">
+      <div>
+        <div class="brand-title">Deakin Moderation</div>
+        <div class="brand-sub">Coordinator Portal</div>
+      </div>
+    </div>
+    <div class="account">Carrie <span class="caret">▾</span></div>
+  </header>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <a class="nav-item" href="overview.html">Overview</a>
+        <a class="nav-item active" aria-current="page" href="invite.html">Invite Markers</a>
+        <a class="nav-item" href="upload.html">Upload Assignment / Rubric</a>
+        <a class="nav-item" href="mark.html">Mark Assignment</a>
+        <a class="nav-item" href="feedback.html">Feedback / Report</a>
+        <a class="nav-item" href="past.html">Past Assignment</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <section class="panel" aria-labelledby="title-invite">
+        <h1 id="title-invite">Invite Markers</h1>
+
+        <div class="card group">
+          <div class="sub-title">Marker emails</div>
+
+          <!-- Chips Input -->
+          <div id="chips" class="chips" aria-label="Add marker emails">
+            <!-- 已选 chips -->
+            <div class="chips-list" id="chipsList"></div>
+            <!-- 输入框 -->
+            <input id="chipsInput" class="chips-input" placeholder="type or paste emails, press Enter…" autocomplete="off" />
+            <!-- 下拉建议 -->
+            <div id="suggest" class="suggest hidden" role="listbox" aria-label="Suggestions"></div>
+          </div>
+
+          <!-- Assignment / Expiry -->
+          <div class="filters">
+            <div class="field">
+              <label class="label">Assignment</label>
+              <input id="assignmentSel" class="input" value="Assignment 1 · Round 2 ▾" />
+            </div>
+            <div class="field">
+              <label class="label">Expiry</label>
+              <input id="expirySel" class="input" value="7 days ▾" />
+            </div>
+            <div class="action-row">
+              <button id="btnClear" class="btn">Clear</button>
+              <button id="btnSend" class="btn primary">Send invites</button>
+            </div>
+          </div>
+          <div id="status" class="msg"></div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap group">
+          <table class="table" id="inviteTable">
+            <thead>
+              <tr>
+                <th>Marker Email</th>
+                <th style="width:160px">Status</th>
+                <th style="width:160px">Sent Date</th>
+                <th style="width:140px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inviteTbody">
+              <!-- JS 渲染 -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="invite.js"></script>
+</body>
+</html>

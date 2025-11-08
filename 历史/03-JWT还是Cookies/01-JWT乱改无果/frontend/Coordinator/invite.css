@@ -1,0 +1,126 @@
+:root{
+    --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
+    --primary:#0F172A; --warn:#F59E0B; --bad:#DC2626; --good:#16a34a;
+    --radius:16px; --shadow:0 6px 24px rgba(2,6,23,0.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+  
+  /* Top bar */
+  .topbar{
+    height:64px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 18px; background:#fff; border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex; align-items:center; gap:12px}
+  .brand img{width:32px;height:32px;border-radius:50%;border:1px solid var(--text);background:#fff}
+  .brand-title{font-weight:800}
+  .brand-sub{font-size:12px;color:var(--muted)}
+  .account{color:var(--text);font-weight:600}
+  .caret{margin-left:4px;color:var(--muted)}
+  
+  /* Layout */
+  .app{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
+  .sidebar{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;
+    height:calc(100vh - 96px);
+  }
+  .nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .nav-item{
+    width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--border);
+    background:#fff;color:var(--text);font-weight:600;cursor:pointer;text-decoration:none;
+  }
+  .nav-item.active,[aria-current="page"].nav-item{background:var(--primary);color:#fff;border-color:var(--primary)}
+  
+  .main{padding-right:16px}
+  .panel{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:18px 18px 22px;
+  }
+  
+  /* Cards & basics */
+  h1{font-size:28px;margin:0 0 14px 0}
+  .group{margin-top:16px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px}
+  .sub-title{font-weight:800;margin-bottom:10px}
+  .label{font-size:12px;color:var(--muted);margin:0 0 6px 2px}
+  .input{
+    height:36px; width:100%;
+    border:1px solid var(--border); border-radius:10px;
+    padding:0 12px; background:#fff; color:var(--text); font-weight:600;
+  }
+  
+  /* Chips input */
+  .chips{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    min-height:46px; padding:6px; background:#fff;
+    border:1px solid var(--border); border-radius:12px;
+    position:relative;
+  }
+  .chips-list{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:999px; border:1px solid var(--border);
+    background:#F8FAFF; font-weight:600;
+  }
+  .chip.bad{border-color:#fecaca;background:#fff1f2;color:#b91c1c}
+  .chip .x{cursor:pointer;opacity:.7}
+  .chip .x:hover{opacity:1}
+  .chips-input{
+    flex:1; min-width:180px; border:none; outline:none; height:32px;
+    font-weight:600; color:var(--text);
+  }
+  
+  /* Suggest dropdown */
+  .suggest{
+    position:absolute; left:6px; right:6px; top:calc(100% + 4px);
+    background:#fff; border:1px solid var(--border); border-radius:10px;
+    box-shadow:var(--shadow); max-height:240px; overflow:auto; z-index:10;
+  }
+  .suggest.hidden{display:none}
+  .suggest-item{
+    padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+  }
+  .suggest-item:hover, .suggest-item.active{background:#F8FAFF}
+  .suggest-item .meta{font-size:12px;color:var(--muted)}
+  
+  /* Filters row */
+  .filters{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:12px}
+  .action-row{display:flex;gap:10px}
+  
+  /* Buttons */
+  .btn{
+    height:36px;padding:0 16px;border-radius:10px;border:1px solid var(--border);
+    background:#fff;color:var(--text);font-weight:600;cursor:pointer;
+  }
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  
+  /* Table */
+  .table-wrap{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .table{width:100%;border-collapse:separate;border-spacing:0}
+  .table thead th{
+    text-align:left; padding:12px 12px; background:#F9FAFD; border-bottom:1px solid var(--border);
+    font-weight:700; color:var(--text);
+  }
+  .table tbody td{padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle}
+  .pill{
+    display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; font-weight:700;
+    border:1px solid transparent;
+  }
+  .pill.accept{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+  .pill.pending{background:#fffbeb;border-color:#fde68a;color:#92400e}
+  .pill.expired{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+  .table a{color:#1d4ed8; font-weight:600; text-decoration:none}
+  
+  /* Status / messages */
+  .msg{margin-top:8px;font-weight:600}
+  .msg.ok{color:#16a34a}
+  .msg.err{color:#dc2626}
+  
+  /* Responsive */
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .sidebar{height:auto}
+    .filters{grid-template-columns:1fr}
+  }
+  

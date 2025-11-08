@@ -1,0 +1,102 @@
+:root{
+    --bg:#F5F7FB; --panel:#fff; --border:#E6EAF2; --text:#0F172A; --muted:#6B7280;
+    --primary:#0F172A; --bad:#DC2626; --shadow:0 2px 8px rgba(2,6,23,0.08);
+    --radius: 4px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.5 Inter,Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif
+  }
+  
+  /* Topbar & layout */
+ /* Top bar */
+.topbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--text);
+  background: #fff;
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.brand-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.account {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.caret {
+  margin-left: 4px;
+  color: var(--muted);
+}
+
+  .account{font-weight:600}
+  .container{max-width:1400px;margin:0 auto;padding:20px}
+  .panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
+  h1{margin:0 0 14px;font-size:20px;font-weight:800}
+  
+  /* Controls */
+  .controls{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+  .select{height:36px;border:1px solid var(--border);border-radius:var(--radius);padding:0 12px;background:#fff;font-weight:600}
+  .btn{height:36px;padding:0 16px;border-radius:var(--radius);border:1px solid var(--border);background:#fff;font-weight:600;cursor:pointer}
+  .ml-auto{margin-left:auto}
+  .label-strong{font-weight:700}
+  
+  /* Table */
+  .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:var(--radius);background:#fff;max-height:600px}
+  .mb-12{margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;min-width:1400px}
+  thead th{
+    position:sticky;top:0;z-index:1;background:#F9FAFB;border-bottom:1px solid var(--border);
+    padding:10px 8px;font-weight:700;text-align:center;white-space:nowrap
+  }
+  tbody td{padding:8px;border-bottom:1px solid #F1F5F9;text-align:center;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody td:first-child{text-align:left;min-width:320px}
+  .muted{color:var(--muted)}
+  .bad-cell{color:var(--bad);font-weight:700;background:#FFF1F1}
+  
+  /* Feedback */
+  .subhead{margin:16px 0 12px;font-size:18px;font-weight:800}
+  .feedback{margin-top:20px}
+  .feedback .card{border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:#fff}
+  .textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:var(--radius);padding:12px;resize:vertical;font-size:14px}
+  .actions{margin-top:8px;display:flex;gap:8px;align-items:center}
+  .actions.justify-end{justify-content:flex-end}
+  .actions.justify-start{justify-content:flex-start}
+  .gap-8{gap:8px}
+  .small{font-size:12px;color:var(--muted)}
+  .fb-title{font-weight:800;margin-bottom:6px}
+  .hidden{display:none}
+  
+  /* Marker Summary */
+  .marker-summary{margin:16px 0}
+  .summary-card{background:#f8f9fa;border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .summary-card h3{margin:0 0 8px 0;font-size:16px;font-weight:700;color:var(--text)}
+  .summary-text{margin:0;font-size:14px;line-height:1.5;color:var(--text)}
+  

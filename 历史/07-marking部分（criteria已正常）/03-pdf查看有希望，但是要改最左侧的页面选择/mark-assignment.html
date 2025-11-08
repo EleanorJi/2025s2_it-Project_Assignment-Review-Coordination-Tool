@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deakin Moderation – Mark Assignment</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <link rel="stylesheet" href="/Coordinator/mark-assignment.css">
+</head>
+<body>
+<!-- Top bar -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-title">HPS302 Assignment Moderation Tool</div>
+  </div>
+  <div class="account">
+    <span id="username"></span><span class="caret">▾</span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Main content -->
+  <main class="main-content">
+    <!-- Title and Back button row -->
+    <div class="title-row">
+      <h1>Mark Assignment</h1>
+      <button class="back-btn">Back</button>
+    </div>
+
+    <!-- Assignment details -->
+    <div class="assignment-details">
+      <div class="assignment-info">
+        <div class="assignment-title"></div>
+        <div class="due-date"></div>
+      </div>
+    </div>
+
+    <!-- Three column layout -->
+    <div class="marking-container">
+      <!-- Left: Document thumbnails sidebar -->
+      <div class="document-thumbnails-sidebar">
+        <div class="thumbnails-header">
+          <h4>Pages</h4>
+        </div>
+        <div class="document-thumbnails">
+          <div class="thumbnail active" data-page="1">1</div>
+          <div class="thumbnail" data-page="2">2</div>
+        </div>
+      </div>
+
+      <!-- Middle: Document viewer -->
+      <!-- 在 document-viewer 部分替换原来的内容 -->
+      <div class="document-viewer">
+        <div class="document-controls">
+          <div class="pagination">Page: <span id="current-page">1</span> of <span id="total-pages">0</span></div>
+          <div class="view-controls">
+            <button class="zoom-btn" id="zoom-out">-</button>
+            <span class="zoom-level" id="zoom-level">100%</span>
+            <button class="zoom-btn" id="zoom-in">+</button>
+            <button class="download-btn">Download</button>
+          </div>
+        </div>
+
+        <div class="pdf-container">
+          <div class="pdf-viewer" id="pdf-viewer">
+            <canvas id="pdf-canvas"></canvas>
+          </div>
+          <div class="pdf-loading" id="pdf-loading">Loading PDF...</div>
+          <div class="pdf-error" id="pdf-error" style="display: none;">Failed to load PDF</div>
+        </div>
+
+        <div class="page-navigation">
+          <button class="page-btn" id="prev-page">Previous</button>
+          <input type="number" id="page-number" min="1" value="1" style="width: 60px; text-align: center;">
+          <button class="page-btn" id="next-page">Next</button>
+        </div>
+      </div>
+
+
+      <!-- Right: Marking criteria -->
+      <div class="marking-criteria">
+        <!-- 由js动态生成 -->
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/Coordinator/mark-assignment.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; }
+        .button {
+          display: inline-block;
+          background-color: #4CAF50;
+          color: white;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 4px;
+          margin: 20px 0;
+        }
+        .footer {
+          margin-top: 20px;
+          padding: 20px;
+          background-color: #f1f1f1;
+          text-align: center;
+          font-size: 12px;
+          color: #666;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>评分系统邀请</h1>
+    </div>
+    <div class="content">
+        <p>尊敬的评分员，</p>
+        <p>您已被 <strong>{{coordinatorName}}</strong> 邀请加入我们的评分系统。</p>
+        <p>请点击下面的链接完成注册：</p>
+        <p style="text-align: center;">
+            <a href="{{signupUrl}}" class="button">完成注册</a>
+        </p>
+        <p>或者复制以下链接到浏览器中打开：</p>
+        <p style="word-break: break-all; background-color: #eee; padding: 10px; border-radius: 4px;">
+            {{signupUrl}}
+        </p>
+        <p><strong>请注意：</strong>此链接将在24小时后过期。</p>
+        <p>如果您没有请求此邀请，请忽略此邮件。</p>
+    </div>
+    <div class="footer">
+        <p>此邮件由评分系统自动发送，请勿回复。</p>
+        <p>© {{currentYear}} 评分系统. 保留所有权利.</p>
+    </div>
+</div>
+</body>
+</html>

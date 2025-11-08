@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>View Feedback – Deakin Moderation</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  
+  <!-- Lato -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./view-feedback.css" />
+  <script src="./view-feedback.js" defer></script>
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="../deakin-logo.png" alt="Deakin logo">
+      <div>
+        <div class="brand-title">Deakin Moderation</div>
+        <div class="brand-sub">Marker Portal</div>
+      </div>
+    </div>
+    <div class="account"><span data-user-name>Marker</span> <span class="caret">▾</span></div>
+  </header>
+
+  <div class="app">
+    <main class="main-content">
+      <!-- Title and Back button row -->
+      <div class="title-row">
+        <h1>View Feedback</h1>
+        <button class="back-btn" id="backBtn">Back</button>
+      </div>
+
+      <!-- Assignment details -->
+      <div class="assignment-details">
+        <div class="assignment-info">
+          <div id="feedback-meta" class="assignment-meta">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Score Summary -->
+      <div class="score-summary">
+        <div class="summary-card">
+          <div class="summary-title">Overall Score Comparison</div>
+          <div class="score-comparison">
+            <div class="score-item">
+              <div class="score-label">Your Score</div>
+              <div class="score-value" id="marker-score">--</div>
+            </div>
+            <div class="score-separator">vs</div>
+            <div class="score-item">
+              <div class="score-label">Coordinator Score</div>
+              <div class="score-value" id="coordinator-score">--</div>
+            </div>
+            <div class="score-difference">
+              <div class="difference-label">Difference</div>
+              <div class="difference-value" id="score-difference">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback Table -->
+      <section class="panel" aria-labelledby="feedback-title">
+        <div class="table-scroll">
+          <table class="feedback-table" id="feedback-table" aria-describedby="feedback-meta">
+            <thead>
+              <tr>
+                <th scope="col">Criteria:</th>
+                <th scope="col">
+                  <div class="grade-header">Your Score</div>
+                  <div class="grade-subheader">(Points)</div>
+                </th>
+                <th scope="col">
+                  <div class="grade-header">Coordinator Score</div>
+                  <div class="grade-subheader">(Points)</div>
+                </th>
+                <th scope="col">
+                  <div class="grade-header">Difference</div>
+                  <div class="grade-subheader">(Points)</div>
+                </th>
+                <th scope="col">Feedback</th>
+              </tr>
+            </thead>
+            <tbody id="feedback-body">
+              <!-- JS renders rows here -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Text Feedback Section -->
+      <section class="text-feedback-section">
+        <div class="panel">
+          <h2>Detailed Feedback</h2>
+          <div class="feedback-content">
+            <div class="feedback-item">
+              <div class="feedback-source">Coordinator Feedback</div>
+              <div class="feedback-text" id="coordinator-feedback">
+                Loading feedback...
+              </div>
+            </div>
+            <div class="feedback-item">
+              <div class="feedback-source">Your Original Comments</div>
+              <div class="feedback-text" id="marker-comments">
+                Loading comments...
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../user-manager.js" defer></script>
+  <script src="./interaction-utils.js" defer></script>
+</body>
+</html>

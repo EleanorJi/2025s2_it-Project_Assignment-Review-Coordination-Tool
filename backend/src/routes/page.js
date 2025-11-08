@@ -9,7 +9,7 @@ router.use('/dashboard', dashboardRoutes);
 
 router.get('/login', (req, res) => {
   // Return HTML page for browser rendering (keep route hidden)
-  res.sendFile(path.join(__dirname, '../../frontend/login.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/login.html'));
 });
 
 // Add invitation-based registration page route
@@ -32,7 +32,7 @@ router.get('/signup', async (req, res) => {
     }
 
     // Token is valid, send registration page
-    res.sendFile(path.join(__dirname, '../../frontend/signup.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/signup.html'));
   } catch (error) {
     console.error('Signup page error:', error);
     res.status(500).send('Internal server error');
@@ -57,7 +57,7 @@ router.get('/reset-password', async (req, res) => {
       }
 
       // Send reset password page (with valid token)
-      res.sendFile(path.join(__dirname, '../../frontend/reset-password.html'));
+      res.sendFile(path.join(__dirname, '../../../frontend/reset-password.html'));
       return;
     } catch (error) {
       console.error('Reset password page error:', error);
@@ -67,11 +67,11 @@ router.get('/reset-password', async (req, res) => {
 
   // No token provided - allow access (for logged-in users to change password)
   // The frontend will check if user is logged in and show appropriate form
-  res.sendFile(path.join(__dirname, '../../frontend/reset-password.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/reset-password.html'));
 });
 
 router.get('/forgot-password', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../frontend/forgot-password.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/forgot-password.html'));
 });
 
 

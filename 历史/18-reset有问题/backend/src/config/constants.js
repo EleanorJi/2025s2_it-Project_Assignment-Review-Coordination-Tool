@@ -1,0 +1,7 @@
+module.exports = {
+  ROLES: {
+    COORDINATOR: 'COORDINATOR',
+    MARKER: 'MARKER'
+  },
+  INVITATION_EXPIRY_HOURS: 24
+};

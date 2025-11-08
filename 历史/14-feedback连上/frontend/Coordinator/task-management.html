@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deakin Moderation – Task Management</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Reuse your previous Design System -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/Coordinator/task-management.css">
+
+</head>
+<body>
+<!-- Top bar -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-title">HPS302 Assignment Moderation Tool</div>
+  </div>
+  <div class="account dropdown">
+    <span id="username" class="dropdown-trigger"></span><span class="caret">▾</span>
+    <div class="dropdown-menu">
+      <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+    </div>
+  </div>
+</header>
+
+<div class="tm-shell">
+  <!-- Sidebar (consistent with previous) -->
+  <aside class="sidebar">
+    <nav class="nav">
+      <a class="nav-item" href="/dashboard/coordinator">Overview</a>
+      <a class="nav-item" href="/dashboard/coordinator/invite">Markers Management</a>
+      <a class="nav-item active" aria-current="page" href="/dashboard/coordinator/taskManagement">Task Management</a>
+      <a class="nav-item" href="/dashboard/coordinator/past">Past Task</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <section class="tm-panel">
+      <div class="tm-header">
+        <div class="tm-header-content">
+          <h1>Task Management</h1>
+          <p class="tm-header-subtitle">Manage assignments, rubrics, and marking tasks</p>
+          <div class="tm-header-stats" id="headerStats" style="display:none;">
+            <div class="tm-stat">
+              <span class="tm-stat-value" id="statTotal">0</span>
+              <span class="tm-stat-label">Total Tasks</span>
+            </div>
+            <div class="tm-stat">
+              <span class="tm-stat-value" id="statActive">0</span>
+              <span class="tm-stat-label">Active</span>
+            </div>
+          </div>
+        </div>
+        <button id="btnAdd" class="btn primary">
+          <span>Add New Task</span>
+        </button>
+      </div>
+
+      <!-- Task Sections Container -->
+      <div id="taskSections" class="tm-sections">
+        <!-- Dynamically generated task areas by JS -->
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Rubric Upload Modal -->
+<div class="tm-modal" id="rubricModal">
+  <div class="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="rubricTitle">
+    <div class="tm-dialog-hd">
+      <h3 id="rubricTitle">Upload Rubric</h3>
+      <button class="btn" id="rubricClose">Close</button>
+    </div>
+
+    <div class="tm-dialog-bd">
+      <div class="tm-card">
+        <h4>Rubric</h4>
+        <div class="tm-label">Rubric (DOCX/CSV)</div>
+        <div class="tm-drop" id="rubricDrop" data-accept=".docx,.csv,.xlsx,.xls">
+          <input id="rubricFile" type="file" accept=".docx,.csv,.xlsx,.xls" hidden />
+          <div>
+            <div id="rubricText">Upload rubric...</div>
+            <div class="tm-help">.docx / .csv / .xlsx</div>
+          </div>
+        </div>
+      </div>
+      <div id="rubricErrLine" class="tm-err" style="display:none">Please select a rubric file.</div>
+    </div>
+
+    <div class="tm-dialog-ft">
+      <button id="rubricSubmit" class="btn primary" style="min-width:160px">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assignment 1 Upload Modal -->
+<div class="tm-modal" id="assignment1Modal">
+  <div class="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="assignment1Title">
+    <div class="tm-dialog-hd">
+      <h3 id="assignment1Title">Assignment 1</h3>
+      <button class="btn" id="assignment1Close">Close</button>
+    </div>
+
+    <div class="tm-dialog-bd">
+      <div class="tm-card">
+        <h4>Assignment 1</h4>
+        <div class="tm-label">Due date</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="assignment1Due" class="tm-input" type="date" style="flex:1" />
+          <input id="assignment1Time" class="tm-input" type="time" style="flex:1" />
+        </div>
+
+        <div class="tm-label" style="margin-top:10px">Assignment file (PDF)</div>
+        <div class="tm-drop" id="assignment1Drop" data-accept=".pdf">
+          <input id="assignment1File" type="file" accept=".pdf" hidden />
+          <div>
+            <div id="assignment1Text">Upload assignment...</div>
+            <div class="tm-help">PDF only</div>
+          </div>
+        </div>
+      </div>
+      <div id="assignment1ErrLine" class="tm-err" style="display:none">Please complete all required fields.</div>
+    </div>
+
+    <div class="tm-dialog-ft">
+      <button id="assignment1Submit" class="btn primary" style="min-width:160px">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assignment 2 Upload Modal -->
+<div class="tm-modal" id="assignment2Modal">
+  <div class="tm-dialog" role="dialog" aria-modal="true" aria-labelledby="assignment2Title">
+    <div class="tm-dialog-hd">
+      <h3 id="assignment2Title">Assignment 2</h3>
+      <button class="btn" id="assignment2Close">Close</button>
+    </div>
+
+    <div class="tm-dialog-bd">
+      <div class="tm-card">
+        <h4>Assignment 2</h4>
+        <div class="tm-label">Due date</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="assignment2Due" class="tm-input" type="date" style="flex:1" />
+          <input id="assignment2Time" class="tm-input" type="time" style="flex:1" />
+        </div>
+
+        <div class="tm-label" style="margin-top:10px">Assignment file (PDF)</div>
+        <div class="tm-drop" id="assignment2Drop" data-accept=".pdf">
+          <input id="assignment2File" type="file" accept=".pdf" hidden />
+          <div>
+            <div id="assignment2Text">Upload assignment...</div>
+            <div class="tm-help">PDF only</div>
+          </div>
+        </div>
+      </div>
+      <div id="assignment2ErrLine" class="tm-err" style="display:none">Please complete all required fields.</div>
+    </div>
+
+    <div class="tm-dialog-ft">
+      <button id="assignment2Submit" class="btn primary" style="min-width:160px">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script src="/Coordinator/task-management.js" defer></script>
+</body>
+</html>

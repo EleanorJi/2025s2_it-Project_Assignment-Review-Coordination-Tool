@@ -8,7 +8,7 @@ exports.getCoordinatorDashboard = (req, res) => {
     return res.redirect('/login');
   }
   // Send corresponding HTML file
-  res.sendFile(path.join(__dirname, '../../frontend/Coordinator/coordinator-dashboard.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/coordinator-dashboard.html'));
 };
 
 exports.getCoordinatorInvitePage = (req, res) => {
@@ -18,7 +18,7 @@ exports.getCoordinatorInvitePage = (req, res) => {
   }
 
   // Send corresponding HTML file
-  res.sendFile(path.join(__dirname, '../../frontend/Coordinator/invite.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/invite.html'));
 };
 
 exports.getCoordinatorFeedbackPage = (req, res) => {
@@ -27,7 +27,7 @@ exports.getCoordinatorFeedbackPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/feedback.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/feedback.html'));
 }
 
 exports.getCoordinatorTaskManagementPage = (req, res) => {
@@ -37,7 +37,7 @@ exports.getCoordinatorTaskManagementPage = (req, res) => {
     }
 
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/task-management.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/task-management.html'));
 }
 exports.getCoordinatorViewRubricPage = (req, res) => {
     // Check role permissions
@@ -45,7 +45,7 @@ exports.getCoordinatorViewRubricPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/rubric.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/rubric.html'));
 }
 
 exports.getCoordinatorMarkPage = (req, res) => {
@@ -54,7 +54,7 @@ exports.getCoordinatorMarkPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/mark-assignment.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/mark-assignment.html'));
 }
 
 exports.getCoordinatorAnalysisPage = (req, res) => {
@@ -63,7 +63,7 @@ exports.getCoordinatorAnalysisPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/feedback.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/feedback.html'));
 }
 
 exports.getCoordinatorPastPage = (req, res) => {
@@ -73,7 +73,7 @@ exports.getCoordinatorPastPage = (req, res) => {
     }
 
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/past-assignment.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/past-assignment.html'));
 }
 
 exports.getCoordinatorOnboardingPage = (req, res) => {
@@ -82,21 +82,21 @@ exports.getCoordinatorOnboardingPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/onboarding.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/onboarding.html'));
 }
 
 exports.getMarkerDashboard = (req, res) => {
   if (req.user.role !== 'MARKER') {
     return res.redirect('/login');
   }
-  res.sendFile(path.join(__dirname, '../../frontend/Marker/marker-dashboard.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/Marker/marker-dashboard.html'));
 };
 
 exports.getMarkerTaskManagementPage = (req, res) => {
   if (req.user.role !== 'MARKER') {
     return res.redirect('/login?error=access_denied');
   }
-  res.sendFile(path.join(__dirname, '../../frontend/Marker/task-management.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/Marker/task-management.html'));
 };
 
 exports.getMarkerMarkPage = (req, res) => {
@@ -105,7 +105,7 @@ exports.getMarkerMarkPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/mark-assignment.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/mark-assignment.html'));
 }
 
 exports.getMarkerViewRubricPage = (req, res) => {
@@ -114,7 +114,7 @@ exports.getMarkerViewRubricPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Coordinator/rubric.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Coordinator/rubric.html'));
 }
 
 exports.getMarkerFeedbackPage = (req, res) => {
@@ -123,21 +123,21 @@ exports.getMarkerFeedbackPage = (req, res) => {
         return res.redirect('/login?error=access_denied');
     }
     // Send corresponding HTML file
-    res.sendFile(path.join(__dirname, '../../frontend/Marker/view-feedback.html'));
+    res.sendFile(path.join(__dirname, '../../../frontend/Marker/view-feedback.html'));
 }
 
 exports.getMarkerPastTaskPage = (req, res) => {
   if (req.user.role !== 'MARKER') {
     return res.redirect('/login?error=access_denied');
   }
-  res.sendFile(path.join(__dirname, '../../frontend/Marker/past-task.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/Marker/past-task.html'));
 };
 
 exports.getMarkerOnboardingPage = (req, res) => {
   if (req.user.role !== 'MARKER') {
     return res.redirect('/login?error=access_denied');
   }
-  res.sendFile(path.join(__dirname, '../../frontend/Marker/onboarding.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/Marker/onboarding.html'));
 };
 
 exports.redirectToRoleDashboard = (req, res) => {
@@ -158,7 +158,7 @@ exports.getMarkerConnectPage = (req, res) => {
     return res.redirect('/login?error=access_denied');
   }
   res.sendFile(
-    require('path').join(__dirname, '../../frontend/Marker/connect-marker.html')
+    require('path').join(__dirname, '../../../frontend/Marker/connect-marker.html')
   );
 };
 

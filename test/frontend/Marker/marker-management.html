@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Task Management — Deakin Moderation</title>
+  <link rel="stylesheet" href="marker-management.css" />
+</head>
+<body>
+  <!-- 顶部栏 -->
+ <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="../deakin-logo.png" alt="Deakin University logo" />
+      <div class="brand-text">
+        <div class="brand-title">Deakin Moderation</div>
+      </div>
+    </div>
+    <div class="account">
+      <span data-user-name>Marker</span><span class="caret">▾</span>
+    </div>
+  </header>
+
+  <div class="app">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <nav class="nav">
+        <a class="nav-item" href="marker-dashboard.html">Overview</a>
+        <button class="nav-item active" data-view="mark">Mark Assignment</button>
+        <a class="nav-item" href="past-task.html">Past Task</a>
+      </nav>
+    </aside>
+    <!-- 主内容 -->
+    <main class="main">
+      <section class="panel">
+        <h1>Task Management</h1>
+
+        <div class="cols">
+          <!-- Upcoming -->
+          <div class="big-box">
+            <h3>Upcoming Assignment</h3>
+            <div class="inner-card">
+              <div class="task-title">2025 · Semester 2 · Assignment 2</div>
+              <div class="row-actions">
+                <button class="btn sm">View Rubric</button>
+                <button class="btn sm">Mark Assignment</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Completed -->
+          <div class="big-box">
+            <h3>Completed Assignment</h3>
+            <div class="inner-card">
+              <div class="task-title">2025 · Semester 2 · Assignment 1</div>
+              <div class="row-actions">
+                <button class="btn sm">View Rubric</button>
+                <button class="btn sm">View Feedback</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+  <script src="../user-manager.js" defer></script>
+  <script src="./interaction-utils.js" defer></script>
+  <script src="./marker-management.js"></script>
+</body>
+</html>

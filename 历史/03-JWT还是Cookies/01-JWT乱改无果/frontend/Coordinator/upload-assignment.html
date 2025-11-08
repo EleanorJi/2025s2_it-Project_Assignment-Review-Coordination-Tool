@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deakin Moderation – Upload Assignment & Rubric</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./upload-assignment.css">
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="../deakin-logo.png" alt="Deakin University">
+      <div>
+        <div class="brand-title">Deakin Moderation</div>
+        <div class="brand-sub">Coordinator Portal</div>
+      </div>
+    </div>
+    <div class="account">Carrie <span class="caret">▾</span></div>
+  </header>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+ <nav class="nav">
+        <a class="nav-item" href="coordinator-dashboard.html">Overview</a>
+        <a class="nav-item" aria-current="page" href="invite.html">Invite Markers</a>
+        <a class="nav-item active" href="upload-assignment.html">Upload Assignment / Rubric</a>
+        <a class="nav-item" href="mark.html">Mark Assignment</a>
+        <a class="nav-item" href="feedback.html">Feedback / Report</a>
+        <a class="nav-item" href="past.html">Past Assignment</a>
+      </nav>    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <section class="panel">
+        <h1>Upload Assignment &amp; Rubric</h1>
+
+        <div class="cards-2 group">
+          <!-- Assignment 1 -->
+          <div class="card assign">
+            <div class="assign-title">Assignment 1</div>
+
+            <div class="form-row">
+              <div class="field">
+                <div class="label">Round</div>
+                <input class="input" value="Moderation 1 ▾" aria-label="Round">
+              </div>
+              <div class="field">
+                <div class="label">Due date</div>
+                <input class="input" placeholder="YYYY-MM-DD" aria-label="Due date">
+              </div>
+              <div class="field">
+                <div class="label">Deviation (%)</div>
+                <input class="input" value="5" aria-label="Deviation">
+              </div>
+            </div>
+
+            <div class="zones-2">
+              <div class="zone">
+                <div class="sub-title">Assignment file (PDF)</div>
+                <label class="drop">
+                  <input type="file" accept="application/pdf" hidden>
+                  <div>Upload assignment…<div class="hint">PDF only</div></div>
+                </label>
+              </div>
+
+              <div class="zone">
+                <div class="sub-title">Rubric (DOCX/CSV)</div>
+                <label class="drop">
+                  <input type="file" accept=".doc,.docx,.csv,.xlsx" hidden>
+                  <div>Upload rubric…<div class="hint">.docx / .csv / .xlsx</div></div>
+                </label>
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="sub-title">Validation</div>
+              <ul class="list muted">
+                <li>✖ Assignment PDF selected</li>
+                <li>✖ Rubric file selected</li>
+                <li>✖ Due date set</li>
+              </ul>
+            </div>
+
+            <div class="right">
+              <button class="btn">Save draft</button>
+              <button class="btn primary">Publish</button>
+            </div>
+          </div>
+
+          <!-- Assignment 2 -->
+          <div class="card assign">
+            <div class="assign-title">Assignment 2</div>
+
+            <div class="form-row">
+              <div class="field">
+                <div class="label">Round</div>
+                <input class="input" value="Moderation 1 ▾" aria-label="Round">
+              </div>
+              <div class="field">
+                <div class="label">Due date</div>
+                <input class="input" placeholder="YYYY-MM-DD" aria-label="Due date">
+              </div>
+              <div class="field">
+                <div class="label">Deviation (%)</div>
+                <input class="input" value="5" aria-label="Deviation">
+              </div>
+            </div>
+
+            <div class="zones-2">
+              <div class="zone">
+                <div class="sub-title">Assignment file (PDF)</div>
+                <label class="drop">
+                  <input type="file" accept="application/pdf" hidden>
+                  <div>Upload assignment…<div class="hint">PDF only</div></div>
+                </label>
+              </div>
+
+              
+            </div>
+
+            <div class="group">
+              <div class="sub-title">Validation</div>
+              <ul class="list muted">
+                <li>✖ Assignment PDF selected</li>
+                <li>✖ Rubric file selected</li>
+                <li>✖ Due date set</li>
+              </ul>
+            </div>
+
+            <div class="right">
+              <button class="btn">Save draft</button>
+              <button class="btn primary">Publish</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
